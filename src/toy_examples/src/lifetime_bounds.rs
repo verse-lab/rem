@@ -23,6 +23,6 @@ fn bar(p: &mut &i32, x: &i32) {
 }
 */
 
-fn bar_fixed<'a, 'b>(p: & 'a mut & 'b i32, x: & 'b i32) {
+fn bar_fixed<'a, 'b: 'a>(p: & 'a mut & 'b i32, x: & 'b i32) {
     *p = &x;
 }

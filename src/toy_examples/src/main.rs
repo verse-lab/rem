@@ -8,5 +8,12 @@ fn main() {
     non_control_flow::original_foo();
     in_out_lifetimes::original_foo();
     lifetime_bounds::original_foo();
-    multiple_expressions_with_different_lifetimes::original_foo();
+    {
+        let x = &mut &0;
+        {
+            let y = &1;
+            multiple_expressions_with_different_lifetimes::original_foo2(x, y);
+        }
+    }
+
 }
