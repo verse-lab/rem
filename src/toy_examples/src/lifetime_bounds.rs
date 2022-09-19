@@ -8,7 +8,7 @@ pub fn original_foo(){
     }
 }
 
-pub fn new_foo(){
+pub fn new_foo_fixed(){
     let p : &mut &i32 = &mut &0;
     {
         let x = 1;
