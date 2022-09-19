@@ -16,7 +16,7 @@ impl<'b, 'a: 'b> MultiLifetimeTrait<'b, 'a> for SimpleStruct {
 
 pub fn original_foo<'b, 'a: 'b>(x: &'a i32, y: &'b i32) {
     let foo = SimpleStruct;
-    let mut z = &mut &0;
+    let z = &mut &0;
     *z = foo.trait_method(x, y);
 }
 
@@ -34,7 +34,7 @@ fn bar_extracted(x: &i32, y: &i32, foo: SimpleStruct) -> &i32 {
 
 pub fn new_foo_fixed<'b, 'a: 'b>(x: &'a i32, y: &'b i32) {
     let foo = SimpleStruct;
-    let mut z = &mut &0;
+    let z = &mut &0;
     *z = bar_fixed(x, y, foo);
 }
 
