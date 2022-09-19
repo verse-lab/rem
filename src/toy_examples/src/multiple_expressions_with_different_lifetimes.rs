@@ -7,16 +7,26 @@ pub fn original_foo2<'a, 'b : 'a>(p: &'a mut &'b i32, x: &'b i32){
     *p = x;
 }
 
+/*
 pub fn new_foo1<'a, 'b : 'a> (p: &'a mut &'a i32, x: &'b i32) where 'a : 'b {
-    bar(p, x);
+    bar_extracted(p, x);
 }
+
+fn bar_extracted(p: &mut &i32, x: &i32) {
+    *p = x;
+}
+*/
+
+pub fn new_foo1_fixed<'a, 'b : 'a> (p: &'a mut &'a i32, x: &'b i32) where 'a : 'b {
+    bar_fixed(p, x);
+}
+
 /*
 pub fn new_foo2<'a, 'b : 'a>(p: &'a mut &'b i32, x: &'b i32){
-    bar(p, x);
+    bar_fixed(p, x);
 }
-
  */
 
-fn bar<'a, 'b : 'a>(p: & 'a mut & 'b i32, x: & 'b i32) where 'a : 'b {
+fn bar_fixed<'a, 'b : 'a>(p: & 'a mut & 'b i32, x: & 'b i32) where 'a : 'b {
     *p = &x;
 }

@@ -24,7 +24,7 @@ fn main() {
             let m = &0;
             multiple_expressions_with_different_lifetimes::original_foo1(x1, y1);
             multiple_expressions_with_different_lifetimes::original_foo2(x2, y2);
-            multiple_expressions_with_different_lifetimes::new_foo1(x2, y2);
+            multiple_expressions_with_different_lifetimes::new_foo1_fixed(x2, y2);
 
             extract_to_trait::original_foo(m, n);
             extract_to_trait::new_foo_fixed(m, n);

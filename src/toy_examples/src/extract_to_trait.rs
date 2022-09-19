@@ -23,7 +23,7 @@ pub fn original_foo<'b, 'a: 'b>(x: &'a i32, y: &'b i32) {
 /*
 pub fn new_foo<'b, 'a: 'b>(x: &'a i32, y: &'b i32) {
     let foo = SimpleStruct;
-    let mut z = &mut &0;
+    let z = &mut &0;
     *z = bar_extracted(x, y, foo);
 }
 

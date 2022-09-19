@@ -1,5 +1,3 @@
-#[allow(dead_code)]
-
 pub fn original_foo() -> String {
     let x = '1';
     let y = if x > '2' {
