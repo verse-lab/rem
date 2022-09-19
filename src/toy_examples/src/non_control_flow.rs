@@ -19,7 +19,7 @@ pub fn new_foo() -> String {
 */
 
 /*
-fn bar_extracted(x: char) -> i32 {
+fn bar_extracted(x: char) -> char {
     if x > '2' {
         x
     } else {
