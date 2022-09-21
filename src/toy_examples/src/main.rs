@@ -17,9 +17,9 @@ fn main() {
     {
         let x1 = &mut &0;
         let x2 = &mut &0;
+        let y1 = &1;
         let n = &1;
         {
-            let y1 = &1;
             let y2 = &1;
             let m = &0;
             multiple_expressions_with_different_lifetimes::original_foo1(x1, y1);
