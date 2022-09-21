@@ -3,16 +3,17 @@ mod in_out_lifetimes;
 mod lifetime_bounds;
 mod extract_to_trait;
 mod multiple_expressions_with_different_lifetimes;
+mod adding_lifetime_to_struct;
 
 fn main() {
     non_control_flow::original_foo();
-    non_control_flow::new_foo_fixed();
+    non_control_flow::new_foo();
 
     in_out_lifetimes::original_foo();
-    in_out_lifetimes::new_foo_fixed();
+    // in_out_lifetimes::new_foo();
 
     lifetime_bounds::original_foo();
-    lifetime_bounds::new_foo_fixed();
+    //lifetime_bounds::new_foo_fixed();
 
     {
         let x1 = &mut &0;
@@ -27,7 +28,7 @@ fn main() {
             multiple_expressions_with_different_lifetimes::new_foo1_fixed(x2, y2);
 
             extract_to_trait::original_foo(m, n);
-            extract_to_trait::new_foo_fixed(m, n);
+            //extract_to_trait::new_foo_fixed(m, n);
         }
     }
 

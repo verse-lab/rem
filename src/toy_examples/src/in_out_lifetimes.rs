@@ -16,18 +16,6 @@ pub fn original_foo () {
     }
 }
 
-pub fn new_foo_fixed () {
-    let x = 1;
-    let x_ref = &x;
-    let mut z : &i32;
-    {
-        let y = 2;
-        z = &y;
-        z = bar_fixed(x_ref, z, &y);
-        println!("{}", *z);
-    }
-}
-
 /*
 pub fn new_foo () {
     let x = 1;
@@ -36,12 +24,12 @@ pub fn new_foo () {
     {
         let y = 2;
         z = &y;
-        z = bar_extracted(x_ref, z, &y);
+        z = bar_extracted(z, x_ref, y);
         println!("{}", *z);
     }
 }
 
-fn bar_extracted(x_ref: &i32, z: &mut &i32, y: &i32) -> &i32 {
+fn bar_extracted(z: &i32, x_ref: &i32, y: i32) -> &i32 {
     if *z < *x_ref {
         &y
     } else {
@@ -49,11 +37,3 @@ fn bar_extracted(x_ref: &i32, z: &mut &i32, y: &i32) -> &i32 {
     }
 }
 */
-
-fn bar_fixed<'a, 'b>(x_ref: & 'a i32, z: & 'a i32, y: &'b i32) -> & 'b i32 {
-    if *z < *x_ref {
-        y
-    } else {
-        &W
-    }
-}

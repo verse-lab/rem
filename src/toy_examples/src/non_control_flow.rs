@@ -8,37 +8,19 @@ pub fn original_foo() -> String {
     String::from(y)
 }
 
-/*
 pub fn new_foo() -> String {
     let x = '1';
-    let y = bar_extracted(x);
-    String::from(y)
-}
-*/
-
-/*
-fn bar_extracted(x: char) -> char {
-    if x > '2' {
-        x
-    } else {
-        return String::from("y")
-    }
-}
-*/
-
-pub fn new_foo_fixed() -> String {
-    let x = '1';
-    let y = match bar_extracted_fixed(x) {
-        Ok(x) => x,
-        Err(s) => return s,
+    let y = match bar_extracted(x) {
+        Ok(value) => value,
+        Err(value) => return value,
     };
     String::from(y)
 }
 
-fn bar_extracted_fixed(x: char) -> Result<char, String> {
-    if x > '2' {
-        Ok(x)
+fn bar_extracted(x: char) -> Result<char, String> {
+    Ok(if x > '2' {
+        x
     } else {
-        Err(String::from("y"))
-    }
+        return Err(String::from("y"))
+    })
 }

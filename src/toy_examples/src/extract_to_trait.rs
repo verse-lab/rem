@@ -24,20 +24,10 @@ pub fn original_foo<'b, 'a: 'b>(x: &'a i32, y: &'b i32) {
 pub fn new_foo<'b, 'a: 'b>(x: &'a i32, y: &'b i32) {
     let foo = SimpleStruct;
     let z = &mut &0;
-    *z = bar_extracted(x, y, foo);
+    *z = bar_extracted(foo, x, y);
 }
 
-fn bar_extracted(x: &i32, y: &i32, foo: SimpleStruct) -> &i32 {
+fn bar_extracted(foo: SimpleStruct, x: &i32, y: &i32) -> &i32 {
     foo.trait_function(x, y)
 }
 */
-
-pub fn new_foo_fixed<'b, 'a: 'b>(x: &'a i32, y: &'b i32) {
-    let foo = SimpleStruct;
-    let z = &mut &0;
-    *z = bar_fixed(x, y, foo);
-}
-
-fn bar_fixed<'b, 'a: 'b>(x: &'a i32, y: &'b i32, foo: SimpleStruct) -> &'b i32 {
-    foo.trait_function(x, y)
-}
