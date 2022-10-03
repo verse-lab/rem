@@ -1,4 +1,5 @@
 mod non_control_flow;
+mod borrow;
 mod in_out_lifetimes;
 mod lifetime_bounds;
 mod extract_to_trait;
@@ -8,6 +9,13 @@ mod adding_lifetime_to_struct;
 fn main() {
     non_control_flow::original_foo();
     non_control_flow::new_foo_fixed();
+
+    borrow::extract_read_no_use_after();
+    borrow::extract_read_use_after();
+    borrow::extract_write_no_use_after();
+    borrow::extract_write_use_after();
+    borrow::extract_read_and_write();
+    borrow::extract_read_and_write_new();
 
     in_out_lifetimes::original_foo();
     in_out_lifetimes::new_foo_fixed();
