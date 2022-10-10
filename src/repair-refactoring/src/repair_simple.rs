@@ -60,7 +60,7 @@ pub fn repair_file(file_name: &str, new_file_name: &str) -> bool {
             return false;
         }
 
-        let file_content: String = fs::read_to_string(file_name).unwrap().parse().unwrap();
+        let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
         // println!("{}", file_content);
         let lines = file_content.split("\n");
         let mut lines_modifiable = Vec::new();
