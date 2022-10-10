@@ -81,6 +81,7 @@ fn extract_write_use_after_bar(x: &mut i32) {
 pub fn extract_read_and_write() {
     let mut x = 1;
     x = 5;
+    x = 6;
     println!("x={}", x);
     println!("x={}", x);
 }
@@ -93,8 +94,10 @@ pub fn extract_read_and_write_new() {
 }
 
 // 5. extracted
+#[allow(unused_assignments)]
 fn extract_read_and_write_bar(x: &mut i32) {
     *x = 5;
+    *x = 6;
     println!("x={}", x);
 }
 
