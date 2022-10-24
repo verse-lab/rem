@@ -13,7 +13,7 @@ fn compile_file(file_name: &str) -> Command {
 
 impl RepairSystem for Repairer {
     fn name(&self) -> &str {
-        "simple repairer"
+        "_simple_repairer"
     }
 
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
