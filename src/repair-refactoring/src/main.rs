@@ -1,3 +1,4 @@
+use std::process::Command;
 use std::time::SystemTime;
 use crate::repair_system::RepairSystem;
 
@@ -8,7 +9,7 @@ mod common;
 
 fn main() {
     let file_names = vec!["borrow", "in_out_lifetimes", "lifetime_bounds", "in_out_lifetimes_original_extract", "lifetime_bounds_not_enough_annotations"];
-    let file_names = vec!["lifetime_bounds_not_enough_annotations"];
+    //let file_names = vec!["lifetime_bounds_not_enough_annotations"];
     let repair_systems : Vec<&dyn RepairSystem> = vec![&repair_lifetime_simple::Repairer{}, &repair_rustfix::Repairer{}];
     for file_name in file_names {
         for repair_system in repair_systems.iter() {

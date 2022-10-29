@@ -33,6 +33,6 @@ impl RepairSystem for Repairer {
             true
         };
 
-        common::repair_iteration(&mut compile_cmd, &process_errors)
+        common::repair_iteration(&mut compile_cmd, &process_errors, true)
     }
 }
