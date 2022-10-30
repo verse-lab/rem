@@ -40,3 +40,4 @@ fn bar_extracted<'a, 'b, 'c>(x_ref: &'a i32, z: &'b i32, y: &'c i32) -> &'a i32 
 
 fn main() {}
 
+

@@ -102,3 +102,8 @@ fn extract_read_and_write_bar(x: &mut i32) {
 }
 
 fn main() {}
+
+
+
+
+

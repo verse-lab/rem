@@ -22,3 +22,9 @@ fn extracted<'a>(x_ref: &'a i32, z: &'a mut &'a i32, y: &'a i32) -> &'a i32 {
 
 fn main() {}
 
+
+
+
+
+
+
