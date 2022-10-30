@@ -2,11 +2,8 @@ extern crate serde;
 extern crate serde_json;
 
 use std::borrow::Cow;
-use std::fmt::format;
 use std::fs;
-use std::vec::IntoIter;
 use regex::Regex;
-use serde_json::{Deserializer, Value};
 use serde::{Serialize, Deserialize};
 
 use crate::repair_system::RepairSystem;
@@ -27,7 +24,7 @@ fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
     for item in stream {
         let rendered = item.unwrap().rendered;
         let re = Regex::new(r"help: consider.+\n.*\n(?P<line_number>\d+) \| (?P<replacement>.+)\n").unwrap();
-        let mut help_lines = re.captures_iter(rendered.as_str());
+        let help_lines = re.captures_iter(rendered.as_str());
 
         let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
 
@@ -40,41 +37,34 @@ fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
         let mut current_line = 0;
         let mut content = String::new();
 
-        loop {
-            match help_lines.next() {
-                Some(captured) => {
-                    println!(
-                        "line: {:?}, fn: {:?} {}",
-                        &captured["line_number"],
-                        &captured["replacement"],
-                        current_line,
-                    );
-                    helped = true;
-                    let line_number = match captured["line_number"].parse::<usize>() {
-                        Ok(n) => n,
-                        Err(_) => continue,
-                    };
-                    let replacement = &captured["replacement"];
-                    while current_line < line_number - 1 {
-                        content.push_str(lines_modifiable[current_line]);
-                        content.push('\n');
-                        current_line += 1;
-                    }
-                    content.push_str(replacement);
-                    content.push('\n');
-                    current_line += 1;
-                },
-                None => {
-                    while current_line < lines_modifiable.len() {
-                        content.push_str(lines_modifiable[current_line]);
-                        content.push('\n');
-                        current_line += 1;
-                    }
-                    fs::write(new_file_name.to_string(), content).unwrap();
-                    break;
-                }
+        for captured in help_lines {
+            println!(
+                "line: {:?}, fn: {:?} {}",
+                &captured["line_number"],
+                &captured["replacement"],
+                current_line,
+            );
+            helped = true;
+            let line_number = match captured["line_number"].parse::<usize>() {
+                Ok(n) => n,
+                Err(_) => continue,
+            };
+            let replacement = &captured["replacement"];
+            while current_line < line_number - 1 {
+                content.push_str(lines_modifiable[current_line]);
+                content.push('\n');
+                current_line += 1;
             }
+            content.push_str(replacement);
+            content.push('\n');
+            current_line += 1;
         }
+        while current_line < lines_modifiable.len() {
+            content.push_str(lines_modifiable[current_line]);
+            content.push('\n');
+            current_line += 1;
+        }
+        fs::write(new_file_name.to_string(), content).unwrap();
     }
     helped
 }
@@ -87,7 +77,7 @@ fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
     for item in stream {
         let rendered = item.unwrap().rendered;
         let re = Regex::new(r"(?P<line_number>\d+) \| (?P<fn_sig>fn .+) \{(?s).*(?-s)= help: consider.+bound: `(?P<constraint_lhs>'[a-z]+): (?P<constraint_rhs>'[a-z]+)`").unwrap();
-        let mut help_lines = re.captures_iter(rendered.as_str());
+        let help_lines = re.captures_iter(rendered.as_str());
         /*
             &caps["line_number"],
             &caps["fn_sig"],
