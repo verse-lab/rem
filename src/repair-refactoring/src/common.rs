@@ -33,7 +33,7 @@ pub fn repair_iteration(compile_cmd: &mut Command, process_errors: &dyn Fn(&Cow<
     };
 
     if print_stats {
-        println!("repair count: {}", count);
+        println!("repair count: {}", count - 1);
     }
 
     result

@@ -30,7 +30,7 @@ pub fn new_foo () {
     println!("{}", *z);
 }
 
-fn bar_extracted<'a, 'b, 'c>(x_ref: &'a i32, z: &'b i32, y: &'c i32) -> &'a i32 where 'b: 'a, 'c: 'a {
+fn bar_extracted<'a, 'b, 'c>(x_ref: &'a i32, z: &'b i32, y: &'c i32) -> &'a i32 where 'b: 'a , 'c: 'a{
     if *z < *x_ref {
         &y
     } else {
@@ -39,4 +39,3 @@ fn bar_extracted<'a, 'b, 'c>(x_ref: &'a i32, z: &'b i32, y: &'c i32) -> &'a i32 
 }
 
 fn main() {}
-
