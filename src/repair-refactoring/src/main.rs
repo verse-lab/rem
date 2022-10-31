@@ -1,10 +1,10 @@
 use std::time::SystemTime;
-use crate::repair_system::RepairSystem;
 
 mod repair_lifetime_simple;
 mod repair_rustfix;
-mod repair_system;
 mod common;
+
+use common::RepairSystem;
 
 fn main() {
     let file_names = vec!["borrow", "in_out_lifetimes", "lifetime_bounds", "in_out_lifetimes_original_extract", "lifetime_bounds_not_enough_annotations", "in_out_lifetimes_wide_bounds"];

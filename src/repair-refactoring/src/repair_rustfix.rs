@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs;
-use crate::repair_system::RepairSystem;
-use crate::common;
+use crate::common::{
+    RepairSystem, compile_file, repair_iteration
+};
 
 pub struct Repairer {}
 
@@ -15,7 +16,7 @@ impl RepairSystem for Repairer {
         fs::copy(file_name, &new_file_name).unwrap();
         let args = vec!["--error-format=json"];
 
-        let mut compile_cmd = common::compile_file(&new_file_name, &args);
+        let mut compile_cmd = compile_file(&new_file_name, &args);
 
         let process_errors = | stderr : &Cow<str> | {
             let suggestions =
@@ -33,6 +34,6 @@ impl RepairSystem for Repairer {
             true
         };
 
-        common::repair_iteration(&mut compile_cmd, &process_errors, true)
+        repair_iteration(&mut compile_cmd, &process_errors, true)
     }
 }

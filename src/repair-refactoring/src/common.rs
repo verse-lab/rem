@@ -1,7 +1,20 @@
 extern crate regex;
+extern crate serde;
 
 use std::borrow::Cow;
 use std::process::Command;
+
+pub trait RepairSystem {
+    fn name(&self) -> &str;
+    fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool;
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CompilerError {
+    pub rendered: String,
+}
+
+use serde::{Serialize, Deserialize};
 
 pub fn compile_file(file_name: &str, args: &Vec<&str>) -> Command {
     let mut compile = Command::new("rustc");

@@ -1,18 +1,13 @@
-extern crate serde;
 extern crate serde_json;
 
 use std::borrow::Cow;
 use std::fs;
 use regex::Regex;
-use serde::{Serialize, Deserialize};
 
-use crate::repair_system::RepairSystem;
-use crate::common;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct CompilerError {
-    rendered: String,
-}
+use crate::common::{
+    RepairSystem, CompilerError,
+    compile_file, repair_iteration
+};
 
 pub struct Repairer {}
 
@@ -119,7 +114,7 @@ impl RepairSystem for Repairer {
         let args : Vec<&str> = vec!["--error-format=json"];
         fs::copy(file_name, &new_file_name).unwrap();
 
-        let mut compile_cmd = common::compile_file(&new_file_name, &args);
+        let mut compile_cmd = compile_file(&new_file_name, &args);
 
 
         let process_errors = |stderr: &Cow<str>| {
@@ -127,6 +122,6 @@ impl RepairSystem for Repairer {
             repair_standard_help(stderr, new_file_name)
         };
 
-        common::repair_iteration(&mut compile_cmd, &process_errors, true)
+        repair_iteration(&mut compile_cmd, &process_errors, true)
     }
 }
