@@ -7,7 +7,7 @@ pub struct Repairer {}
 
 impl RepairSystem for Repairer {
     fn name(&self) -> &str {
-        "_tightest_bounds_repairer"
+        "_tightest_bounds_first_repairer"
     }
 
     fn repair_file(&self, _: &str, new_file_name: &str) -> bool {
