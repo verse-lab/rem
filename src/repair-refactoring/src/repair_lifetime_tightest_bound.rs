@@ -20,7 +20,7 @@ impl RepairSystem for Repairer {
                 repair_standard_help(stderr, new_file_name)
         };
 
-        repair_iteration(&mut compile_cmd, &process_errors, true)
+        repair_iteration(&mut compile_cmd, &process_errors, true, None)
     }
 
     fn repair_function(&self, file_name: &str, new_file_name: &str, function_sig: &str, function_name: &str) -> bool {
@@ -41,6 +41,6 @@ impl RepairSystem for Repairer {
             }
         };
 
-        repair_iteration(&mut compile_cmd, &process_errors, true)
+        repair_iteration(&mut compile_cmd, &process_errors, true, Some(50))
     }
 }

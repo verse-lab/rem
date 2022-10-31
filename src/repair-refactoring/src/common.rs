@@ -161,7 +161,7 @@ pub fn annotate_named_lifetime(new_file_name: &str, function_sig: &str) -> bool 
     success
 }
 
-pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, function_sig: &str, function_name: &str) -> bool {
+pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_name: &str) -> bool {
     let binding = stderr.to_string();
     let deserializer = serde_json::Deserializer::from_str(binding.as_str());
     let stream = deserializer.into_iter::<CompilerError>();
@@ -196,8 +196,8 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, function_sig: &str,
                                 None => {},
                                 Some(captured_ref) => {
                                     println!("captured ref arg: {}", &captured_ref["ref_arg"]);
-                                    let replace_ref_re = Regex::new(r"\&(?P<old_lt>'\S*)").unwrap();
-                                    let new_ref = replace_ref_re.replace(&captured_ref["ref_arg"], format!("&{}",new_lt));
+                                    let replace_ref_re = Regex::new(r"\&(?P<old_lt>'\S+)\s").unwrap();
+                                    let new_ref = replace_ref_re.replace_all(&captured_ref["ref_arg"], format!("&{} ",new_lt)); // replace only the first one
                                     let get_ref_arg_re = Regex::new(escape(format!("{}", &captured_ref["ref_arg"]).as_str()).as_str()).unwrap();
                                     let new_full_sig = new_full_sig.to_string();
                                     let new_full_sig = get_ref_arg_re.replace_all(new_full_sig.as_str(), new_ref);
@@ -219,8 +219,9 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, function_sig: &str,
     helped
 }
 
-pub fn repair_iteration(compile_cmd: &mut Command, process_errors: &dyn Fn(&Cow<str>) -> bool, print_stats: bool) -> bool {
+pub fn repair_iteration(compile_cmd: &mut Command, process_errors: &dyn Fn(&Cow<str>) -> bool, print_stats: bool, max_iterations: Option<i32>) -> bool {
     let mut count = 0;
+    let max_iterations = max_iterations.unwrap_or(25);
     let result = loop {
         let out = compile_cmd.output().unwrap();
         let stderr = String::from_utf8_lossy(&out.stderr);
@@ -231,7 +232,9 @@ pub fn repair_iteration(compile_cmd: &mut Command, process_errors: &dyn Fn(&Cow<
         if !process_errors(&stderr) {
             break false;
         }
-
+        if max_iterations == count {
+            break false;
+        }
     };
 
     if print_stats {
