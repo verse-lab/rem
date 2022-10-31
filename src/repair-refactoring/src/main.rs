@@ -1,8 +1,9 @@
 use std::time::SystemTime;
 
+mod common;
 mod repair_lifetime_simple;
 mod repair_rustfix;
-mod common;
+mod repair_lifetime_tightest_bound;
 
 use common::RepairSystem;
 
