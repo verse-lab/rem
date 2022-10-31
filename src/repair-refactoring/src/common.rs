@@ -7,18 +7,18 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::process::Command;
 use regex::Regex;
+use serde::{Serialize, Deserialize};
 
 pub trait RepairSystem {
     fn name(&self) -> &str;
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool;
+    fn repair_function(&self, file_name: &str, new_file_name: &str, function_name: &str) -> bool;
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CompilerError {
     pub rendered: String,
 }
-
-use serde::{Serialize, Deserialize};
 
 pub fn compile_file(file_name: &str, args: &Vec<&str>) -> Command {
     let mut compile = Command::new("rustc");
