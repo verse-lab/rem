@@ -7,6 +7,7 @@ use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::process::Command;
+use std::ptr::replace;
 //use radix_fmt::{radix, radix_29};
 use regex::{Regex, escape};
 use serde::{Serialize, Deserialize};
@@ -71,12 +72,17 @@ pub fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
                 &captured["replacement"],
                 current_line,
             );
-            helped = true;
+
             let line_number = match captured["line_number"].parse::<usize>() {
                 Ok(n) => n,
                 Err(_) => continue,
             };
             let replacement = &captured["replacement"];
+            if replacement.contains("&'lifetime") {
+                continue;
+            }
+
+            helped = true;
             while current_line < line_number - 1 {
                 writeln!(writer, "{}", lines_modifiable[current_line]).unwrap();
                 current_line += 1;
@@ -99,7 +105,7 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
     let mut helped = false;
     for item in stream {
         let rendered = item.unwrap().rendered;
-        let re = Regex::new(r"(?P<line_number>\d+) \| (?P<fn_sig>fn .+) \{(?s).*(?-s)= help: consider.+bound: `(?P<constraint_lhs>'[a-z]+): (?P<constraint_rhs>'[a-z]+)`").unwrap();
+        let re = Regex::new(r"(?P<line_number>\d+) \| (?P<fn_sig>fn .+) \{(?s).*(?-s)= help: consider.+bound: `(?P<constraint_lhs>'[a-z0-9]+): (?P<constraint_rhs>'[a-z0-9]+)`").unwrap();
         let help_lines = re.captures_iter(rendered.as_str());
         /*
             &caps["line_number"],
@@ -134,7 +140,7 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
 }
 
 // TODO: URGENT: need to rewrite using syn (AST)
-pub fn annotate_named_lifetime(new_file_name: &str, function_sig: &str) -> bool {
+pub fn annotate_tight_named_lifetime(new_file_name: &str, function_sig: &str) -> bool {
     let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
     let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic>(<(?P<generic_args>.+)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*)").unwrap();
     let capture = re.captures(function_sig);
@@ -147,9 +153,64 @@ pub fn annotate_named_lifetime(new_file_name: &str, function_sig: &str) -> bool 
                 ("", "", args, ret_ty) => {
                     let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
                     let new_args = add_ref_lifetime_re.replace_all(args, r"&'lt0 ");
-                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
+                    //let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
                     let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
-                    let new_sig = format!("{}<'lt0>({}) {}", &captured["fn_prefix"], new_args, new_ret_ty);
+                    let new_sig = format!("{}<'lt0>({}) {}", &captured["fn_prefix"], new_args, ret_ty);
+                    let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
+                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
+                    true
+                },
+                _ => false, // need to support annotating for function already annotated
+            }
+        },
+    };
+    success
+}
+
+// TODO: URGENT: need to rewrite using syn (AST)
+pub fn annotate_loose_named_lifetime(new_file_name: &str, function_sig: &str) -> bool {
+    let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
+    let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic>(<(?P<generic_args>.+)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*)").unwrap();
+    let capture = re.captures(function_sig);
+
+    let success = match capture {
+        None => false,
+        Some(captured) => {
+            match (&captured["where"], &captured["generic"], &captured["args"], &captured["ret_ty"]) {
+                ("", "", "", _) => true, // count as success--no annotation needed
+                ("", "", args, ret_ty) => {
+                    let mut count = -1;
+                    let mut i = 0;
+                    let new_args = args.chars().fold(
+                        String::new(),
+                        |acc, c| {
+                            i+=1;
+                            match args.chars().nth(i) {
+                                None => [acc, c.to_string()].join(""),
+                                Some(next) => [acc, (
+                                    if c == '&' && next  != '\'' {
+                                        count+=1;
+                                        format!("&'lt{} ", count).into()
+                                    } else {
+                                        c.to_string()
+                                    })].join("")
+                            }
+                        }
+                    );
+
+                    let new_generic_lt = (0..(count+1)).fold(
+                        String::new(),
+                        | acc, c| {
+                            if acc.is_empty() {
+                                [format!("'lt{}", c)].join(", ")
+                            } else {
+                                [acc, format!("'lt{}", c)].join(", ")
+                            }
+                        }
+                    );
+                    let new_sig = format!("{}<{}>({}) {}", &captured["fn_prefix"], new_generic_lt, new_args, ret_ty);
+
+                    let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
                     let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
                     fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
                     true
@@ -172,7 +233,7 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
         let error_lines = reference_re.captures_iter(rendered.as_str());
 
         for captured in error_lines {
-            println!("ref_full: {}, ref: {}", &captured["ref_full"], &captured["ref"]);
+            //println!("ref_full: {}, ref: {}", &captured["ref_full"], &captured["ref"]);
             let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
             let mut fn_str_regex = format!(r"(?P<full_fn_sig>.*fn {}\s*(?P<generic>(<(?P<generic_args>.*)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*))", function_name);
             fn_str_regex.push_str("\\{");
@@ -189,13 +250,13 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
                     let re_gen_replace = Regex::new(format!("<{}>", generic_args).as_str()).unwrap();
                     let new_full_sig = re_gen_replace.replace_all(old_full_sig.as_str(), sig_new_generic_args);
                     match &capture_sig["args"] {
-                        "" => {println!("empty args")},
+                        "" => {},
                         args => {
                             let get_ref_arg_re = Regex::new(format!(r"(?P<ref_arg>{}.*:.*(,|\)))", &captured["ref"]).as_str()).unwrap(); // TODO: highly unstable!! need syn
                             match get_ref_arg_re.captures(args) {
                                 None => {},
                                 Some(captured_ref) => {
-                                    println!("captured ref arg: {}", &captured_ref["ref_arg"]);
+                                    // println!("captured ref arg: {}", &captured_ref["ref_arg"]);
                                     let replace_ref_re = Regex::new(r"\&(?P<old_lt>'\S+)\s").unwrap();
                                     let new_ref = replace_ref_re.replace_all(&captured_ref["ref_arg"], format!("&{} ",new_lt)); // replace only the first one
                                     let get_ref_arg_re = Regex::new(escape(format!("{}", &captured_ref["ref_arg"]).as_str()).as_str()).unwrap();
@@ -217,6 +278,10 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
 
     }
     helped
+}
+
+pub fn tighten_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_name: &str) -> bool {
+    false
 }
 
 pub fn repair_iteration(compile_cmd: &mut Command, process_errors: &dyn Fn(&Cow<str>) -> bool, print_stats: bool, max_iterations: Option<i32>) -> bool {
