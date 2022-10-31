@@ -12,7 +12,7 @@ use serde::{Serialize, Deserialize};
 pub trait RepairSystem {
     fn name(&self) -> &str;
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool;
-    fn repair_function(&self, file_name: &str, new_file_name: &str, function_name: &str) -> bool;
+    fn repair_function(&self, file_name: &str, new_file_name: &str, function_sig: &str) -> bool;
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -119,6 +119,34 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
 
     }
     helped
+}
+
+// TODO: URGENT: need to rewrite using syn (AST)
+pub fn annotate_named_lifetime(new_file_name: &str, function_sig: &str) -> bool {
+    let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
+    let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic><(?P<generic_args>.+)>)?\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>where (?s).*(?-s))?").unwrap();
+    let mut capture = re.captures(function_sig);
+
+    let success = match capture {
+        None => false,
+        Some(captured) => {
+            match (&captured["where"], &captured["generic"], &captured["args"], &captured["ret_ty"]) {
+                ("", "", "", _) => true, // count as success--no annotation needed
+                ("", "", args, ret_ty) => {
+                    let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
+                    let new_args = add_ref_lifetime_re.replace_all(args, r"\&'a ");
+                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"\&'a ");
+                    let replace_re = Regex::new(regex::escape(function_sig).as_str()).unwrap();
+                    let new_sig = format!("{}<'a>({}) {}", &captured["fn_prefix"], new_args, new_ret_ty);
+                    let new_file_content = replace_re.replace_all(file_content.as_str(), regex::escape(new_sig.as_str()));
+                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
+                    true
+                },
+                _ => false, // need to support annotating for function already annotated
+            }
+        },
+    };
+    success
 }
 
 pub fn repair_iteration(compile_cmd: &mut Command, process_errors: &dyn Fn(&Cow<str>) -> bool, print_stats: bool) -> bool {
