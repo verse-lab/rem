@@ -30,7 +30,7 @@ pub fn new_foo () {
     println!("{}", *z);
 }
 
-fn bar_extracted<'lt0>(x_ref: &'lt0 i32, z: &'lt0 i32, y: &'lt0 i32)  -> &i32 {
+fn bar_extracted<'lt0>(x_ref: &'lt0 i32, z: &'lt0 i32, y: &'lt0 i32)  -> &'lt0 i32 {
     if *z < *x_ref {
         &y
     } else {

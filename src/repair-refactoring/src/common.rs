@@ -7,7 +7,6 @@ use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use std::ptr::replace;
 //use radix_fmt::{radix, radix_29};
 use regex::{Regex, escape};
 use serde::{Serialize, Deserialize};
@@ -153,9 +152,9 @@ pub fn annotate_tight_named_lifetime(new_file_name: &str, function_sig: &str) ->
                 ("", "", args, ret_ty) => {
                     let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
                     let new_args = add_ref_lifetime_re.replace_all(args, r"&'lt0 ");
-                    //let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
+                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
                     let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
-                    let new_sig = format!("{}<'lt0>({}) {}", &captured["fn_prefix"], new_args, ret_ty);
+                    let new_sig = format!("{}<'lt0>({}) {}", &captured["fn_prefix"], new_args, new_ret_ty);
                     let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
                     fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
                     true
@@ -177,7 +176,7 @@ pub fn annotate_loose_named_lifetime(new_file_name: &str, function_sig: &str) ->
         None => false,
         Some(captured) => {
             match (&captured["where"], &captured["generic"], &captured["args"], &captured["ret_ty"]) {
-                ("", "", "", _) => true, // count as success--no annotation needed
+                ("", "", "", _) => true, // count as success--no argument so no annotation needed
                 ("", "", args, ret_ty) => {
                     let mut count = -1;
                     let mut i = 0;
@@ -198,6 +197,10 @@ pub fn annotate_loose_named_lifetime(new_file_name: &str, function_sig: &str) ->
                         }
                     );
 
+                    if count < 0 {
+                        return false;
+                    }
+
                     let new_generic_lt = (0..(count+1)).fold(
                         String::new(),
                         | acc, c| {
@@ -208,7 +211,12 @@ pub fn annotate_loose_named_lifetime(new_file_name: &str, function_sig: &str) ->
                             }
                         }
                     );
-                    let new_sig = format!("{}<{}>({}) {}", &captured["fn_prefix"], new_generic_lt, new_args, ret_ty);
+
+                    let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
+                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
+
+                    let new_sig = format!("{}<{}>({}) {}", &captured["fn_prefix"], new_generic_lt, new_args, new_ret_ty);
+
 
                     let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
                     let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
@@ -280,7 +288,7 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
     helped
 }
 
-pub fn tighten_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_name: &str) -> bool {
+pub fn tighten_bounds(_: &Cow<str>, _: &str, _: &str, _: &str) -> bool {
     false
 }
 
