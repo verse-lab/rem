@@ -2,6 +2,9 @@ extern crate serde_json;
 
 use std::borrow::Cow;
 use std::fs;
+use std::fs::File;
+use std::io::BufWriter;
+use std::io::Write;
 use regex::Regex;
 
 use crate::common::{
@@ -30,7 +33,9 @@ fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
         }
 
         let mut current_line = 0;
-        let mut content = String::new();
+
+        let out_file = File::create(&new_file_name).unwrap();
+        let mut writer = BufWriter::new(out_file);
 
         for captured in help_lines {
             println!(
@@ -46,20 +51,16 @@ fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
             };
             let replacement = &captured["replacement"];
             while current_line < line_number - 1 {
-                content.push_str(lines_modifiable[current_line]);
-                content.push('\n');
+                writeln!(writer, "{}", lines_modifiable[current_line]).unwrap();
                 current_line += 1;
             }
-            content.push_str(replacement);
-            content.push('\n');
+            writeln!(writer, "{}", replacement).unwrap();
             current_line += 1;
         }
         while current_line < lines_modifiable.len() {
-            content.push_str(lines_modifiable[current_line]);
-            content.push('\n');
+            writeln!(writer, "{}", lines_modifiable[current_line]).unwrap();
             current_line += 1;
         }
-        fs::write(new_file_name.to_string(), content).unwrap();
     }
     helped
 }
