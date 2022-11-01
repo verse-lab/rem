@@ -15,10 +15,13 @@ pub fn new_foo(){
     }
 }
 
-fn bar_extracted<'lt0, 'lt1>(p: &'lt1 mut &'lt1  i32, x: &'lt0  i32)  {
+fn bar_extracted<'lt0, 'lt1, 'lt2>(p: &'lt2 mut &'lt2  i32, x: &'lt0  i32)  where 'lt0: 'lt1 {
     *p = &x;
 }
 
 fn main() {}
+
+
+
 
 
