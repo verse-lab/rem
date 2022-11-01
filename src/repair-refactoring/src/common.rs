@@ -260,6 +260,10 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
                     match &capture_sig["args"] {
                         "" => {},
                         args => {
+                            let arg_count_re = Regex::new(".*,?").unwrap();
+                            if arg_count_re.captures_iter(args).count() >= count {
+                                return false;
+                            }
                             let get_ref_arg_re = Regex::new(format!(r"(?P<ref_arg>{}.*:.*(,|\)))", &captured["ref"]).as_str()).unwrap(); // TODO: highly unstable!! need syn
                             match get_ref_arg_re.captures(args) {
                                 None => {},

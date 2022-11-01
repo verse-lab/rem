@@ -34,7 +34,7 @@ impl RepairSystem for Repairer {
         let process_errors = |stderr: &Cow<str>| {
             let simple_repairs = repair_bounds_help(stderr, new_file_name) ||
                 repair_standard_help(stderr, new_file_name);
-            println!("simple repairs: {}", simple_repairs);
+
             if simple_repairs {
                 true
             } else {
