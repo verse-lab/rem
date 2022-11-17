@@ -1,4 +1,4 @@
-pub fn original_foo(){
+pub fn foo(){
     let p : &mut &i32 = &mut &0;
     {
         let x = 1;
@@ -6,17 +6,6 @@ pub fn original_foo(){
     }
 }
 
-pub fn new_foo(){
-    let p : &mut &i32 = &mut &0;
-    {
-        let x = 1;
-        bar_extracted(p, &x);
-        println!("{}", **p);
-    }
+fn main() {
+    foo()
 }
-
-fn bar_extracted(p: &mut & i32, x: & i32) {
-    *p = &x;
-}
-
-fn main() {}
