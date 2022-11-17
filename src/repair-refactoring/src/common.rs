@@ -256,7 +256,6 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
                     let new_lt = format!("'lt{}", count);
                     let sig_new_generic_args = format!("<{}, {}>", generic_args, new_lt);
                     let re_gen_replace = Regex::new(format!("<{}>", generic_args).as_str()).unwrap();
-                    let new_full_sig = re_gen_replace.replace_all(old_full_sig.as_str(), sig_new_generic_args);
                     match &capture_sig["args"] {
                         "" => {},
                         args => {
@@ -264,6 +263,7 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
                             if count == ref_count {
                                 return false;
                             }
+                            let new_full_sig = re_gen_replace.replace_all(old_full_sig.as_str(), sig_new_generic_args);
                             let get_ref_arg_re = Regex::new(format!(r"(?P<ref_arg>{}.*:.*(,|\)))", &captured["ref"]).as_str()).unwrap(); // TODO: highly unstable!! need syn
                             match get_ref_arg_re.captures(args) {
                                 None => {},
