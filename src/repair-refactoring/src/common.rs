@@ -7,7 +7,8 @@ use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-//use radix_fmt::{radix, radix_29};
+use proc_macro2::{LineColumn, Span};
+use syn::{spanned::Spanned, visit_mut::VisitMut};
 use regex::{Regex, escape};
 use serde::{Serialize, Deserialize};
 
@@ -16,17 +17,7 @@ pub trait RepairSystem {
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool;
     fn repair_function(&self, file_name: &str, new_file_name: &str, function_sig: &str, function_name: &str) -> bool;
 }
-/*
-fn gen_next_lexico_alpha(current_number: i32) -> String {
-    if current_number < 10 {
-        let base_29 = radix(current_number + 10, 29).to_string();
-        base_29.clone()
-    }
-    let base_29 = radix(current_number, 29);
-    println!("{}", base_29);
-    base_29.to_string().clone()
-}
-*/
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CompilerError {
     pub rendered: String,
@@ -139,7 +130,46 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
 }
 
 // TODO: URGENT: need to rewrite using syn (AST)
+struct TightLifetimeAnnotator{}
+
+impl VisitMut for TightLifetimeAnnotator {
+    fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
+        let id = i.sig.ident;
+        println!("visiting: {}", id);
+    }
+}
+
 pub fn annotate_tight_named_lifetime(new_file_name: &str, function_sig: &str) -> bool {
+    let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
+    let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e))?;
+    let mut visit = TightLifetimeAnnotator {};
+    visit.visit_item_fn_mut(&mut file);
+    let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic>(<(?P<generic_args>.+)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*)").unwrap();
+    let capture = re.captures(function_sig);
+
+    let success = match capture {
+        None => false,
+        Some(captured) => {
+            match (&captured["where"], &captured["generic"], &captured["args"], &captured["ret_ty"]) {
+                ("", "", "", _) => true, // count as success--no annotation needed
+                ("", "", args, ret_ty) => {
+                    let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
+                    let new_args = add_ref_lifetime_re.replace_all(args, r"&'lt0 ");
+                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
+                    let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
+                    let new_sig = format!("{}<'lt0>({}) {}", &captured["fn_prefix"], new_args, new_ret_ty);
+                    let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
+                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
+                    true
+                },
+                _ => false, // need to support annotating for function already annotated
+            }
+        },
+    };
+    success
+}
+
+pub fn annotate_tight_named_lifetime_regex(new_file_name: &str, function_sig: &str) -> bool {
     let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
     let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic>(<(?P<generic_args>.+)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*)").unwrap();
     let capture = re.captures(function_sig);
