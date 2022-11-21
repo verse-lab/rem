@@ -115,3 +115,25 @@ fn extract_read_and_write_bar_fixed(x: &mut i32) {
     *x = 5;
     println!("x={}", x);
 }
+
+pub fn original_foo() {
+    let mut x = 1;
+    println!("x={}", x);
+    x = 5;
+    println!("x={}", x);
+}
+
+pub fn new_foo() {
+    let mut x = 1;
+    extract_immutable(&x);
+    extract_mutable(&mut x);
+    println!("x={}", x);
+}
+
+fn extract_immutable(x: &i32) {
+    println!("x={}", *x);
+}
+
+fn extract_mutable(x: &mut i32) {
+    *x = 5;
+}

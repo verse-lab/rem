@@ -57,3 +57,19 @@ fn bar_fixed<'a, 'b>(x_ref: & 'a i32, z: & 'a i32, y: &'b i32) -> & 'b i32 {
         &W
     }
 }
+
+fn bar_extracted<'a, 'b, 'c>(x_ref: &'a i32, z: &'b i32, y: &'c i32) -> &'c i32 {
+    if *z < *x_ref {
+        &y
+    } else {
+        &W
+    }
+}
+
+fn bar_extracted_elidded<'c>(x_ref: &i32, z: &i32, y: &'c i32) -> &'c i32 {
+    if *z < *x_ref {
+        &y
+    } else {
+        &W
+    }
+}
