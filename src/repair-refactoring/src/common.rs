@@ -4,11 +4,10 @@ extern crate radix_fmt;
 
 use std::borrow::Cow;
 use std::fs;
-use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::process::Command;
-use proc_macro2::{LineColumn, Span};
-use syn::{spanned::Spanned, visit_mut::VisitMut};
+use std::process::{Command, Stdio};
+use proc_macro2::{Span};
+use syn::{FnArg, Lifetime, LifetimeDef, visit_mut::VisitMut};
 use regex::{Regex, escape};
 use serde::{Serialize, Deserialize};
 
@@ -53,7 +52,7 @@ pub fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
 
         let mut current_line = 0;
 
-        let out_file = File::create(&new_file_name).unwrap();
+        let out_file = fs::File::create(&new_file_name).unwrap();
         let mut writer = BufWriter::new(out_file);
         for captured in help_lines {
             println!(
@@ -130,134 +129,171 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
 }
 
 // TODO: URGENT: need to rewrite using syn (AST)
-struct TightLifetimeAnnotator{}
+pub fn format_source(src: &str) -> String {
+    let rustfmt = {
+        let mut proc = Command::new(&"rustfmt")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn().unwrap();
+        let mut stdin = proc.stdin.take().unwrap();
+        stdin.write_all(src.as_bytes()).unwrap();
+        proc
+    };
 
-impl VisitMut for TightLifetimeAnnotator {
+    let stdout = rustfmt.wait_with_output().unwrap();
+
+    String::from_utf8(stdout.stdout).unwrap()
+}
+
+struct TightLifetimeAnnotator<'a> {
+    fn_name : &'a str,
+    success : bool
+}
+
+impl VisitMut for TightLifetimeAnnotator<'_> {
+    fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
+        match i {
+            FnArg::Receiver(_) => (), // don't modify receiver yet (&self)
+            FnArg::Typed(t) =>
+                {
+                    match t.ty.as_mut() {
+                        syn::Type::Reference(r) =>
+                            {
+                                r.lifetime = Some(Lifetime::new("'lt0", Span::call_site()))
+                            },
+                        _ => ()
+                    }}
+        }
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
-        let id = i.sig.ident;
-        println!("visiting: {}", id);
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name.to_string() {
+            false => (),
+            true =>
+                match (&mut i.sig.inputs, &mut i.sig.generics, &mut i.sig.output)  {
+                    (inputs, _, _) if inputs.len() == 0 => self.success = true,
+                    (_, gen, _) if gen.params.iter().any(|x| match x {
+                        syn::GenericParam::Lifetime(_) => true,
+                        _ => false
+                    })=> self.success = false,
+                    (inputs, gen, out) =>
+                        {
+                            let lifetime = Lifetime::new("'lt0", Span::call_site());
+                            gen.params.push(syn::GenericParam::Lifetime(LifetimeDef { attrs: vec![], lifetime, colon_token: None, bounds: Default::default() }));
+                            inputs.iter_mut().map(|arg| self.visit_fn_arg_mut(arg)).all(|_| true);
+                            match out {
+                                syn::ReturnType::Type(_, ty) => {
+                                    match ty.as_mut() {
+                                        syn::Type::Reference(r) =>
+                                            {
+                                                r.lifetime = Some(Lifetime::new("'lt0", Span::call_site()))
+                                            },
+                                        _ => ()
+                                    }
+                                },
+                                _ => ()
+                            };
+                            self.success = true
+                        }
+                }
+        }
     }
 }
 
-pub fn annotate_tight_named_lifetime(new_file_name: &str, function_sig: &str) -> bool {
+pub fn annotate_tight_named_lifetime(new_file_name: &str, fn_name: &str) -> bool {
     let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
-    let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e))?;
-    let mut visit = TightLifetimeAnnotator {};
-    visit.visit_item_fn_mut(&mut file);
-    let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic>(<(?P<generic_args>.+)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*)").unwrap();
-    let capture = re.captures(function_sig);
-
-    let success = match capture {
-        None => false,
-        Some(captured) => {
-            match (&captured["where"], &captured["generic"], &captured["args"], &captured["ret_ty"]) {
-                ("", "", "", _) => true, // count as success--no annotation needed
-                ("", "", args, ret_ty) => {
-                    let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
-                    let new_args = add_ref_lifetime_re.replace_all(args, r"&'lt0 ");
-                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
-                    let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
-                    let new_sig = format!("{}<'lt0>({}) {}", &captured["fn_prefix"], new_args, new_ret_ty);
-                    let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
-                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
-                    true
-                },
-                _ => false, // need to support annotating for function already annotated
-            }
+    let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
+    let mut visit = TightLifetimeAnnotator { fn_name, success: false };
+    visit.visit_file_mut(&mut file);
+    let file = quote::ToTokens::into_token_stream(file).to_string();
+    match visit.success {
+        true => {
+            fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
+            true
         },
-    };
-    success
-}
+        false => false
+    }
 
-pub fn annotate_tight_named_lifetime_regex(new_file_name: &str, function_sig: &str) -> bool {
-    let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
-    let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic>(<(?P<generic_args>.+)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*)").unwrap();
-    let capture = re.captures(function_sig);
-
-    let success = match capture {
-        None => false,
-        Some(captured) => {
-            match (&captured["where"], &captured["generic"], &captured["args"], &captured["ret_ty"]) {
-                ("", "", "", _) => true, // count as success--no annotation needed
-                ("", "", args, ret_ty) => {
-                    let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
-                    let new_args = add_ref_lifetime_re.replace_all(args, r"&'lt0 ");
-                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
-                    let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
-                    let new_sig = format!("{}<'lt0>({}) {}", &captured["fn_prefix"], new_args, new_ret_ty);
-                    let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
-                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
-                    true
-                },
-                _ => false, // need to support annotating for function already annotated
-            }
-        },
-    };
-    success
 }
 
 // TODO: URGENT: need to rewrite using syn (AST)
-pub fn annotate_loose_named_lifetime(new_file_name: &str, function_sig: &str) -> bool {
+struct LooseLifetimeAnnotator<'a> {
+    fn_name : &'a str,
+    lt_num : &'a mut i32,
+    success : bool
+}
+
+impl VisitMut for LooseLifetimeAnnotator<'_> {
+    fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
+        match i {
+            FnArg::Receiver(_) => (), // don't modify receiver yet (&self)
+            FnArg::Typed(t) =>
+                {
+                    match t.ty.as_mut() {
+                        syn::Type::Reference(r) =>
+                            {
+                                r.lifetime = Some(Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site()));
+                                *self.lt_num += 1
+                            },
+                        _ => ()
+                    }}
+        }
+    }
+
+    fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name.to_string() {
+            false => (),
+            true =>
+                match (&mut i.sig.inputs, &mut i.sig.generics, &mut i.sig.output)  {
+                    (inputs, _, _) if inputs.len() == 0 => self.success = true,
+                    (_, gen, _) if gen.params.iter().any(|x| match x {
+                        syn::GenericParam::Lifetime(_) => true,
+                        _ => false
+                    })=> self.success = false,
+                    (inputs, gen, out) =>
+                        {
+                            inputs.iter_mut().map(|arg| self.visit_fn_arg_mut(arg)).all(|_| true);
+                            match out {
+                                syn::ReturnType::Type(_, ty) => {
+                                    match ty.as_mut() {
+                                        syn::Type::Reference(r) =>
+                                            {
+                                                r.lifetime = Some(Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site()));
+                                                *self.lt_num += 1;
+                                            },
+                                        _ => ()
+                                    }
+                                },
+                                _ => ()
+                            };
+                            for lt in 0..*self.lt_num {
+                                let lifetime = Lifetime::new(format!("'lt{}", lt).as_str(), Span::call_site());
+                                gen.params.push(syn::GenericParam::Lifetime(LifetimeDef { attrs: vec![], lifetime, colon_token: None, bounds: Default::default() }))
+                            }
+                            self.success = true
+                        }
+                }
+        }
+    }
+}
+
+pub fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> bool {
     let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
-    let re = Regex::new(r"(?P<fn_prefix>.*fn (?P<fn_name>.*))\s?(?P<generic>(<(?P<generic_args>.+)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*)").unwrap();
-    let capture = re.captures(function_sig);
-
-    let success = match capture {
-        None => false,
-        Some(captured) => {
-            match (&captured["where"], &captured["generic"], &captured["args"], &captured["ret_ty"]) {
-                ("", "", "", _) => true, // count as success--no argument so no annotation needed
-                ("", "", args, ret_ty) => {
-                    let mut count = -1;
-                    let mut i = 0;
-                    let new_args = args.chars().fold(
-                        String::new(),
-                        |acc, c| {
-                            i+=1;
-                            match args.chars().nth(i) {
-                                None => [acc, c.to_string()].join(""),
-                                Some(next) => [acc, (
-                                    if c == '&' && next  != '\'' {
-                                        count+=1;
-                                        format!("&'lt{} ", count).into()
-                                    } else {
-                                        c.to_string()
-                                    })].join("")
-                            }
-                        }
-                    );
-
-                    if count < 0 {
-                        return false;
-                    }
-
-                    let new_generic_lt = (0..(count+1)).fold(
-                        String::new(),
-                        | acc, c| {
-                            if acc.is_empty() {
-                                [format!("'lt{}", c)].join(", ")
-                            } else {
-                                [acc, format!("'lt{}", c)].join(", ")
-                            }
-                        }
-                    );
-
-                    let add_ref_lifetime_re = Regex::new(r"\&").unwrap();
-                    let new_ret_ty = add_ref_lifetime_re.replace_all(ret_ty, r"&'lt0 ");
-
-                    let new_sig = format!("{}<{}>({}) {}", &captured["fn_prefix"], new_generic_lt, new_args, new_ret_ty);
-
-
-                    let replace_re = Regex::new(escape(function_sig).as_str()).unwrap();
-                    let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
-                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
-                    true
-                },
-                _ => false, // need to support annotating for function already annotated
-            }
+    let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
+    let lt_num = &mut 0;
+    let mut visit = LooseLifetimeAnnotator { fn_name, success: false, lt_num };
+    visit.visit_file_mut(&mut file);
+    let file = quote::ToTokens::into_token_stream(file).to_string();
+    match visit.success {
+        true => {
+            fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
+            true
         },
-    };
-    success
+        false => false
+    }
+
 }
 
 pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_name: &str) -> bool {

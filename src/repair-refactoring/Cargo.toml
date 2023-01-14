@@ -15,5 +15,6 @@ regex = "1.6.0"
 rustfix = "0.6.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-syn = {version="1.0.86", features=["printing", "parsing"]}
+syn = {version="1.0.86", features=["printing", "parsing", "full", "visit-mut", "visit"]}
 proc-macro2 = { version = "1.0", features = ["span-locations"]}
+quote = "1.0"
