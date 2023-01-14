@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fs;
 
-use crate::common::{RepairSystem, compile_file, repair_iteration, repair_standard_help, repair_bounds_help, annotate_loose_named_lifetime};
+use crate::common::{RepairSystem, compile_file, repair_iteration, repair_bounds_help, annotate_loose_named_lifetime};
 use crate::repair_lifetime_simple;
 
 pub struct Repairer {}
@@ -24,7 +24,7 @@ impl RepairSystem for Repairer {
         let mut compile_cmd = compile_file(&new_file_name, &args);
 
         let process_errors = |stderr: &Cow<str>| {
-            repair_bounds_help(stderr, new_file_name)
+            repair_bounds_help(stderr, new_file_name, fn_name)
         };
 
         repair_iteration(&mut compile_cmd, &process_errors, true, Some(50))

@@ -15,8 +15,9 @@ pub fn new_foo(){
     }
 }
 
-fn bar_extracted<'a, 'b, 'c>(p: &'a mut &'b i32, x: &'c i32) where 'c: 'b {
+fn bar_extracted<'a, 'b, 'c>(p: &'a mut &'b i32, x: &'c i32) {
     *p = &x;
 }
 
 fn main() {}
+

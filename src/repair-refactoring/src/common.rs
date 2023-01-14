@@ -7,7 +7,8 @@ use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::{Command, Stdio};
 use proc_macro2::{Span};
-use syn::{FnArg, Lifetime, LifetimeDef, Type, TypeReference, visit_mut::VisitMut};
+use quote::ToTokens;
+use syn::{FnArg, Lifetime, LifetimeDef, PredicateLifetime, Type, TypeReference, visit_mut::VisitMut, WhereClause, WherePredicate};
 use regex::{Regex, escape};
 use serde::{Serialize, Deserialize};
 
@@ -87,14 +88,42 @@ pub fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
     helped
 }
 
-pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
+struct FnLifetimeBounder<'a> {
+    fn_name: &'a str,
+    lifetime: &'a str,
+    bound: &'a str,
+    success: bool
+}
+
+impl VisitMut for FnLifetimeBounder<'_> {
+    fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => {
+                let gen = &mut i.sig.generics;
+                let wc = gen.where_clause.get_or_insert(WhereClause{ where_token: Default::default(), predicates: Default::default() });
+                let mut wp = PredicateLifetime {
+                    lifetime: Lifetime::new(self.lifetime, Span::call_site()),
+                    colon_token: Default::default(),
+                    bounds: Default::default(),
+                };
+                wp.bounds.push(Lifetime::new(self.bound, Span::call_site()));
+                wc.predicates.push(WherePredicate::Lifetime(wp));
+                self.success = true
+            }
+        }
+    }
+}
+
+pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str, fn_name : &str) -> bool {
     let binding = stderr.to_string();
     let deserializer = serde_json::Deserializer::from_str(binding.as_str());
     let stream = deserializer.into_iter::<CompilerError>();
     let mut helped = false;
     for item in stream {
         let rendered = item.unwrap().rendered;
-        let re = Regex::new(r"(?P<line_number>\d+) \| (?P<fn_sig>fn .+) \{(?s).*(?-s)= help: consider.+bound: `(?P<constraint_lhs>'[a-z0-9]+): (?P<constraint_rhs>'[a-z0-9]+)`").unwrap();
+        let re = Regex::new(r"= help: consider.+bound: `(?P<constraint_lhs>'[a-z0-9]+): (?P<constraint_rhs>'[a-z0-9]+)`").unwrap();
         let help_lines = re.captures_iter(rendered.as_str());
         /*
             &caps["line_number"],
@@ -103,27 +132,19 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
             &caps["constraint_rhs"],
         */
         for captured in help_lines {
-            helped = true;
             let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
-            let where_re = Regex::new(r"(?P<where>where (?s).*(?-s))\{").unwrap();
-            let captures_where = where_re.captures(&captured["fn_sig"]);
-
-            match captures_where {
-                Some(captured_where) => {
-                    let replace_re = Regex::new(escape(&captured_where["where"]).as_str()).unwrap();
-                    let new_where = format!("{}, {}: {}", &captured_where["where"], &captured["constraint_lhs"], &captured["constraint_rhs"]);
-                    let new_file_content = replace_re.replace_all(file_content.as_str(), escape(new_where.as_str()));
-                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
+            let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
+            let mut visit = FnLifetimeBounder { fn_name, lifetime: &captured["constraint_lhs"], bound: &captured["constraint_rhs"], success: false };
+            visit.visit_file_mut(&mut file);
+            let file = file.into_token_stream().to_string();
+            match visit.success {
+                true => {
+                    fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
+                    helped = true;
                 },
-                None => {
-                    let replace_re = Regex::new(escape(&captured["fn_sig"]).as_str()).unwrap();
-                    let new_sig = format!("{} where {}: {}", &captured["fn_sig"], &captured["constraint_lhs"], &captured["constraint_rhs"]);
-                    let new_file_content = replace_re.replace_all(file_content.as_str(), new_sig.as_str());
-                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
-                },
+                false => ()
             }
         }
-
     }
     helped
 }
@@ -144,12 +165,10 @@ pub fn format_source(src: &str) -> String {
     String::from_utf8(stdout.stdout).unwrap()
 }
 
-struct TightLifetimeAnnotator<'a> {
-    fn_name : &'a str,
-    success : bool
-}
+// Tight Lifetime Annotator
+struct TightLifetimeAnnotatorTypeHelper {}
 
-impl VisitMut for TightLifetimeAnnotator<'_> {
+impl VisitMut for TightLifetimeAnnotatorTypeHelper {
     fn visit_type_mut(&mut self, i: &mut Type) {
         match i {
             Type::Reference(r) =>
@@ -160,14 +179,28 @@ impl VisitMut for TightLifetimeAnnotator<'_> {
             _ => ()
         }
     }
+}
 
+struct TightLifetimeAnnotatorFnArgHelper {}
+
+impl VisitMut for TightLifetimeAnnotatorFnArgHelper {
     fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
         match i {
             FnArg::Receiver(_) => (), // don't modify receiver yet (&self)
-            FnArg::Typed(t) =>self.visit_type_mut(t.ty.as_mut())
+            FnArg::Typed(t) => {
+                let mut type_helper = TightLifetimeAnnotatorTypeHelper {};
+                type_helper.visit_type_mut(t.ty.as_mut())
+            },
         }
     }
+}
 
+struct TightLifetimeAnnotator<'a> {
+    fn_name : &'a str,
+    success : bool
+}
+
+impl VisitMut for TightLifetimeAnnotator<'_> {
     fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name.to_string() {
@@ -183,7 +216,10 @@ impl VisitMut for TightLifetimeAnnotator<'_> {
                         {
                             let lifetime = Lifetime::new("'lt0", Span::call_site());
                             gen.params.push(syn::GenericParam::Lifetime(LifetimeDef { attrs: vec![], lifetime, colon_token: None, bounds: Default::default() }));
-                            inputs.iter_mut().map(|arg| self.visit_fn_arg_mut(arg)).all(|_| true);
+                            inputs.iter_mut().map(|arg| {
+                                let mut fn_arg_helper = TightLifetimeAnnotatorFnArgHelper {};
+                                fn_arg_helper.visit_fn_arg_mut(arg)
+                            }).all(|_| true);
                             match out {
                                 syn::ReturnType::Type(_, ty) => {
                                     match ty.as_mut() {
@@ -219,14 +255,12 @@ pub fn annotate_tight_named_lifetime(new_file_name: &str, fn_name: &str) -> bool
 
 }
 
-// TODO: URGENT: need to rewrite using syn (AST)
-struct LooseLifetimeAnnotator<'a> {
-    fn_name : &'a str,
+// Loose Lifetime Annotator
+struct LooseLifetimeAnnotatorTypeHelper {
     lt_num : i32,
-    success : bool
 }
 
-impl VisitMut for LooseLifetimeAnnotator<'_> {
+impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
     fn visit_type_mut(&mut self, i: &mut Type) {
         match i {
             Type::Reference(r) =>
@@ -238,14 +272,32 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
             _ => ()
         }
     }
+}
 
+struct LooseLifetimeAnnotatorFnArgHelper {
+    lt_num : i32
+}
+
+impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
     fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
         match i {
             FnArg::Receiver(_) => (), // don't modify receiver yet (&self)
-            FnArg::Typed(t) => self.visit_type_mut(t.ty.as_mut()),
+            FnArg::Typed(t) => {
+                let mut type_helper = LooseLifetimeAnnotatorTypeHelper { lt_num: self.lt_num };
+                type_helper.visit_type_mut(t.ty.as_mut());
+                self.lt_num = type_helper.lt_num
+            },
         }
     }
+}
 
+struct LooseLifetimeAnnotator<'a> {
+    fn_name : &'a str,
+    lt_num : i32,
+    success : bool
+}
+
+impl VisitMut for LooseLifetimeAnnotator<'_> {
     fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name.to_string() {
@@ -259,7 +311,11 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
                     })=> self.success = false,
                     (inputs, gen, out) =>
                         {
-                            inputs.iter_mut().map(|arg| self.visit_fn_arg_mut(arg)).all(|_| true);
+                            inputs.iter_mut().map(|arg| {
+                                let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper { lt_num: self.lt_num};
+                                fn_arg_helper.visit_fn_arg_mut(arg);
+                                self.lt_num = fn_arg_helper.lt_num
+                            }).all(|_| true);
                             match out {
                                 syn::ReturnType::Type(_, ty) => {
                                     match ty.as_mut() {

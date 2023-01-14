@@ -17,6 +17,10 @@ impl RepairSystem for Repairer {
     }
 
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
+        self.repair_function(file_name, new_file_name, "")
+    }
+
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool {
         let args : Vec<&str> = vec!["--error-format=json"];
         fs::copy(file_name, &new_file_name).unwrap();
 
@@ -24,14 +28,10 @@ impl RepairSystem for Repairer {
 
 
         let process_errors = |stderr: &Cow<str>| {
-            repair_bounds_help(stderr, new_file_name) ||
-            repair_standard_help(stderr, new_file_name)
+            repair_bounds_help(stderr, new_file_name, fn_name) ||
+                repair_standard_help(stderr, new_file_name)
         };
 
         repair_iteration(&mut compile_cmd, &process_errors, true, None)
-    }
-
-    fn repair_function(&self, file_name: &str, new_file_name: &str, _: &str) -> bool {
-        self.repair_file(file_name, new_file_name)
     }
 }
