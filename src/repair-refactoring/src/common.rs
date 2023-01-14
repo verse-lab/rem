@@ -8,8 +8,8 @@ use std::io::{BufWriter, Write};
 use std::process::{Command, Stdio};
 use proc_macro2::{Span};
 use quote::ToTokens;
-use syn::{FnArg, Lifetime, LifetimeDef, PredicateLifetime, Type, TypeReference, visit_mut::VisitMut, WhereClause, WherePredicate};
-use regex::{Regex, escape};
+use syn::{FnArg, Lifetime, LifetimeDef, PredicateLifetime, Type, visit_mut::VisitMut, WhereClause, WherePredicate};
+use regex::{Regex};
 use serde::{Serialize, Deserialize};
 
 pub trait RepairSystem {
@@ -223,7 +223,7 @@ impl VisitMut for TightLifetimeAnnotator<'_> {
                             match out {
                                 syn::ReturnType::Type(_, ty) => {
                                     match ty.as_mut() {
-                                        syn::Type::Reference(r) =>
+                                        Type::Reference(r) =>
                                             {
                                                 r.lifetime = Some(Lifetime::new("'lt0", Span::call_site()))
                                             },
@@ -244,7 +244,7 @@ pub fn annotate_tight_named_lifetime(new_file_name: &str, fn_name: &str) -> bool
     let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
     let mut visit = TightLifetimeAnnotator { fn_name, success: false };
     visit.visit_file_mut(&mut file);
-    let file = quote::ToTokens::into_token_stream(file).to_string();
+    let file = file.into_token_stream().to_string();
     match visit.success {
         true => {
             fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
@@ -319,7 +319,7 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
                             match out {
                                 syn::ReturnType::Type(_, ty) => {
                                     match ty.as_mut() {
-                                        syn::Type::Reference(r) =>
+                                        Type::Reference(r) =>
                                             {
                                                 r.lifetime = Some(Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site()));
                                                 self.lt_num += 1;
@@ -345,7 +345,7 @@ pub fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> bool
     let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
     let mut visit = LooseLifetimeAnnotator { fn_name, success: false, lt_num: 0 };
     visit.visit_file_mut(&mut file);
-    let file = quote::ToTokens::into_token_stream(file).to_string();
+    let file = file.into_token_stream().to_string();
     match visit.success {
         true => {
             fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
@@ -376,7 +376,7 @@ impl VisitMut for ArgBoundLoosener<'_> {
                 match t.pat.as_mut() {
                     syn::Pat::Ident(id) if id.ident.to_string() == self.arg_name => {
                         match t.ty.as_mut() {
-                            syn::Type::Reference(r) => {
+                            Type::Reference(r) => {
                                 r.lifetime = Some(Lifetime::new(self.lt, Span::call_site()));
                                 self.success = true
                             },
@@ -435,7 +435,7 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, fn_name: &str) -> b
             let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
             let mut visit = BoundsLoosener { fn_name, arg_name: &captured["ref"], success: false };
             visit.visit_file_mut(&mut file);
-            let file = quote::ToTokens::into_token_stream(file).to_string();
+            let file = file.into_token_stream().to_string();
             match visit.success {
                 true => {
                     fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
