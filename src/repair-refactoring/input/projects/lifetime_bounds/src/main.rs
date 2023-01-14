@@ -1,5 +1,5 @@
-pub fn foo(){
-    let p : &mut &i32 = &mut &0;
+pub fn foo() {
+    let p: &mut &i32 = &mut &0;
     {
         let x = 1;
         *p = &x;

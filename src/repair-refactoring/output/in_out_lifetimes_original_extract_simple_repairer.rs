@@ -1,9 +1,9 @@
 const W: i32 = 5;
 
-pub fn original_foo () {
+pub fn original_foo() {
     let x = 1;
     let x_ref = &x;
-    let mut z : &i32;
+    let mut z: &i32;
     {
         let y = 2;
         z = &y;
@@ -21,10 +21,3 @@ fn extracted<'a>(x_ref: &'a i32, z: &'a mut &'a i32, y: &'a i32) -> &'a i32 {
 }
 
 fn main() {}
-
-
-
-
-
-
-

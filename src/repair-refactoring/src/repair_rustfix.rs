@@ -1,9 +1,7 @@
+use crate::common::{compile_file, repair_iteration, RepairSystem};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs;
-use crate::common::{
-    RepairSystem, compile_file, repair_iteration
-};
 
 pub struct Repairer {}
 
@@ -18,10 +16,13 @@ impl RepairSystem for Repairer {
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
 
-        let process_errors = | stderr : &Cow<str> | {
-            let suggestions =
-                rustfix::get_suggestions_from_json(&*stderr, &HashSet::new(), rustfix::Filter::Everything)
-                    .expect("rustfix failed to run on error json");
+        let process_errors = |stderr: &Cow<str>| {
+            let suggestions = rustfix::get_suggestions_from_json(
+                &*stderr,
+                &HashSet::new(),
+                rustfix::Filter::Everything,
+            )
+            .expect("rustfix failed to run on error json");
 
             if suggestions.len() == 0 {
                 return false;

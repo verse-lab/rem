@@ -1,7 +1,10 @@
 use std::borrow::Cow;
 use std::fs;
 
-use crate::common::{RepairSystem, compile_file, repair_iteration, repair_bounds_help, annotate_tight_named_lifetime, loosen_bounds};
+use crate::common::{
+    annotate_tight_named_lifetime, compile_file, loosen_bounds, repair_bounds_help,
+    repair_iteration, RepairSystem,
+};
 use crate::repair_lifetime_simple;
 
 pub struct Repairer {}
@@ -19,7 +22,7 @@ impl RepairSystem for Repairer {
         fs::copy(file_name, &new_file_name).unwrap();
         annotate_tight_named_lifetime(&new_file_name, fn_name);
         //println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
-        let args : Vec<&str> = vec!["--error-format=json"];
+        let args: Vec<&str> = vec!["--error-format=json"];
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
 
