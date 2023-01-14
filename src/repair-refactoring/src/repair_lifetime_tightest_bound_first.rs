@@ -15,9 +15,9 @@ impl RepairSystem for Repairer {
         repair_lifetime_simple::Repairer {}.repair_file(file_name, new_file_name)
     }
 
-    fn repair_function(&self, file_name: &str, new_file_name: &str, function_sig: &str, function_name: &str) -> bool {
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool {
         fs::copy(file_name, &new_file_name).unwrap();
-        annotate_tight_named_lifetime(&new_file_name, function_sig);
+        annotate_tight_named_lifetime(&new_file_name, fn_name);
         println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
         let args : Vec<&str> = vec!["--error-format=json"];
 
@@ -29,7 +29,7 @@ impl RepairSystem for Repairer {
             if simple_repairs {
                 true
             } else {
-                loosen_bounds(stderr, new_file_name, function_sig, function_name)
+                loosen_bounds(stderr, new_file_name, fn_name)
             }
         };
 

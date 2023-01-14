@@ -14,7 +14,7 @@ use serde::{Serialize, Deserialize};
 pub trait RepairSystem {
     fn name(&self) -> &str;
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool;
-    fn repair_function(&self, file_name: &str, new_file_name: &str, function_sig: &str, function_name: &str) -> bool;
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool;
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -296,7 +296,7 @@ pub fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> bool
 
 }
 
-pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_name: &str) -> bool {
+pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, fn_name: &str) -> bool {
     let binding = stderr.to_string();
     let deserializer = serde_json::Deserializer::from_str(binding.as_str());
     let stream = deserializer.into_iter::<CompilerError>();
@@ -309,7 +309,7 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
         for captured in error_lines {
             //println!("ref_full: {}, ref: {}", &captured["ref_full"], &captured["ref"]);
             let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
-            let mut fn_str_regex = format!(r"(?P<full_fn_sig>.*fn {}\s*(?P<generic>(<(?P<generic_args>.*)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*))", function_name);
+            let mut fn_str_regex = format!(r"(?P<full_fn_sig>.*fn {}\s*(?P<generic>(<(?P<generic_args>.*)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*))", fn_name);
             fn_str_regex.push_str("\\{");
             let re_new_sig = Regex::new(fn_str_regex.as_str()).unwrap();
             let capture_sig = re_new_sig.captures(file_content.as_str()).unwrap();
@@ -356,10 +356,6 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, _: &str, function_n
 
     }
     helped
-}
-
-pub fn tighten_bounds(_: &Cow<str>, _: &str, _: &str, _: &str) -> bool {
-    false
 }
 
 pub fn repair_iteration(compile_cmd: &mut Command, process_errors: &dyn Fn(&Cow<str>) -> bool, print_stats: bool, max_iterations: Option<i32>) -> bool {

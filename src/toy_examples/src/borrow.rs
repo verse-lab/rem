@@ -126,7 +126,8 @@ pub fn original_foo() {
 pub fn new_foo() {
     let mut x = 1;
     extract_immutable(&x);
-    extract_mutable(&mut x);
+    let x_ref = &mut x;
+    extract_mutable(x_ref);
     println!("x={}", x);
 }
 

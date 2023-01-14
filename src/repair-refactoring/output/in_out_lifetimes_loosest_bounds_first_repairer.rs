@@ -1,25 +1,19 @@
 const W: i32 = 5;
-
-pub fn original_foo () {
+pub fn original_foo() {
     let x = 1;
     let x_ref = &x;
-    let mut z : &i32;
+    let mut z: &i32;
     {
         let y = 2;
         z = &y;
-        z = if *z < *x_ref {
-            &y
-        } else {
-            &W
-        };
+        z = if *z < *x_ref { &y } else { &W };
         println!("{}", *z);
     }
 }
-
-pub fn new_foo () {
+pub fn new_foo() {
     let x = 1;
     let x_ref = &x;
-    let mut z : &i32;
+    let mut z: &i32;
     {
         let y = 2;
         z = &y;
@@ -29,15 +23,17 @@ pub fn new_foo () {
     z = x_ref;
     println!("{}", *z);
 }
-
-fn bar_extracted<'a>(x_ref: &'a i32, z: &'a i32, y: &'a i32) -> &'a i32 {
+fn bar_extracted<'lt0, 'lt1, 'lt2, 'lt3>(
+    x_ref: &'lt0 i32,
+    z: &'lt1 i32,
+    y: &'lt2 i32,
+) -> &'lt3 i32 {
     if *z < *x_ref {
         &y
     } else {
         &W
     }
 }
-
 fn main() {}
 
 

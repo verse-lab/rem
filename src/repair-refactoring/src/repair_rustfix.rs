@@ -37,7 +37,7 @@ impl RepairSystem for Repairer {
         repair_iteration(&mut compile_cmd, &process_errors, true, None)
     }
 
-    fn repair_function(&self, file_name: &str, new_file_name: &str, _: &str, _: &str) -> bool {
+    fn repair_function(&self, file_name: &str, new_file_name: &str, _: &str) -> bool {
         self.repair_file(file_name, new_file_name)
     }
 }
