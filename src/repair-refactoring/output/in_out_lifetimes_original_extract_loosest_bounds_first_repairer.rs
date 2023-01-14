@@ -12,7 +12,7 @@ pub fn original_foo () {
     }
 }
 
-fn extracted<'a>(x_ref: &'a i32, z: &'a mut &'a i32, y: &'a i32) -> &'a i32 {
+fn extracted(x_ref: &i32, z: &mut &i32, y: &i32) -> &i32 {
     if *z < *x_ref {
         &y
     } else {
@@ -21,10 +21,3 @@ fn extracted<'a>(x_ref: &'a i32, z: &'a mut &'a i32, y: &'a i32) -> &'a i32 {
 }
 
 fn main() {}
-
-
-
-
-
-
-

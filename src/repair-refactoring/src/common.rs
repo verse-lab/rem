@@ -7,7 +7,7 @@ use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::{Command, Stdio};
 use proc_macro2::{Span};
-use syn::{FnArg, Lifetime, LifetimeDef, visit_mut::VisitMut};
+use syn::{FnArg, Lifetime, LifetimeDef, Type, TypeReference, visit_mut::VisitMut};
 use regex::{Regex, escape};
 use serde::{Serialize, Deserialize};
 
@@ -128,7 +128,6 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
     helped
 }
 
-// TODO: URGENT: need to rewrite using syn (AST)
 pub fn format_source(src: &str) -> String {
     let rustfmt = {
         let mut proc = Command::new(&"rustfmt")
@@ -151,18 +150,21 @@ struct TightLifetimeAnnotator<'a> {
 }
 
 impl VisitMut for TightLifetimeAnnotator<'_> {
+    fn visit_type_mut(&mut self, i: &mut Type) {
+        match i {
+            Type::Reference(r) =>
+                {
+                    r.lifetime = Some(Lifetime::new("'lt0", Span::call_site()));
+                    self.visit_type_mut(r.elem.as_mut());
+                },
+            _ => ()
+        }
+    }
+
     fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
         match i {
             FnArg::Receiver(_) => (), // don't modify receiver yet (&self)
-            FnArg::Typed(t) =>
-                {
-                    match t.ty.as_mut() {
-                        syn::Type::Reference(r) =>
-                            {
-                                r.lifetime = Some(Lifetime::new("'lt0", Span::call_site()))
-                            },
-                        _ => ()
-                    }}
+            FnArg::Typed(t) =>self.visit_type_mut(t.ty.as_mut())
         }
     }
 
@@ -220,24 +222,27 @@ pub fn annotate_tight_named_lifetime(new_file_name: &str, fn_name: &str) -> bool
 // TODO: URGENT: need to rewrite using syn (AST)
 struct LooseLifetimeAnnotator<'a> {
     fn_name : &'a str,
-    lt_num : &'a mut i32,
+    lt_num : i32,
     success : bool
 }
 
 impl VisitMut for LooseLifetimeAnnotator<'_> {
+    fn visit_type_mut(&mut self, i: &mut Type) {
+        match i {
+            Type::Reference(r) =>
+                {
+                    r.lifetime = Some(Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site()));
+                    self.lt_num += 1;
+                    self.visit_type_mut(r.elem.as_mut());
+                },
+            _ => ()
+        }
+    }
+
     fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
         match i {
             FnArg::Receiver(_) => (), // don't modify receiver yet (&self)
-            FnArg::Typed(t) =>
-                {
-                    match t.ty.as_mut() {
-                        syn::Type::Reference(r) =>
-                            {
-                                r.lifetime = Some(Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site()));
-                                *self.lt_num += 1
-                            },
-                        _ => ()
-                    }}
+            FnArg::Typed(t) => self.visit_type_mut(t.ty.as_mut()),
         }
     }
 
@@ -261,14 +266,14 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
                                         syn::Type::Reference(r) =>
                                             {
                                                 r.lifetime = Some(Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site()));
-                                                *self.lt_num += 1;
+                                                self.lt_num += 1;
                                             },
                                         _ => ()
                                     }
                                 },
                                 _ => ()
                             };
-                            for lt in 0..*self.lt_num {
+                            for lt in 0..self.lt_num {
                                 let lifetime = Lifetime::new(format!("'lt{}", lt).as_str(), Span::call_site());
                                 gen.params.push(syn::GenericParam::Lifetime(LifetimeDef { attrs: vec![], lifetime, colon_token: None, bounds: Default::default() }))
                             }
@@ -282,8 +287,7 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
 pub fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> bool {
     let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
-    let lt_num = &mut 0;
-    let mut visit = LooseLifetimeAnnotator { fn_name, success: false, lt_num };
+    let mut visit = LooseLifetimeAnnotator { fn_name, success: false, lt_num: 0 };
     visit.visit_file_mut(&mut file);
     let file = quote::ToTokens::into_token_stream(file).to_string();
     match visit.success {
@@ -294,6 +298,69 @@ pub fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> bool
         false => false
     }
 
+}
+
+struct BoundsLoosener<'a> {
+    fn_name : &'a str,
+    arg_name : &'a str,
+    success : bool
+}
+
+struct ArgBoundLoosener<'a> {
+    arg_name : &'a str,
+    lt : &'a str,
+    success: bool
+}
+
+impl VisitMut for ArgBoundLoosener<'_> {
+    fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
+        match i {
+            FnArg::Receiver(_) => (), // don't modify receiver yet (&self)
+            FnArg::Typed(t) => {
+                match t.pat.as_mut() {
+                    syn::Pat::Ident(id) if id.ident.to_string() == self.arg_name => {
+                        match t.ty.as_mut() {
+                            syn::Type::Reference(r) => {
+                                r.lifetime = Some(Lifetime::new(self.lt, Span::call_site()));
+                                self.success = true
+                            },
+                            _ => ()
+                        }
+                    },
+                    _ => ()
+                }
+            },
+        }
+    }
+}
+
+impl VisitMut for BoundsLoosener<'_> {
+    fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => {
+                let mut lt_count = 0;
+                let gen = &mut i.sig.generics;
+                for i in &gen.params {
+                    match i {
+                        syn::GenericParam::Lifetime(LifetimeDef { .. }) => lt_count += 1,
+                        _ => ()
+                    }
+                };
+                let lt = format!("'lt{}", lt_count);
+                let lifetime = Lifetime::new(lt.as_str(), Span::call_site());
+                gen.params.push(syn::GenericParam::Lifetime(LifetimeDef { attrs: vec![], lifetime, colon_token: None, bounds: Default::default() }));
+                let mut arg_loosener = ArgBoundLoosener { arg_name: self.arg_name, lt: lt.as_str(), success: false };
+                let inputs = &mut i.sig.inputs;
+                inputs.iter_mut().map(|arg| arg_loosener.visit_fn_arg_mut(arg)).all(|_| true);
+                match arg_loosener.success {
+                    true => self.success = true,
+                    false => ()
+                }
+            }
+        }
+    }
 }
 
 pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, fn_name: &str) -> bool {
@@ -309,49 +376,17 @@ pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, fn_name: &str) -> b
         for captured in error_lines {
             //println!("ref_full: {}, ref: {}", &captured["ref_full"], &captured["ref"]);
             let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
-            let mut fn_str_regex = format!(r"(?P<full_fn_sig>.*fn {}\s*(?P<generic>(<(?P<generic_args>.*)>)?)\((?P<args>.*)\)(?P<ret_ty>.*)?\s?(?P<where>(where)?.*))", fn_name);
-            fn_str_regex.push_str("\\{");
-            let re_new_sig = Regex::new(fn_str_regex.as_str()).unwrap();
-            let capture_sig = re_new_sig.captures(file_content.as_str()).unwrap();
-            let old_full_sig = String::from(&capture_sig["full_fn_sig"]);
-            match &capture_sig["generic_args"] {
-                "" => {},
-                generic_args => {
-                    let lifetime_args_re = Regex::new(r"'(?P<named_lifetime>[a-z]+),?").unwrap();
-                    let count = lifetime_args_re.captures_iter(&generic_args).count();
-                    let new_lt = format!("'lt{}", count);
-                    let sig_new_generic_args = format!("<{}, {}>", generic_args, new_lt);
-                    let re_gen_replace = Regex::new(format!("<{}>", generic_args).as_str()).unwrap();
-                    match &capture_sig["args"] {
-                        "" => {},
-                        args => {
-                            let ref_count = args.split("&").count() - 1; // highly unstable
-                            if count == ref_count {
-                                return false;
-                            }
-                            let new_full_sig = re_gen_replace.replace_all(old_full_sig.as_str(), sig_new_generic_args);
-                            let get_ref_arg_re = Regex::new(format!(r"(?P<ref_arg>{}.*:.*(,|\)))", &captured["ref"]).as_str()).unwrap(); // TODO: highly unstable!! need syn
-                            match get_ref_arg_re.captures(args) {
-                                None => {},
-                                Some(captured_ref) => {
-                                    // println!("captured ref arg: {}", &captured_ref["ref_arg"]);
-                                    let replace_ref_re = Regex::new(r"\&(?P<old_lt>'\S+)\s").unwrap();
-                                    let new_ref = replace_ref_re.replace_all(&captured_ref["ref_arg"], format!("&{} ",new_lt)); // replace only the first one
-                                    let get_ref_arg_re = Regex::new(escape(format!("{}", &captured_ref["ref_arg"]).as_str()).as_str()).unwrap();
-                                    let new_full_sig = new_full_sig.to_string();
-                                    let new_full_sig = get_ref_arg_re.replace_all(new_full_sig.as_str(), new_ref);
-                                    let replace_fn_re = Regex::new(escape(old_full_sig.as_str()).as_str()).unwrap();
-                                    let new_file_content = replace_fn_re.replace_all(file_content.as_str(), new_full_sig.to_string().as_str());
-                                    fs::write(new_file_name.to_string(), new_file_content.to_string()).unwrap();
-                                    helped = true;
-                                }
-                            }
-
-                        },
-                    }
+            let mut file = syn::parse_str::<syn::File>(file_content.as_str()).map_err(|e| format!("{:?}", e)).unwrap();
+            let mut visit = BoundsLoosener { fn_name, arg_name: &captured["ref"], success: false };
+            visit.visit_file_mut(&mut file);
+            let file = quote::ToTokens::into_token_stream(file).to_string();
+            match visit.success {
+                true => {
+                    fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
+                    helped = true
                 },
+                false => ()
             }
-
         }
 
     }

@@ -35,5 +35,3 @@ fn bar_extracted<'lt0, 'lt1, 'lt2, 'lt3>(
     }
 }
 fn main() {}
-
-

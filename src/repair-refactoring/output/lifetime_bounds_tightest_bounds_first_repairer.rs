@@ -13,16 +13,7 @@ pub fn new_foo() {
         println!("{}", **p);
     }
 }
-fn bar_extracted<'lt0, 'lt1, 'lt2>(p: &'lt2 mut &i32, x: &'lt0 i32) {
+fn bar_extracted<'lt0, 'lt1>(p: &'lt1 mut &'lt0 i32, x: &'lt0 i32) {
     *p = &x;
 }
 fn main() {}
-
-
-
-
-
-
-
-
-

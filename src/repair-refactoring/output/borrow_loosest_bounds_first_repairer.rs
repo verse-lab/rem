@@ -52,7 +52,7 @@ pub fn extract_write_no_use_after_new() {
 
 // 3. extracted
 fn extract_write_no_use_after_bar(x: &mut i32) {
-    *x = 5;
+    x = 5;
 }
 
 // 4. original
@@ -73,7 +73,7 @@ pub fn extract_write_use_after_new() {
 
 // 4. extracted
 fn extract_write_use_after_bar(x: &mut i32) {
-    *x = 5;
+    x = 5;
 }
 
 // 5. original
@@ -96,14 +96,9 @@ pub fn extract_read_and_write_new() {
 // 5. extracted
 #[allow(unused_assignments)]
 fn extract_read_and_write_bar(x: &mut i32) {
-    *x = 5;
-    *x = 6;
+    x = 5;
+    x = 6;
     println!("x={}", x);
 }
 
 fn main() {}
-
-
-
-
-
