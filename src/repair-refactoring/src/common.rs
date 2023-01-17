@@ -264,10 +264,12 @@ fn change_lt(i: &mut Type, map: &HashMap<String, String>) {
                 Some(lt) => {
                     let id = lt.to_string();
                     match map.get(&id) {
-                        Some(new_lt) => r.lifetime = Some(Lifetime::new(new_lt.as_str(), Span::call_site())),
+                        Some(new_lt) => {
+                            r.lifetime = Some(Lifetime::new(new_lt.as_str(), Span::call_site()))
+                        }
                         None => (),
                     }
-                },
+                }
                 None => (),
             };
             change_lt(r.elem.as_mut(), map)
@@ -346,49 +348,59 @@ impl VisitMut for FnLifetimeElider<'_> {
                             false => {
                                 let mut lt_count = 0;
                                 let mut new_lts = HashMap::new();
-                                gen.params.iter_mut().for_each(|gp| {
-                                    match gp {
-                                        GenericParam::Lifetime(lt) => {
-                                            let id = lt.lifetime.to_string();
-                                            new_lts.insert(id, format!("'lt{}", lt_count));
-                                            lt.lifetime = Lifetime::new(format!("'lt{}", lt_count).as_str(), Span::call_site());
-                                            lt_count += 1
-                                        },
-                                        _ => (),
+                                gen.params.iter_mut().for_each(|gp| match gp {
+                                    GenericParam::Lifetime(lt) => {
+                                        let id = lt.lifetime.to_string();
+                                        new_lts.insert(id, format!("'lt{}", lt_count));
+                                        lt.lifetime = Lifetime::new(
+                                            format!("'lt{}", lt_count).as_str(),
+                                            Span::call_site(),
+                                        );
+                                        lt_count += 1
                                     }
+                                    _ => (),
                                 });
                                 match &mut gen.where_clause {
                                     None => (),
-                                    Some(wc) => {
-                                        wc.predicates.iter_mut().for_each(|wp| match wp {
-                                            WherePredicate::Lifetime(lt) => {
-                                                let id = lt.lifetime.to_string();
+                                    Some(wc) => wc.predicates.iter_mut().for_each(|wp| match wp {
+                                        WherePredicate::Lifetime(lt) => {
+                                            let id = lt.lifetime.to_string();
+                                            match new_lts.get(&id) {
+                                                Some(new_lt) => {
+                                                    lt.lifetime = Lifetime::new(
+                                                        new_lt.as_str(),
+                                                        Span::call_site(),
+                                                    )
+                                                }
+                                                None => (),
+                                            };
+                                            lt.bounds.iter_mut().for_each(|bound| {
+                                                let id = bound.to_string();
                                                 match new_lts.get(&id) {
-                                                    Some(new_lt) => lt.lifetime = Lifetime::new(new_lt.as_str(), Span::call_site()),
+                                                    Some(new_lt) => {
+                                                        *bound = Lifetime::new(
+                                                            new_lt.as_str(),
+                                                            Span::call_site(),
+                                                        )
+                                                    }
                                                     None => (),
-                                                };
-                                                lt.bounds.iter_mut().for_each(|bound|{
-                                                    let id = bound.to_string();
-                                                match new_lts.get(&id) {
-                                                    Some(new_lt) => *bound = Lifetime::new(new_lt.as_str(), Span::call_site()),
-                                                    None => (),
-                                                }})
-                                            },
-                                            _ => ()
-                                        })
-                                    }
+                                                }
+                                            })
+                                        }
+                                        _ => (),
+                                    }),
                                 }
                                 inputs.iter_mut().for_each(|fn_arg| match fn_arg {
                                     FnArg::Receiver(_) => (),
                                     FnArg::Typed(t) => {
-                                        change_lt( t.ty.as_mut(), &new_lts);
+                                        change_lt(t.ty.as_mut(), &new_lts);
                                     }
                                 });
                                 match &mut i.sig.output {
                                     ReturnType::Default => (),
-                                    ReturnType::Type(_, ty) => change_lt(ty.as_mut(), &new_lts)
+                                    ReturnType::Type(_, ty) => change_lt(ty.as_mut(), &new_lts),
                                 }
-                            },
+                            }
                         }
                     }
                 }
