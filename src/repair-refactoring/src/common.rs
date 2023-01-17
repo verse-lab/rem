@@ -9,7 +9,7 @@ use std::io::{BufWriter, Write};
 use std::process::{Command, Stdio};
 use syn::{
     visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
-    Token, Type, WhereClause, WherePredicate,
+    Type, WhereClause, WherePredicate,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -195,7 +195,7 @@ pub fn repair_iteration(
 ////////////////////////////////    ELIDING LIFETIMES   ////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 struct FnLifetimeEliderTypeHelper<'a> {
-        cannot_elide: &'a Vec<String>,
+    cannot_elide: &'a Vec<String>,
     lt_count: &'a HashMap<&'a String, i32>,
 }
 
@@ -207,7 +207,8 @@ impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
                     None => (),
                     Some(lt) => {
                         let id = lt.to_string();
-                        if *self.lt_count.get(&id).unwrap() == 1 && !self.cannot_elide.contains(&id) {
+                        if *self.lt_count.get(&id).unwrap() == 1 && !self.cannot_elide.contains(&id)
+                        {
                             r.lifetime = None
                         }
                     }
@@ -309,14 +310,18 @@ impl VisitMut for FnLifetimeElider<'_> {
                         inputs
                             .iter_mut()
                             .for_each(|fn_arg| fn_arg_helper.visit_fn_arg_mut(fn_arg));
-                        gen.params = gen.params.iter().cloned().filter(|g|
-                            match g {
-                              GenericParam::Lifetime(lt) => {
-                                  let id = lt.lifetime.to_string();
-                                      *map.get(&id).unwrap() > 1 || cannot_elide.contains(&id)
-                              },
+                        gen.params = gen
+                            .params
+                            .iter()
+                            .cloned()
+                            .filter(|g| match g {
+                                GenericParam::Lifetime(lt) => {
+                                    let id = lt.lifetime.to_string();
+                                    *map.get(&id).unwrap() > 1 || cannot_elide.contains(&id)
+                                }
                                 _ => false,
-                            }).collect()
+                            })
+                            .collect()
                     }
                 }
             }

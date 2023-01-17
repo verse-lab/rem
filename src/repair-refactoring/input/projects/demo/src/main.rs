@@ -15,6 +15,15 @@ pub fn lt_bounds_use() {
     }
 }
 
+/* first extraction
+fn bar<'lt0, 'lt1, 'lt2>(p: &'lt0 mut &'lt1 i32, x: &'lt2 i32)
+    where
+        'lt2: 'lt1,
+{
+    *p = &x;
+}
+*/
+
 const W: i32 = 5;
 
 // does not work because improper ref handlings
