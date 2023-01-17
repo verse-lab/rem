@@ -3,10 +3,18 @@ use quote::ToTokens;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::{Command, Stdio};
-use syn::{visit_mut::VisitMut, Lifetime, PredicateLifetime, WhereClause, WherePredicate};
+use syn::{
+    visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
+    Token, Type, WhereClause, WherePredicate,
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub trait RepairSystem {
     fn name(&self) -> &str;
@@ -153,23 +161,6 @@ pub fn repair_bounds_help(stderr: &Cow<str>, new_file_name: &str, fn_name: &str)
     helped
 }
 
-pub fn format_source(src: &str) -> String {
-    let rustfmt = {
-        let mut proc = Command::new(&"rustfmt")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
-        let mut stdin = proc.stdin.take().unwrap();
-        stdin.write_all(src.as_bytes()).unwrap();
-        proc
-    };
-
-    let stdout = rustfmt.wait_with_output().unwrap();
-
-    String::from_utf8(stdout.stdout).unwrap()
-}
-
 pub fn repair_iteration(
     compile_cmd: &mut Command,
     process_errors: &dyn Fn(&Cow<str>) -> bool,
@@ -198,4 +189,175 @@ pub fn repair_iteration(
     }
 
     result
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////    ELIDING LIFETIMES   ////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+struct FnLifetimeEliderTypeHelper<'a> {
+        cannot_elide: &'a Vec<String>,
+    lt_count: &'a HashMap<&'a String, i32>,
+}
+
+impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
+    fn visit_type_mut(&mut self, i: &mut Type) {
+        match i {
+            Type::Reference(r) => {
+                match &mut r.lifetime {
+                    None => (),
+                    Some(lt) => {
+                        let id = lt.to_string();
+                        if *self.lt_count.get(&id).unwrap() == 1 && !self.cannot_elide.contains(&id) {
+                            r.lifetime = None
+                        }
+                    }
+                };
+                self.visit_type_mut(r.elem.as_mut());
+            }
+            _ => (),
+        }
+    }
+}
+
+struct FnLifetimeEliderArgHelper<'a> {
+    cannot_elide: &'a Vec<String>,
+    lt_count: &'a HashMap<&'a String, i32>,
+}
+
+impl VisitMut for FnLifetimeEliderArgHelper<'_> {
+    fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
+        match i {
+            FnArg::Typed(t) => {
+                let mut type_helper = FnLifetimeEliderTypeHelper {
+                    cannot_elide: self.cannot_elide,
+                    lt_count: self.lt_count,
+                };
+                type_helper.visit_type_mut(t.ty.as_mut());
+            }
+            FnArg::Receiver(_) => (), // cannot elide if there is self
+        }
+    }
+}
+
+struct FnLifetimeElider<'a> {
+    fn_name: &'a str,
+}
+
+fn get_lt(i: &Type, v: &mut Vec<String>) {
+    match i {
+        Type::Reference(r) => {
+            match &r.lifetime {
+                Some(lt) => v.push(lt.to_string()),
+                None => (),
+            };
+            get_lt(r.elem.as_ref(), v)
+        }
+        _ => (),
+    }
+}
+
+impl VisitMut for FnLifetimeElider<'_> {
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => {
+                let gen = &mut i.sig.generics;
+                let mut cannot_elide = vec![];
+                match &gen.where_clause {
+                    None => (),
+                    Some(wc) => wc.predicates.iter().for_each(|wp| match wp {
+                        WherePredicate::Lifetime(lt) => {
+                            cannot_elide.push(lt.lifetime.to_string());
+                            cannot_elide.push(lt.bounds.first().unwrap().to_string())
+                        }
+                        _ => (),
+                    }),
+                }
+                let inputs = &mut i.sig.inputs;
+                let mut has_receiver = false;
+                let mut map = HashMap::new();
+                let mut v = vec![];
+                inputs.iter().for_each(|fn_arg| {
+                    match fn_arg {
+                        FnArg::Receiver(_) => has_receiver = true,
+                        FnArg::Typed(t) => {
+                            get_lt(t.ty.as_ref(), &mut v);
+                        }
+                    };
+                });
+                match has_receiver {
+                    true => (),
+                    false => {
+                        match &i.sig.output {
+                            ReturnType::Default => (),
+                            ReturnType::Type(_, ty) => {
+                                get_lt(ty, &mut cannot_elide);
+                                get_lt(ty, &mut v);
+                            }
+                        };
+                        v.iter().for_each(|lt| {
+                            match map.contains_key(lt) {
+                                true => map.insert(lt, *map.get(lt).unwrap() + 1),
+                                false => map.insert(lt, 1),
+                            };
+                        });
+                        let mut fn_arg_helper = FnLifetimeEliderArgHelper {
+                            cannot_elide: &cannot_elide,
+                            lt_count: &map,
+                        };
+                        inputs
+                            .iter_mut()
+                            .for_each(|fn_arg| fn_arg_helper.visit_fn_arg_mut(fn_arg));
+                        gen.params = gen.params.iter().cloned().filter(|g|
+                            match g {
+                              GenericParam::Lifetime(lt) => {
+                                  let id = lt.lifetime.to_string();
+                                      *map.get(&id).unwrap() > 1 || cannot_elide.contains(&id)
+                              },
+                                _ => false,
+                            }).collect()
+                    }
+                }
+            }
+        }
+    }
+}
+/**
+Elide lifetimes that are only used once in the inputs and not used in output(s)/bound(s)
+
+Do not elide lifetimes when receiver (self) is in the input
+
+Elision rules are here: https://doc.rust-lang.org/nomicon/lifetime-elision.htm
+*/
+pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
+    let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
+    let mut file = syn::parse_str::<syn::File>(file_content.as_str())
+        .map_err(|e| format!("{:?}", e))
+        .unwrap();
+    let mut visit = FnLifetimeElider { fn_name };
+    visit.visit_file_mut(&mut file);
+    let file = file.into_token_stream().to_string();
+    fs::write(new_file_name.to_string(), format_source(&file)).unwrap()
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////          MISC          ////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pub fn format_source(src: &str) -> String {
+    let rustfmt = {
+        let mut proc = Command::new(&"rustfmt")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut stdin = proc.stdin.take().unwrap();
+        stdin.write_all(src.as_bytes()).unwrap();
+        proc
+    };
+
+    let stdout = rustfmt.wait_with_output().unwrap();
+
+    String::from_utf8(stdout.stdout).unwrap()
 }

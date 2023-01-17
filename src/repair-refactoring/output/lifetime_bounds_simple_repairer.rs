@@ -20,3 +20,5 @@ fn bar_extracted<'a>(p: &mut &'a i32, x: &'a i32) {
 }
 
 fn main() {}
+
+

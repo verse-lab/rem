@@ -5,7 +5,8 @@ use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
-    compile_file, format_source, repair_bounds_help, repair_iteration, RepairSystem,
+    compile_file, elide_lifetimes_annotations, format_source, repair_bounds_help, repair_iteration,
+    RepairSystem,
 };
 use crate::repair_lifetime_simple;
 
@@ -30,7 +31,13 @@ impl RepairSystem for Repairer {
 
         let process_errors = |stderr: &Cow<str>| repair_bounds_help(stderr, new_file_name, fn_name);
 
-        repair_iteration(&mut compile_cmd, &process_errors, true, Some(50))
+        match repair_iteration(&mut compile_cmd, &process_errors, true, Some(50)) {
+            true => {
+                elide_lifetimes_annotations(new_file_name, fn_name);
+                true
+            }
+            false => false,
+        }
     }
 }
 
@@ -95,16 +102,13 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
                     self.success = false
                 }
                 (inputs, gen, out) => {
-                    inputs
-                        .iter_mut()
-                        .map(|arg| {
-                            let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
-                                lt_num: self.lt_num,
-                            };
-                            fn_arg_helper.visit_fn_arg_mut(arg);
-                            self.lt_num = fn_arg_helper.lt_num
-                        })
-                        .all(|_| true);
+                    inputs.iter_mut().for_each(|arg| {
+                        let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
+                            lt_num: self.lt_num,
+                        };
+                        fn_arg_helper.visit_fn_arg_mut(arg);
+                        self.lt_num = fn_arg_helper.lt_num
+                    });
                     match out {
                         syn::ReturnType::Type(_, ty) => match ty.as_mut() {
                             Type::Reference(r) => {

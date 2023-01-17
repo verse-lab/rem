@@ -6,7 +6,8 @@ use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
-    compile_file, format_source, repair_bounds_help, repair_iteration, CompilerError, RepairSystem,
+    compile_file, elide_lifetimes_annotations, format_source, repair_bounds_help, repair_iteration,
+    CompilerError, RepairSystem,
 };
 use crate::repair_lifetime_simple;
 
@@ -37,7 +38,13 @@ impl RepairSystem for Repairer {
             }
         };
 
-        repair_iteration(&mut compile_cmd, &process_errors, true, Some(10))
+        match repair_iteration(&mut compile_cmd, &process_errors, true, Some(10)) {
+            true => {
+                elide_lifetimes_annotations(new_file_name, fn_name);
+                true
+            }
+            false => false,
+        }
     }
 }
 
@@ -97,13 +104,10 @@ impl VisitMut for TightLifetimeAnnotator<'_> {
                         colon_token: None,
                         bounds: Default::default(),
                     }));
-                    inputs
-                        .iter_mut()
-                        .map(|arg| {
-                            let mut fn_arg_helper = TightLifetimeAnnotatorFnArgHelper {};
-                            fn_arg_helper.visit_fn_arg_mut(arg)
-                        })
-                        .all(|_| true);
+                    inputs.iter_mut().for_each(|arg| {
+                        let mut fn_arg_helper = TightLifetimeAnnotatorFnArgHelper {};
+                        fn_arg_helper.visit_fn_arg_mut(arg)
+                    });
                     match out {
                         syn::ReturnType::Type(_, ty) => match ty.as_mut() {
                             Type::Reference(r) => {
@@ -202,8 +206,7 @@ impl VisitMut for BoundsLoosener<'_> {
                 let inputs = &mut i.sig.inputs;
                 inputs
                     .iter_mut()
-                    .map(|arg| arg_loosener.visit_fn_arg_mut(arg))
-                    .all(|_| true);
+                    .for_each(|arg| arg_loosener.visit_fn_arg_mut(arg));
                 match arg_loosener.success {
                     true => self.success = true,
                     false => (),
