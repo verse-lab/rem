@@ -257,6 +257,25 @@ fn get_lt(i: &Type, v: &mut Vec<String>) {
     }
 }
 
+fn change_lt(i: &mut Type, map: &HashMap<String, String>) {
+    match i {
+        Type::Reference(r) => {
+            match &r.lifetime {
+                Some(lt) => {
+                    let id = lt.to_string();
+                    match map.get(&id) {
+                        Some(new_lt) => r.lifetime = Some(Lifetime::new(new_lt.as_str(), Span::call_site())),
+                        None => (),
+                    }
+                },
+                None => (),
+            };
+            change_lt(r.elem.as_mut(), map)
+        }
+        _ => (),
+    }
+}
+
 impl VisitMut for FnLifetimeElider<'_> {
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
@@ -321,7 +340,56 @@ impl VisitMut for FnLifetimeElider<'_> {
                                 }
                                 _ => false,
                             })
-                            .collect()
+                            .collect();
+                        match gen.params.is_empty() {
+                            true => (),
+                            false => {
+                                let mut lt_count = 0;
+                                let mut new_lts = HashMap::new();
+                                gen.params.iter_mut().for_each(|gp| {
+                                    match gp {
+                                        GenericParam::Lifetime(lt) => {
+                                            let id = lt.lifetime.to_string();
+                                            new_lts.insert(id, format!("'lt{}", lt_count));
+                                            lt.lifetime = Lifetime::new(format!("'lt{}", lt_count).as_str(), Span::call_site());
+                                            lt_count += 1
+                                        },
+                                        _ => (),
+                                    }
+                                });
+                                match &mut gen.where_clause {
+                                    None => (),
+                                    Some(wc) => {
+                                        wc.predicates.iter_mut().for_each(|wp| match wp {
+                                            WherePredicate::Lifetime(lt) => {
+                                                let id = lt.lifetime.to_string();
+                                                match new_lts.get(&id) {
+                                                    Some(new_lt) => lt.lifetime = Lifetime::new(new_lt.as_str(), Span::call_site()),
+                                                    None => (),
+                                                };
+                                                lt.bounds.iter_mut().for_each(|bound|{
+                                                    let id = bound.to_string();
+                                                match new_lts.get(&id) {
+                                                    Some(new_lt) => *bound = Lifetime::new(new_lt.as_str(), Span::call_site()),
+                                                    None => (),
+                                                }})
+                                            },
+                                            _ => ()
+                                        })
+                                    }
+                                }
+                                inputs.iter_mut().for_each(|fn_arg| match fn_arg {
+                                    FnArg::Receiver(_) => (),
+                                    FnArg::Typed(t) => {
+                                        change_lt( t.ty.as_mut(), &new_lts);
+                                    }
+                                });
+                                match &mut i.sig.output {
+                                    ReturnType::Default => (),
+                                    ReturnType::Type(_, ty) => change_lt(ty.as_mut(), &new_lts)
+                                }
+                            },
+                        }
                     }
                 }
             }
