@@ -29,7 +29,7 @@ const W: i32 = 5;
 // does not work because improper ref handlings
 pub fn in_out_lt() {
     let x = 1;
-    let mut x_ref: &i32 = &x;
+    let x_ref: &i32 = &x;
     let mut z: &i32;
     {
         let y = 2;
@@ -43,22 +43,19 @@ pub fn in_out_lt() {
 fn a() {
     let mut a = vec![1, 2, 3];
     let mut b = vec![5, 2, 3];
-    let mut x = 1;
-    let mut y = 2;
+    let x = 1;
+    let y = 2;
 
     println!("{}{}", x, y);
     a.push(4);
-    a.get(0);
+    let _ = a.get(0);
     b[0] = a[0];
     println!("{}{}", a[0], b[0]);
-}
-
-struct X {
-    x: i32,
 }
 
 fn main() {
     lt_bounds();
     lt_bounds_use();
     in_out_lt();
+    a()
 }
