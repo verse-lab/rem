@@ -1,5 +1,3 @@
 mod borrow;
 
-fn main() {
-
-}
+fn main() {}
