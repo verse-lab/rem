@@ -1,5 +1,5 @@
-use proc_macro2::Ident;
-use quote::ToTokens;
+use proc_macro2::{Ident};
+use quote::{ToTokens};
 use std::fs;
 use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Type, TypeReference};
 use utils::format_source;
@@ -15,8 +15,8 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
         match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
             false => (),
             true => {
-                *i = syn::parse_quote!(format!("*{}", id));
-            }
+                *i = syn::parse_quote!{*#i}
+            },
         }
     }
 
@@ -25,16 +25,16 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
             FnArg::Receiver(_) => (),
             FnArg::Typed(t) => {
                 let id = t.into_token_stream().to_string();
-                match self.make_ref.contains(&id) {
+                match self.make_mut.contains(&id) {
                     true => {
                         t.ty = Box::from(Type::Reference(TypeReference {
                             and_token: Default::default(),
                             lifetime: None,
-                            mutability: (Some(syn::parse_quote!("mut"))),
+                            mutability: (Some(syn::parse_quote!{mut})),
                             elem: t.ty.clone(),
                         }))
                     }
-                    false => match self.make_mut.contains(&id) {
+                    false => match self.make_ref.contains(&id) {
                         false => (),
                         true => {
                             t.ty = Box::from(Type::Reference(TypeReference {
@@ -76,6 +76,30 @@ impl VisitMut for RefBorrowAssigner<'_> {
     }
 }
 
+struct CalleeInputs<'a> {
+    fn_name: &'a str,
+    inputs: &'a mut Vec<String>,
+}
+
+impl VisitMut for CalleeInputs<'_> {
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            true => {
+                i.sig.inputs.iter().for_each(|fn_arg| {
+                    match fn_arg {
+                        FnArg::Receiver(_) => (),
+                        FnArg::Typed(t) => {
+                            self.inputs.push(t.pat.as_ref().into_token_stream().to_string())
+                        }
+                    }
+                });
+            }
+            false => (),
+        }
+    }
+}
+
 struct CallerCheckCallee<'a> {
     callee_fn_name: &'a str,
     found: bool,
@@ -99,6 +123,7 @@ struct CallerCheckInput<'a> {
 impl VisitMut for CallerCheckInput<'_> {
     fn visit_ident_mut(&mut self, i: &mut Ident) {
         let id = i.into_token_stream().to_string();
+        println!("id: {}, in inputs: {}", &id, self.input.contains(&id));
         match self.input.contains(&id) {
             false => (),
             true => self.make_ref.push(id),
@@ -109,7 +134,8 @@ impl VisitMut for CallerCheckInput<'_> {
 struct CallerHelper<'a> {
     caller_fn_name: &'a str,
     callee_fn_name: &'a str,
-    make_ref: &'a mut Vec<String>, // must be ref (not deciding whether immut/mut yet
+    callee_inputs: &'a Vec<String>,
+    make_ref: &'a mut Vec<String>, // must be ref (not deciding whether immutable/mut yet
 }
 
 impl VisitMut for CallerHelper<'_> {
@@ -118,18 +144,16 @@ impl VisitMut for CallerHelper<'_> {
         match id == self.caller_fn_name {
             false => (),
             true => {
-                let inputs = i.sig.inputs.iter().cloned();
-                let inputs_str: Vec<String> = inputs
-                    .map(|fn_arg| fn_arg.into_token_stream().to_string())
-                    .collect();
+                println!("found caller {}", id);
                 let mut check_callee = CallerCheckCallee {
                     callee_fn_name: self.callee_fn_name,
                     found: false,
                 };
                 let mut check_input = CallerCheckInput {
-                    input: &inputs_str,
+                    input: &self.callee_inputs,
                     make_ref: &mut self.make_ref,
                 };
+                self.callee_inputs.iter().for_each(|x| println!("inputs: {}", x));
                 i.block.stmts.iter_mut().for_each(|stmt| {
                     if check_callee.found {
                         check_input.visit_stmt_mut(stmt);
@@ -187,10 +211,14 @@ pub fn make_borrows(file_name: &str, new_file_name: &str, callee_fn_name: &str, 
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
         .unwrap();
+    let mut callee_inputs = vec![];
+    let mut callee_input_helper = CalleeInputs { fn_name: callee_fn_name, inputs: &mut callee_inputs };
+    callee_input_helper.visit_file_mut(&mut file);
     let mut make_ref = vec![];
     let mut caller_helper = CallerHelper {
         caller_fn_name,
         callee_fn_name,
+        callee_inputs: &callee_inputs,
         make_ref: &mut make_ref,
     };
     caller_helper.visit_file_mut(&mut file);
@@ -206,6 +234,13 @@ pub fn make_borrows(file_name: &str, new_file_name: &str, callee_fn_name: &str, 
         make_ref: &make_ref,
         make_mut: &make_mut,
     };
+    for s in &make_ref {
+        println!("make {} ref", s);
+    }
+
+    for s in &make_mut {
+        println!("make {} mut", s);
+    }
     assigner.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap()

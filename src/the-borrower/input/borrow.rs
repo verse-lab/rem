@@ -29,10 +29,12 @@ pub fn extract_read_use_after_new() {
     let x = 1;
     extract_read_use_after_bar(x);
     println!("x={}", x);
+    extract_read_no_use_after_bar(x);
 }
 
 // 2. extracted
 fn extract_read_use_after_bar(x: i32) {
+    let y = x;
     println!("x={}", x);
 }
 
