@@ -4,8 +4,9 @@ use std::borrow::Cow;
 use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
+use utils::format_source;
 use crate::common::{
-    compile_file, elide_lifetimes_annotations, format_source, repair_bounds_help, repair_iteration,
+    compile_file, elide_lifetimes_annotations, repair_bounds_help, repair_iteration,
     RepairSystem,
 };
 use crate::repair_lifetime_simple;

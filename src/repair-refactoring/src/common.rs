@@ -6,11 +6,12 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use syn::{
     visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
     Type, WhereClause, WherePredicate,
 };
+use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////
@@ -424,25 +425,4 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
     visit.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap()
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////          MISC          ////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-pub fn format_source(src: &str) -> String {
-    let rustfmt = {
-        let mut proc = Command::new(&"rustfmt")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
-        let mut stdin = proc.stdin.take().unwrap();
-        stdin.write_all(src.as_bytes()).unwrap();
-        proc
-    };
-
-    let stdout = rustfmt.wait_with_output().unwrap();
-
-    String::from_utf8(stdout.stdout).unwrap()
 }
