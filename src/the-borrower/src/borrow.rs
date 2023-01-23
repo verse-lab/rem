@@ -126,10 +126,9 @@ impl VisitMut for CallerHelper<'_> {
                     callee_fn_name: self.callee_fn_name,
                     found: false,
                 };
-                let mut make_ref = vec![];
                 let mut check_input = CallerCheckInput {
                     input: &inputs_str,
-                    make_ref: &mut make_ref,
+                    make_ref: &mut self.make_ref,
                 };
                 i.block.stmts.iter_mut().for_each(|stmt| {
                     if check_callee.found {
@@ -183,7 +182,7 @@ impl VisitMut for MutableBorrower<'_> {
     }
 }
 
-fn make_borrows(file_name: &str, new_file_name: &str, callee_fn_name: &str, caller_fn_name: &str) {
+pub fn make_borrows(file_name: &str, new_file_name: &str, callee_fn_name: &str, caller_fn_name: &str) {
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
