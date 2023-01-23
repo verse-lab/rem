@@ -98,7 +98,7 @@ impl VisitMut for CallerHelper<'_> {
                 let inputs_str : Vec<String> = inputs.map(|fn_arg| fn_arg.into_token_stream().to_string()).collect();
                 let mut check_callee = CallerCheckCallee{ callee_fn_name: self.callee_fn_name, found: false };
                 let mut make_ref = vec![];
-                let mut check_input = CallerCheckInput{ input: inputs_str, make_ref: &mut make_ref };
+                let mut check_input = CallerCheckInput{ input: &inputs_str, make_ref: &mut make_ref };
                 i.block.stmts.iter_mut().for_each(|stmt|{
                     if check_callee.found {
                         check_input.visit_stmt_mut(stmt);
