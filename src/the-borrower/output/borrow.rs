@@ -51,10 +51,10 @@ pub fn extract_write_use_after() {
 #[allow(dead_code)]
 pub fn extract_write_use_after_new() {
     let mut x = 1;
-    extract_write_use_after_bar(&mut x);
+    extract_write_use_after_bar(x);
     println!("x={}", x);
 }
-fn extract_write_use_after_bar(x: &mut i32) {
+fn extract_write_use_after_bar(x: i32) {
     x = 5;
 }
 #[allow(unused_assignments)]
