@@ -18,13 +18,16 @@ pub fn extract_read_use_after() {
 #[allow(dead_code)]
 pub fn extract_read_use_after_new() {
     let x = 1;
-    extract_read_use_after_bar(x);
+    extract_read_use_after_bar(&x);
     println!("x={}", x);
     extract_read_no_use_after_bar(x);
 }
-fn extract_read_use_after_bar(x: i32) {
+fn extract_read_use_after_bar(x: &i32) {
     let y = *x;
     println!("x={}", x);
+    extract_read_no_use_after_bar(*x);
+    let z = y;
+    let n = z + *x;
 }
 #[allow(unused_assignments, unused_variables)]
 pub fn extract_write_no_use_after() {

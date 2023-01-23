@@ -36,6 +36,9 @@ pub fn extract_read_use_after_new() {
 fn extract_read_use_after_bar(x: i32) {
     let y = x;
     println!("x={}", x);
+    extract_read_no_use_after_bar(x);
+    let z = y;
+    let n = z + x;
 }
 
 // 3. original
