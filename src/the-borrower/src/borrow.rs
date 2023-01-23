@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
-use syn::{Expr, ExprAssign, ExprCall, ExprGroup, FnArg, ItemFn, PatType, Token, Type, TypeReference, visit_mut::VisitMut};
+use syn::{Expr, ExprAssign, ExprCall, ExprGroup, FnArg, Item, ItemFn, PatType, Token, Type, TypeReference, visit_mut::VisitMut};
 use syn::visit::Visit;
 
 struct RefBorrowAssigner<'a> {
@@ -14,7 +14,7 @@ impl VisitMut for RefBorrowAssigner<'_> {
         match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
             false => (),
             true => {
-                *i.left.as_mut() = syn::parse_quote!(format!("*{}", id));
+                *i = syn::parse_quote!(format!("*{}", id));
             }
         }
     }
@@ -67,9 +67,20 @@ impl VisitMut for CallerCheckCallee<'_>{
     }
 }
 
+struct CallerCheckInput<'a> {
+    input: &'a Vec<String>,
+}
+
+impl VisitMut for CallerCheckInput<'_> {
+    fn visit_ident_mut(&mut self, i: &mut Ident) {
+        let id =
+    }
+}
+
 struct CallerHelper<'a> {
     caller_fn_name: &'a str,
     callee_fn_name: &'a str,
+    make_ref: &'a mut Vec<String>,
 }
 
 impl VisitMut for CallerHelper<'_> {
@@ -79,16 +90,18 @@ impl VisitMut for CallerHelper<'_> {
             false => (),
             true => {
                 let inputs = i.sig.inputs.iter().cloned();
-                i.block.stmts.iter().for_each(|stmt|{
-                    let check_assignment = |i: &ExprAssign| {
-                        ()
-                    };
+                let inputs_str : Vec<String> = inputs.map(|fn_arg| fn_arg.into_token_stream().to_string()).collect();
+                let mut check_callee = CallerCheckCallee{ callee_fn_name: self.callee_fn_name, found: false };
+                i.block.stmts.iter_mut().for_each(|stmt|{
+                    if check_callee.found {
+
+                    } else {
+                        check_callee.visit_stmt_mut(stmt);
+                    }
                 })
             }
         }
     }
-
-
 }
 
 struct RefBorrower<'a> {

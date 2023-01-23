@@ -10,9 +10,16 @@ pub fn lt_bounds_use() {
     let p: &mut &i32 = &mut &0;
     {
         let x = 1;
-        *p = &x;
+        bar(p, &x);
         println!("{}", **p);
     }
+}
+
+fn bar<'lt0, 'lt1>(p: &mut &'lt0 i32, x: &'lt1 i32)
+    where
+        'lt1: 'lt0,
+{
+    *p = &x;
 }
 
 /* first extraction
