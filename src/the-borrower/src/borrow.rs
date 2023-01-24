@@ -2,8 +2,7 @@ use quote::ToTokens;
 
 use std::fs;
 use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Macro,
-    Type, TypeReference,
+    visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Macro, Type, TypeReference,
 };
 use utils::format_source;
 
@@ -37,13 +36,7 @@ where
         Expr::Index(e) => v.visit_expr_index_mut(e),
         Expr::Let(e) => v.visit_expr_let_mut(e),
         Expr::Loop(e) => v.visit_expr_loop_mut(e),
-        Expr::Macro(e) => {
-            println!(
-                "visitng macro: {}",
-                e.clone().into_token_stream().to_string()
-            );
-            v.visit_expr_macro_mut(e)
-        }
+        Expr::Macro(e) => v.visit_expr_macro_mut(e),
         Expr::Match(e) => v.visit_expr_match_mut(e),
         Expr::MethodCall(e) => v.visit_expr_method_call_mut(e),
         Expr::Paren(e) => v.visit_expr_paren_mut(e),
