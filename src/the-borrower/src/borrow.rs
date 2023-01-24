@@ -1,12 +1,55 @@
-use proc_macro2::{Ident};
+use std::borrow::Borrow;
 use quote::{ToTokens};
 use std::fs;
-use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Type, TypeReference};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Type, TypeReference, Attribute, Macro};
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
+}
+
+fn visit_sub_expr_find_id<V>(v: &mut V, node: &mut Expr) where V : VisitMut {
+    match node {
+        Expr::Array(e) => v.visit_expr_array_mut(e),
+        Expr::Assign(e) => v.visit_expr_assign_mut(e),
+        Expr::AssignOp(e) => v.visit_expr_assign_op_mut(e),
+        Expr::Async(e) => v.visit_expr_async_mut(e),
+        Expr::Await(e) => v.visit_expr_await_mut(e),
+        Expr::Binary(e) => v.visit_expr_binary_mut(e),
+        Expr::Block(e) => v.visit_expr_block_mut(e),
+        Expr::Box(e) => v.visit_expr_box_mut(e),
+        Expr::Break(e) => v.visit_expr_break_mut(e),
+        Expr::Call(e) => v.visit_expr_call_mut(e),
+        Expr::Cast(e) => v.visit_expr_cast_mut(e),
+        Expr::Closure(e) => v.visit_expr_closure_mut(e),
+        Expr::Continue(e) => v.visit_expr_continue_mut(e),
+        Expr::Field(e) => v.visit_expr_field_mut(e),
+        Expr::ForLoop(e) => v.visit_expr_for_loop_mut(e),
+        Expr::Group(e) => v.visit_expr_group_mut(e),
+        Expr::If(e) => v.visit_expr_if_mut(e),
+        Expr::Index(e) => v.visit_expr_index_mut(e),
+        Expr::Let(e) => v.visit_expr_let_mut(e),
+        Expr::Loop(e) => v.visit_expr_loop_mut(e),
+        Expr::Macro(e) => {println!("visitng macro: {}", e.clone().into_token_stream().to_string()); v.visit_expr_macro_mut(e)},
+        Expr::Match(e) => v.visit_expr_match_mut(e),
+        Expr::MethodCall(e) => v.visit_expr_method_call_mut(e),
+        Expr::Paren(e) => v.visit_expr_paren_mut(e),
+        Expr::Path(e) => v.visit_expr_path_mut(e),
+        Expr::Range(e) => v.visit_expr_range_mut(e),
+        Expr::Reference(e) => v.visit_expr_reference_mut(e),
+        Expr::Repeat(e) => v.visit_expr_repeat_mut(e),
+        Expr::Return(e) => v.visit_expr_return_mut(e),
+        Expr::Struct(e) => v.visit_expr_struct_mut(e),
+        Expr::Try(e) => v.visit_expr_try_mut(e),
+        Expr::TryBlock(e) => v.visit_expr_try_block_mut(e),
+        Expr::Tuple(e) => v.visit_expr_tuple_mut(e),
+        Expr::Type(e) => v.visit_expr_type_mut(e),
+        Expr::Unary(e) => v.visit_expr_unary_mut(e),
+        Expr::While(e) => v.visit_expr_while_mut(e),
+        Expr::Yield(e) => v.visit_expr_yield_mut(e),
+        _ => (),
+    }
 }
 
 impl VisitMut for RefBorrowAssignerHelper<'_> {
@@ -18,46 +61,7 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
                 *i = syn::parse_quote!{*#i}
             }
             false => {
-                match i {
-                    Expr::Array(e) => self.visit_expr_array_mut(e),
-                    Expr::Assign(e) => self.visit_expr_assign_mut(e),
-                    Expr::AssignOp(e) => self.visit_expr_assign_op_mut(e),
-                    Expr::Async(e) => self.visit_expr_async_mut(e),
-                    Expr::Await(e) => self.visit_expr_await_mut(e),
-                    Expr::Binary(e) => self.visit_expr_binary_mut(e),
-                    Expr::Block(e) => self.visit_expr_block_mut(e),
-                    Expr::Box(e) => self.visit_expr_box_mut(e),
-                    Expr::Break(e) => self.visit_expr_break_mut(e),
-                    Expr::Call(e) => self.visit_expr_call_mut(e),
-                    Expr::Cast(e) => self.visit_expr_cast_mut(e),
-                    Expr::Closure(e) => self.visit_expr_closure_mut(e),
-                    Expr::Continue(e) => self.visit_expr_continue_mut(e),
-                    Expr::Field(e) => self.visit_expr_field_mut(e),
-                    Expr::ForLoop(e) => self.visit_expr_for_loop_mut(e),
-                    Expr::Group(e) => self.visit_expr_group_mut(e),
-                    Expr::If(e) => self.visit_expr_if_mut(e),
-                    Expr::Index(e) => self.visit_expr_index_mut(e),
-                    Expr::Let(e) => self.visit_expr_let_mut(e),
-                    Expr::Loop(e) => self.visit_expr_loop_mut(e),
-                    Expr::Macro(e) =>self.visit_expr_macro_mut(e),
-                    Expr::Match(e) => self.visit_expr_match_mut(e),
-                    Expr::MethodCall(e) => self.visit_expr_method_call_mut(e),
-                    Expr::Paren(e) => self.visit_expr_paren_mut(e),
-                    Expr::Path(e) => self.visit_expr_path_mut(e),
-                    Expr::Range(e) => self.visit_expr_range_mut(e),
-                    Expr::Reference(e) => self.visit_expr_reference_mut(e),
-                    Expr::Repeat(e) => self.visit_expr_repeat_mut(e),
-                    Expr::Return(e) => self.visit_expr_return_mut(e),
-                    Expr::Struct(e) => self.visit_expr_struct_mut(e),
-                    Expr::Try(e) => self.visit_expr_try_mut(e),
-                    Expr::TryBlock(e) => self.visit_expr_try_block_mut(e),
-                    Expr::Tuple(e) => self.visit_expr_tuple_mut(e),
-                    Expr::Type(e) => self.visit_expr_type_mut(e),
-                    Expr::Unary(e) => self.visit_expr_unary_mut(e),
-                    Expr::While(e) => self.visit_expr_while_mut(e),
-                    Expr::Yield(e) => self.visit_expr_yield_mut(e),
-                    _ => (),
-                }
+                visit_sub_expr_find_id(self, i)
             }
         }
     }
@@ -164,12 +168,12 @@ struct CallerCheckInput<'a> {
 }
 
 impl VisitMut for CallerCheckInput<'_> {
-    fn visit_ident_mut(&mut self, i: &mut Ident) {
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
         let id = i.into_token_stream().to_string();
         println!("id: {}, in inputs: {}", &id, self.input.contains(&id));
         match self.input.contains(&id) {
-            false => (),
             true => self.make_ref.push(id),
+            false => visit_sub_expr_find_id(self, i),
         }
     }
 }
