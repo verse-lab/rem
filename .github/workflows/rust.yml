@@ -17,10 +17,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build main
-      run: cargo build --verbose
-      
-    - name: Build repairer
-      run: cd src/repair-refactoring && cargo build --verbose
-      
-    - name: Build borrower
-      run: cd ../the-borrower && cargo build --verbose
+      run: cargo build --all --verbose
