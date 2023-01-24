@@ -1,0 +1,26 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build main
+      run: cargo build --verbose
+      
+    - name: Build repairer
+      run: cargo build ./src/repair-refactoring --verbose
+      
+    - name: Build borrower
+      run: cargo build ./src/the-borrower --verbose
