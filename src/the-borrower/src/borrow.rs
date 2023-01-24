@@ -63,9 +63,14 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         let id = i.into_token_stream().to_string();
         println!("id expr: {}", &id);
-        match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
-            true => *i = syn::parse_quote! {(*#i)},
-            false => visit_sub_expr_find_id(self, i),
+        match i {
+            Expr::MethodCall(_) => (), //no need to star method call
+            _ => {
+                match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
+                    true => *i = syn::parse_quote! {*#i},
+                    false => visit_sub_expr_find_id(self, i),
+                }
+            }
         }
     }
 
