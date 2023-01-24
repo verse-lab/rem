@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use quote::{ToTokens};
 use std::fs;
-use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Type, TypeReference, Attribute, Macro};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Type, TypeReference, Attribute, Macro, ExprMacro};
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -57,12 +57,9 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
         let id = i.into_token_stream().to_string();
         println!("id expr: {}", &id);
         match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
-            true => {
-                *i = syn::parse_quote!{*#i}
-            }
-            false => {
-                visit_sub_expr_find_id(self, i)
-            }
+            true => *i = syn::parse_quote!{*#i},
+            false => visit_sub_expr_find_id(self, i),
+
         }
     }
 
@@ -174,6 +171,23 @@ impl VisitMut for CallerCheckInput<'_> {
         match self.input.contains(&id) {
             true => self.make_ref.push(id),
             false => visit_sub_expr_find_id(self, i),
+        }
+    }
+
+    fn visit_macro_mut(&mut self, i: &mut Macro) {
+        // only support *print*! macros as it is most common
+        let path = i.path.clone().into_token_stream().to_string();
+        match path.contains("print") {
+            false => (),
+            true => {
+                i.tokens.to_string().split(",").into_iter().for_each(|x| {
+                    let id = x.trim().to_string();
+                    match self.input.contains(&id) {
+                        true => self.make_ref.push(id),
+                        false => {}
+                    }
+                })
+            }
         }
     }
 }

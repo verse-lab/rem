@@ -11,6 +11,7 @@ fn helper(x: i32) {
 pub fn new_foo() {
     let mut x = 1;
     bar(&mut x);
+    println!("x={}", x);
     if x == 5 {
         helper(x)
     }
