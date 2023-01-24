@@ -20,7 +20,7 @@ jobs:
       run: cargo build --verbose
       
     - name: Build repairer
-      run: cargo build ./src/repair-refactoring --verbose
+      run: cd src/repair-refactoring && cargo build --verbose
       
     - name: Build borrower
-      run: cargo build ./src/the-borrower --verbose
+      run: cd ../the-borrower && cargo build --verbose
