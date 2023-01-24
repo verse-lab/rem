@@ -2,8 +2,8 @@ mod borrow;
 
 fn main() {
     borrow::make_borrows(
-        "input/borrow_write_use_after.rs",
-        "output/borrow_write_use_after.rs",
+        "input/vec_borrow_mut.rs",
+        "output/vec_borrow_mut.rs",
         "bar",
         "new_foo",
     )

@@ -1,8 +1,10 @@
 use quote::ToTokens;
 
 use std::fs;
+
 use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprCall, FnArg, ItemFn, Macro, Type, TypeReference,
+    visit_mut::VisitMut, Expr, ExprAssign, ExprCall, ExprMethodCall,
+    FnArg, ItemFn, Local, Macro, Pat, Type, TypeReference,
 };
 use utils::format_source;
 
@@ -62,7 +64,7 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
         let id = i.into_token_stream().to_string();
         println!("id expr: {}", &id);
         match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
-            true => *i = syn::parse_quote! {*#i},
+            true => *i = syn::parse_quote! {(*#i)},
             false => visit_sub_expr_find_id(self, i),
         }
     }
@@ -112,7 +114,7 @@ impl VisitMut for CalleeBorrowAssigner<'_> {
             true => {
                 let mut borrow_assigner = RefBorrowAssignerHelper {
                     make_ref: self.make_ref,
-                    make_mut: &self.make_mut,
+                    make_mut: self.make_mut,
                 };
                 i.sig
                     .inputs
@@ -139,9 +141,14 @@ impl VisitMut for CalleeInputs<'_> {
             true => {
                 i.sig.inputs.iter().for_each(|fn_arg| match fn_arg {
                     FnArg::Receiver(_) => (),
-                    FnArg::Typed(t) => self
-                        .inputs
-                        .push(t.pat.as_ref().into_token_stream().to_string()),
+                    FnArg::Typed(t) => {
+                        match t.ty.as_ref() {
+                            Type::Reference(_) => (), // don't add reference no need to make it a ref
+                            _ => self
+                                .inputs
+                                .push(t.pat.as_ref().into_token_stream().to_string()),
+                        }
+                    }
                 });
             }
             false => (),
@@ -151,6 +158,7 @@ impl VisitMut for CalleeInputs<'_> {
 
 struct CallerCheckCallee<'a> {
     callee_fn_name: &'a str,
+    decl_mut: &'a mut Vec<String>,
     found: bool,
 }
 
@@ -161,6 +169,18 @@ impl VisitMut for CallerCheckCallee<'_> {
             false => (),
             true => self.found = true,
         }
+    }
+
+    fn visit_local_mut(&mut self, i: &mut Local) {
+        match &mut i.pat {
+            Pat::Ident(id) => match &id.mutability {
+                None => (),
+                Some(_) => {
+                    self.decl_mut.push(id.ident.to_string());
+                }
+            },
+            _ => (),
+        };
     }
 }
 
@@ -199,6 +219,7 @@ struct CallerHelper<'a> {
     caller_fn_name: &'a str,
     callee_fn_name: &'a str,
     callee_inputs: &'a Vec<String>,
+    decl_mut: &'a mut Vec<String>,
     make_ref: &'a mut Vec<String>, // must be ref (not deciding whether immutable/mut yet
 }
 
@@ -208,17 +229,29 @@ impl VisitMut for CallerHelper<'_> {
         match id == self.caller_fn_name {
             false => (),
             true => {
+                i.sig.inputs.clone().iter().for_each(|input| match input {
+                    FnArg::Receiver(_) => (),
+                    FnArg::Typed(t) => match t.ty.as_ref() {
+                        Type::Reference(r) => match r.mutability {
+                            None => (),
+                            Some(_) => self
+                                .decl_mut
+                                .push(t.pat.as_ref().into_token_stream().to_string()),
+                        },
+                        _ => (),
+                    },
+                });
                 let mut check_callee = CallerCheckCallee {
                     callee_fn_name: self.callee_fn_name,
+                    decl_mut: self.decl_mut,
                     found: false,
                 };
+
                 let mut check_input = CallerCheckInput {
                     input: &self.callee_inputs,
                     make_ref: &mut self.make_ref,
                 };
-                self.callee_inputs
-                    .iter()
-                    .for_each(|x| println!("inputs: {}", x));
+
                 i.block.stmts.iter_mut().for_each(|stmt| {
                     if check_callee.found {
                         check_input.visit_stmt_mut(stmt);
@@ -234,6 +267,7 @@ impl VisitMut for CallerHelper<'_> {
 struct MutableBorrowerHelper<'a> {
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
+    decl_mut: &'a mut Vec<String>,
 }
 
 impl VisitMut for MutableBorrowerHelper<'_> {
@@ -244,12 +278,27 @@ impl VisitMut for MutableBorrowerHelper<'_> {
             true => self.make_mut.push(id),
         }
     }
+
+    // treating all declared mut with method call as mut (cannot look up fn decl)
+    fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
+        let id = i.receiver.as_ref().into_token_stream().to_string();
+        println!(
+            "call decl id: {}, {}",
+            id,
+            i.clone().into_token_stream().to_string()
+        );
+        match self.decl_mut.contains(&id) {
+            true => self.make_mut.push(id),
+            false => (),
+        }
+    }
 }
 
 struct MutableBorrower<'a> {
     fn_name: &'a str,
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
+    decl_mut: &'a mut Vec<String>,
 }
 
 impl VisitMut for MutableBorrower<'_> {
@@ -261,6 +310,7 @@ impl VisitMut for MutableBorrower<'_> {
                 let mut mut_borrower_helper = MutableBorrowerHelper {
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
+                    decl_mut: self.decl_mut,
                 };
                 i.block
                     .stmts
@@ -344,18 +394,26 @@ pub fn make_borrows(
     };
     callee_input_helper.visit_file_mut(&mut file);
     let mut make_ref = vec![];
+    let mut decl_mut = vec![];
     let mut caller_helper = CallerHelper {
         caller_fn_name,
         callee_fn_name,
         callee_inputs: &callee_inputs,
         make_ref: &mut make_ref,
+        decl_mut: &mut decl_mut,
     };
     caller_helper.visit_file_mut(&mut file);
+
+    for s in &decl_mut {
+        println!("decl {} mut", s);
+    }
+
     let mut make_mut = vec![];
     let mut mut_borrower = MutableBorrower {
         fn_name: callee_fn_name,
         make_ref: &mut make_ref,
         make_mut: &mut make_mut,
+        decl_mut: &mut decl_mut,
     };
     mut_borrower.visit_file_mut(&mut file);
     let mut callee_assigner = CalleeBorrowAssigner {
