@@ -21,3 +21,8 @@ fn bar(x: i32) -> i32 {
         return -1;
     }
 }
+
+fn main() {
+    foo();
+    new_foo();
+}
