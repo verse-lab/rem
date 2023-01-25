@@ -1,10 +1,6 @@
 pub fn original_foo() -> String {
     let x = '1';
-    let y = if x > '2' {
-        x
-    } else {
-        return String::from("y")
-    };
+    let y = if x > '2' { x } else { return String::from("y") };
     String::from(y)
 }
 

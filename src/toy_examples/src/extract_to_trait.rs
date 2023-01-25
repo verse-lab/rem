@@ -1,5 +1,5 @@
 trait MultiLifetimeTrait<'b, 'a: 'b> {
-    fn trait_function(self: &Self, x: & 'a i32, y: &'b i32) -> & 'b i32;
+    fn trait_function(self: &Self, x: &'a i32, y: &'b i32) -> &'b i32;
 }
 
 struct SimpleStruct;

@@ -3,8 +3,8 @@ use quote::ToTokens;
 use std::fs;
 
 use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprCall, ExprMethodCall,
-    FnArg, ItemFn, Local, Macro, Pat, Type, TypeReference,
+    visit_mut::VisitMut, Expr, ExprAssign, ExprCall, ExprMethodCall, FnArg, ItemFn, Local, Macro,
+    Pat, Type, TypeReference,
 };
 use utils::format_source;
 
@@ -64,13 +64,13 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
         let id = i.into_token_stream().to_string();
         println!("id expr: {}", &id);
         match i {
-            Expr::MethodCall(_) => (), //no need to star method call
-            _ => {
-                match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
-                    true => *i = syn::parse_quote! {*#i},
-                    false => visit_sub_expr_find_id(self, i),
-                }
-            }
+            Expr::MethodCall(e) => {
+                e.args.iter_mut().for_each(|el| self.visit_expr_mut(el));
+            } //no need to star method call left side
+            _ => match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
+                true => *i = syn::parse_quote! {*#i},
+                false => visit_sub_expr_find_id(self, i),
+            },
         }
     }
 

@@ -1,10 +1,10 @@
-mod non_control_flow;
+mod adding_lifetime_to_struct;
 mod borrow;
+mod extract_to_trait;
 mod in_out_lifetimes;
 mod lifetime_bounds;
-mod extract_to_trait;
 mod multiple_expressions_with_different_lifetimes;
-mod adding_lifetime_to_struct;
+mod non_control_flow;
 
 fn main() {
     non_control_flow::original_foo();
@@ -40,5 +40,4 @@ fn main() {
             adding_lifetime_to_struct::make_foo_updated(x3, y3);
         }
     }
-
 }

@@ -1,7 +1,7 @@
-pub fn original_foo(){
+pub fn original_foo() {
     let x = 1;
     {
-        let p : &mut &i32 = &mut &0;
+        let p: &mut &i32 = &mut &0;
         *p = &x;
         println!("{}", **p);
     }
@@ -22,15 +22,15 @@ fn bar_extracted(p: &mut &i32, x: &i32) {
 }
 */
 
-pub fn new_foo_fixed(){
+pub fn new_foo_fixed() {
     let x = 1;
     {
-        let p : &mut &i32 = &mut &0;
+        let p: &mut &i32 = &mut &0;
         bar_fixed(p, &x);
         println!("{}", **p);
     }
 }
 
-fn bar_fixed<'a, 'b: 'a>(p: & 'a mut & 'b i32, x: & 'b i32) {
+fn bar_fixed<'a, 'b: 'a>(p: &'a mut &'b i32, x: &'b i32) {
     *p = &x;
 }
