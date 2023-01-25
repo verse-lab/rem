@@ -23,11 +23,12 @@ fn new_foo() -> i32 {
 }
 
 fn bar(x: i32) -> RetNewFoo<i32,i32> {
-    if x < 2 {
-        RetNewFoo::Ok(5)
+    let result = if x < 2 {
+        5
     } else {
-        RetNewFoo::Return(-1)
-    }
+        return RetNewFoo::Return(-1)
+    };
+    RetNewFoo::Ok(result)
 }
 
 fn main() {
