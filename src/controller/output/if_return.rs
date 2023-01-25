@@ -16,11 +16,15 @@ fn bar(x: i32) -> Ret_bar<i32, i32> {
     let result = if x < 2 {
         5
     } else {
-        return -1;
+        return Ret_bar::Return(-1);
     };
     Ret_bar::Ok(result)
 }
 fn main() {
     foo();
     new_foo();
+}
+enum Ret_bar<A, B> {
+    Ok(A),
+    Return(B),
 }

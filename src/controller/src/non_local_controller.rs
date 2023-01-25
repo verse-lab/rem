@@ -1,7 +1,8 @@
 use std::fs;
+use std::process::id;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
-use syn::{Expr, ExprCall, ExprReturn, ItemFn, parse_quote, ReturnType, Signature, Stmt, Token, Type};
+use syn::{Expr, ExprCall, ExprReturn, Item, ItemEnum, ItemFn, parse_quote, ReturnType, Signature, Stmt, Token, Type};
 use syn::token::Return;
 use syn::visit::Visit;
 use syn::visit_mut::VisitMut;
@@ -192,11 +193,9 @@ impl VisitMut for CalleeCheckNCF<'_> {
     }
 }
 
-struct MakeLastReturnBlkVisitor<'a> {
-    enum_name: &'a str,
-}
+struct MakeLastReturnBlkVisitor {}
 
-impl VisitMut for MakeLastReturnBlkVisitor<'_> {
+impl VisitMut for MakeLastReturnBlkVisitor {
     fn visit_stmt_mut(&mut self, i: &mut Stmt) {
         match i {
             Stmt::Expr(e) => {
@@ -229,7 +228,7 @@ impl VisitMut for MakeReturn<'_> {
                 };
                 let ty : Type = Type::Verbatim(quote!{#ident<#callee_rety,#caller_rety>});
                 i.sig.output = ReturnType::Type(syn::parse_quote!{->}, Box::new(ty));
-                let mut helper = MakeLastReturnBlkVisitor{ enum_name: enum_name.as_str() };
+                let mut helper = MakeLastReturnBlkVisitor{};
                 helper.visit_block_mut(i.block.as_mut());
                 let re = quote!(result);
                 let ok = quote!(Ok);
@@ -238,6 +237,50 @@ impl VisitMut for MakeReturn<'_> {
             }
         }
     }
+}
+
+struct MakeCallerReturnHelper<'a> {
+    callee_fn_name: &'a str,
+}
+impl VisitMut for MakeCallerReturnHelper<'_> {
+    fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
+        let enum_name = format!("Ret_{}", self.callee_fn_name);
+        let ident = Ident::new( enum_name.as_str(), Span::call_site());
+        let return_t = quote!{Return};
+        match i.expr.clone() {
+            None => {
+                let rety : Expr = syn::parse_quote!{#ident::#return_t(())};
+                i.expr = Some(Box::new(rety))
+            }
+            Some(e) => {
+                let e = e.as_ref().clone();
+                let rety : Expr = syn::parse_quote!{#ident::#return_t(#e)};
+                i.expr = Some(Box::new(rety));
+            }
+        }
+    }
+}
+
+struct MakeCallerReturn<'a> {
+    callee_fn_name: &'a str,
+}
+
+impl VisitMut for MakeCallerReturn<'_>{
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.callee_fn_name {
+            false => (),
+            true => {
+                let mut helper = MakeCallerReturnHelper { callee_fn_name: self.callee_fn_name };
+                helper.visit_item_fn_mut(i)
+            }
+        }
+    }
+}
+
+struct MatchCallSite<'a> {
+    caller_fn_name: &'a str,
+    callee_fn_name: &'a str,
 }
 
 pub fn make_controls(
@@ -276,6 +319,20 @@ pub fn make_controls(
         };
         let mut make_ret = MakeReturn { callee_fn_name, caller_rety: &caller_rety };
         make_ret.visit_file_mut(&mut file);
+
+        let mut make_caller_ret = MakeCallerReturn{ callee_fn_name };
+        make_caller_ret.visit_file_mut(&mut file);
+
+        let enum_name = format!("Ret_{}", callee_fn_name);
+        let ident = Ident::new( enum_name.as_str(), Span::call_site());
+        let a = quote!(A);
+        let b = quote!(B);
+        let ok_t = quote!(Ok);
+        let ok = quote!{#ok_t(#a)};
+        let ret_t = quote!(Return);
+        let ret = quote!{#ret_t(#b)};
+        let enum_ret : ItemEnum = syn::parse_quote!{enum #ident<A,B> { #ok, #ret }};
+        file.items.push(Item::Enum(enum_ret));
     }
 
     let file = file.into_token_stream().to_string();
