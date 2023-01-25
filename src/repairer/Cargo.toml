@@ -1,5 +1,5 @@
 [package]
-name = "repair-refactoring"
+name = "repairer"
 version = "0.1.0"
 edition = "2021"
 authors = ["Sewen Thy <me@sewenthy.dev>"]
