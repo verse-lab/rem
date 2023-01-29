@@ -1,10 +1,10 @@
 mod borrow;
 
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use std::fs;
 use std::time::SystemTime;
 use utils::compile_file;
-use colored::Colorize;
 
 #[derive(Parser)]
 struct Cli {
@@ -54,7 +54,12 @@ fn test() {
         let callee_fn_name = "bar";
         let caller_fn_name = "new_foo";
         let now = SystemTime::now();
-        borrow::make_borrows(file_name.as_str(), new_file_name.as_str(), callee_fn_name, caller_fn_name);
+        borrow::make_borrows(
+            file_name.as_str(),
+            new_file_name.as_str(),
+            callee_fn_name,
+            caller_fn_name,
+        );
         let time_elapsed = now.elapsed().unwrap();
         let args = vec![];
         let mut compile_cmd = compile_file(new_file_name.as_str(), &args);
