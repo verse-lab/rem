@@ -2,7 +2,10 @@ use quote::ToTokens;
 
 use std::fs;
 
-use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprCall, ExprMethodCall, FnArg, ItemFn, Local, Macro, Pat, Type, TypeReference, ExprAssignOp};
+use syn::{
+    visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn,
+    Local, Macro, Pat, Type, TypeReference,
+};
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -282,7 +285,7 @@ struct MutBorrowLHSChecker<'a> {
 
 impl VisitMut for MutBorrowLHSChecker<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
-        let id  = i.clone().into_token_stream().to_string();
+        let id = i.clone().into_token_stream().to_string();
         match self.make_ref.contains(&id) {
             true => self.make_mut.push(id),
             false => {
@@ -304,7 +307,10 @@ impl VisitMut for MutableBorrowerHelper<'_> {
         match self.make_ref.contains(&id) {
             true => self.make_mut.push(id),
             false => {
-                let mut lhs_checker = MutBorrowLHSChecker { make_mut: self.make_mut, make_ref: self.make_ref };
+                let mut lhs_checker = MutBorrowLHSChecker {
+                    make_mut: self.make_mut,
+                    make_ref: self.make_ref,
+                };
                 lhs_checker.visit_expr_mut(&mut i.left.clone());
             }
         }
@@ -315,7 +321,10 @@ impl VisitMut for MutableBorrowerHelper<'_> {
         match self.make_ref.contains(&id) {
             true => self.make_mut.push(id),
             false => {
-                let mut lhs_checker = MutBorrowLHSChecker { make_mut: self.make_mut, make_ref: self.make_ref };
+                let mut lhs_checker = MutBorrowLHSChecker {
+                    make_mut: self.make_mut,
+                    make_ref: self.make_ref,
+                };
                 lhs_checker.visit_expr_mut(&mut i.left.clone());
             }
         }
