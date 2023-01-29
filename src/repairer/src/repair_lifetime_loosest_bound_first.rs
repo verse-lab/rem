@@ -5,10 +5,10 @@ use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
-    compile_file, elide_lifetimes_annotations, repair_bounds_help, repair_iteration, RepairSystem,
+    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, RepairSystem,
 };
 use crate::repair_lifetime_simple;
-use utils::format_source;
+use utils::{format_source, compile_file};
 
 pub struct Repairer {}
 

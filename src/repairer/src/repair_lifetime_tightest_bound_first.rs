@@ -10,7 +10,7 @@ use crate::common::{
     RepairSystem,
 };
 use crate::repair_lifetime_simple;
-use utils::format_source;
+use utils::{format_source, compile_file};
 
 pub struct Repairer {}
 

@@ -1,5 +1,6 @@
 mod borrow;
 
+use std::fs;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -17,13 +18,14 @@ enum Commands {
         caller_fn_name: String,
         callee_fn_name: String,
     },
-    // Test {},
+    /// Test the borrower on inputs
+    Test {},
 }
 
 fn main() {
     let args = Cli::parse();
     match &args.command {
-        // Commands::Test {} => test(),
+        Commands::Test {} => test(),
         Commands::Run {
             file_name,
             new_file_name,
@@ -35,5 +37,12 @@ fn main() {
             callee_fn_name.as_str(),
             caller_fn_name.as_str(),
         ),
+    }
+}
+
+fn test() {
+    for file in fs::read_dir("./input").unwrap() {
+        println!("{}", file.unwrap().file_name().to_str().unwrap());
+
     }
 }

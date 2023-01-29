@@ -11,7 +11,7 @@ use syn::{
     visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
     Type, WhereClause, WherePredicate,
 };
-use utils::format_source;
+use utils::{format_source, compile_file};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////
@@ -26,15 +26,6 @@ pub trait RepairSystem {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CompilerError {
     pub rendered: String,
-}
-
-pub fn compile_file(file_name: &str, args: &Vec<&str>) -> Command {
-    let mut compile = Command::new("rustc");
-    for arg in args {
-        compile.arg(arg);
-    }
-    compile.arg(file_name);
-    compile
 }
 
 pub fn repair_standard_help(stderr: &Cow<str>, new_file_name: &str) -> bool {
