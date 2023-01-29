@@ -3,10 +3,7 @@ use quote::ToTokens;
 use std::fs;
 
 use syn::punctuated::Punctuated;
-use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn,
-    Local, Macro, Pat, Token, Type, TypeReference,
-};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn, Local, Macro, Pat, Token, Type, TypeReference};
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -175,11 +172,20 @@ struct CallerCheckCallee<'a> {
     callee_fn_name: &'a str,
     decl_mut: &'a mut Vec<String>,
     found: bool,
+    check_input_visitor: &'a mut CallerCheckInput<'a>,
 }
 
 impl VisitMut for CallerCheckCallee<'_> {
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
+        match self.found {
+            true => self.check_input_visitor.visit_expr_mut(i),
+            false => visit_sub_expr_find_id(self, i),
+        }
+    }
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let id = i.func.as_ref().into_token_stream().to_string();
+        println!("expression call: {}", i.clone().into_token_stream().to_string());
+        println!("func call: {}", id.as_str());
         match id == self.callee_fn_name {
             false => (),
             true => self.found = true,
@@ -220,6 +226,7 @@ impl VisitMut for CallerCheckInput<'_> {
         match path.contains("print") {
             false => (),
             true => {
+                println!("visiting macro:{}", i.clone().into_token_stream().to_string());
                 let tokens = i.tokens.clone();
                 let mut expr_punc: Punctuated<Expr, Token!(,)> = syn::parse_quote! {#tokens};
                 expr_punc.iter_mut().for_each(|e| self.visit_expr_mut(e));
@@ -254,15 +261,22 @@ impl VisitMut for CallerHelper<'_> {
                         _ => (),
                     },
                 });
-                let mut check_callee = CallerCheckCallee {
-                    callee_fn_name: self.callee_fn_name,
-                    decl_mut: self.decl_mut,
-                    found: false,
-                };
 
                 let mut check_input = CallerCheckInput {
                     input: &self.callee_inputs,
                     make_ref: &mut self.make_ref,
+                };
+
+                let mut temp = vec![];
+                let mut check_input_temp = CallerCheckInput {
+                    input: &self.callee_inputs,
+                    make_ref: &mut temp,
+                };
+                let mut check_callee = CallerCheckCallee {
+                    callee_fn_name: self.callee_fn_name,
+                    decl_mut: self.decl_mut,
+                    found: false,
+                    check_input_visitor: &mut check_input_temp,
                 };
 
                 i.block.stmts.iter_mut().for_each(|stmt| {
@@ -271,7 +285,9 @@ impl VisitMut for CallerHelper<'_> {
                     } else {
                         check_callee.visit_stmt_mut(stmt);
                     }
-                })
+                });
+
+                temp.into_iter().for_each(|x| self.make_ref.push(x))
             }
         }
     }

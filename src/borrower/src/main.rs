@@ -64,10 +64,9 @@ fn test() {
         let args = vec![];
         let mut compile_cmd = compile_file(new_file_name.as_str(), &args);
         let out = compile_cmd.output().unwrap();
-        let stderr = String::from_utf8_lossy(&out.stderr);
         println!(
             "{}: {} in {:#?}",
-            (if stderr.len() == 0 {
+            (if out.status.success() {
                 format!("PASSED").green()
             } else {
                 format!("FAILED").red()
