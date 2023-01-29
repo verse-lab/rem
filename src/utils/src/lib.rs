@@ -12,6 +12,18 @@ pub fn compile_file(file_name: &str, args: &Vec<&str>) -> Command {
     compile
 }
 
+pub fn compile_project(manifest_path: &str, cargo_args: &Vec<&str>) -> Command {
+    let mut compile = Command::new("cargo");
+    compile.arg("build");
+    for arg in cargo_args {
+        compile.arg(arg);
+    }
+    let toml = format!("--manifest-path={}", manifest_path);
+    compile.arg(toml);
+    compile.arg("--message-format=json");
+    compile
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////          MISC          ////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////

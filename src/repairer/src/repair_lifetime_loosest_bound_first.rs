@@ -1,20 +1,30 @@
 use proc_macro2::Span;
 use quote::ToTokens;
-use std::borrow::Cow;
 use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
-use crate::common::{
-    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, RepairSystem,
-};
+use crate::common::{RustcError, elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project, RepairSystem};
 use crate::repair_lifetime_simple;
-use utils::{compile_file, format_source};
+use utils::{compile_file, compile_project, format_source};
 
 pub struct Repairer {}
 
 impl RepairSystem for Repairer {
     fn name(&self) -> &str {
         "_loosest_bounds_first_repairer"
+    }
+
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
+        annotate_loose_named_lifetime(src_path, fn_name);
+        let mut compile_cmd = compile_project(manifest_path, &vec![]);
+        let process_errors = |ce: &RustcError| repair_bounds_help(ce.rendered.as_str(), src_path, fn_name);
+        match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50)) {
+            true => {
+                elide_lifetimes_annotations(src_path, fn_name);
+                true
+            }
+            false => false,
+        }
     }
 
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
@@ -29,7 +39,7 @@ impl RepairSystem for Repairer {
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
 
-        let process_errors = |stderr: &Cow<str>| repair_bounds_help(stderr, new_file_name, fn_name);
+        let process_errors = |stderr: &str| repair_bounds_help(stderr, new_file_name, fn_name);
 
         match repair_iteration(&mut compile_cmd, &process_errors, true, Some(50)) {
             true => {

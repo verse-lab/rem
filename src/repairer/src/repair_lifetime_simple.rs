@@ -11,6 +11,10 @@ impl RepairSystem for Repairer {
         "_simple_repairer"
     }
 
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
+        false
+    }
+
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
         self.repair_function(file_name, new_file_name, "")
     }
@@ -21,7 +25,7 @@ impl RepairSystem for Repairer {
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
 
-        let process_errors = |stderr: &Cow<str>| {
+        let process_errors = |stderr: &str| {
             repair_bounds_help(stderr, new_file_name, fn_name)
                 || repair_standard_help(stderr, new_file_name)
         };

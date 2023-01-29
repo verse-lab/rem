@@ -11,15 +11,19 @@ impl RepairSystem for Repairer {
         "_rustfix_repairer"
     }
 
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
+        false
+    }
+
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
         fs::copy(file_name, &new_file_name).unwrap();
         let args = vec!["--error-format=json"];
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
 
-        let process_errors = |stderr: &Cow<str>| {
+        let process_errors = |stderr: &str| {
             let suggestions = rustfix::get_suggestions_from_json(
-                &*stderr,
+                stderr,
                 &HashSet::new(),
                 rustfix::Filter::Everything,
             )

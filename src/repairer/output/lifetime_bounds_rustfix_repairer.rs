@@ -15,7 +15,7 @@ pub fn new_foo() {
     }
 }
 
-fn bar_extracted<'a>(p: &mut &'a i32, x: &'a i32) {
+fn bar_extracted(p: &mut &i32, x: &i32) {
     *p = &x;
 }
 

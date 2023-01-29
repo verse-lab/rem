@@ -6,7 +6,7 @@ use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
-    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, CompilerError, RepairSystem,
+    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, RustcError, RepairSystem,
 };
 use crate::repair_lifetime_simple;
 use utils::{compile_file, format_source};
@@ -16,6 +16,10 @@ pub struct Repairer {}
 impl RepairSystem for Repairer {
     fn name(&self) -> &str {
         "_tightest_bounds_first_repairer"
+    }
+
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
+        false
     }
 
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
@@ -30,7 +34,7 @@ impl RepairSystem for Repairer {
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
 
-        let process_errors = |stderr: &Cow<str>| {
+        let process_errors = |stderr: &str| {
             if repair_bounds_help(stderr, new_file_name, fn_name) {
                 true
             } else {
@@ -216,10 +220,9 @@ impl VisitMut for BoundsLoosener<'_> {
     }
 }
 
-pub fn loosen_bounds(stderr: &Cow<str>, new_file_name: &str, fn_name: &str) -> bool {
-    let binding = stderr.to_string();
-    let deserializer = serde_json::Deserializer::from_str(binding.as_str());
-    let stream = deserializer.into_iter::<CompilerError>();
+pub fn loosen_bounds(stderr: &str, new_file_name: &str, fn_name: &str) -> bool {
+    let deserializer = serde_json::Deserializer::from_str(stderr);
+    let stream = deserializer.into_iter::<RustcError>();
     let mut helped = false;
     for item in stream {
         let rendered = item.unwrap().rendered;
