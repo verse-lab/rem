@@ -2,10 +2,7 @@ use quote::ToTokens;
 
 use std::fs;
 
-use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprCall, ExprMethodCall, FnArg, ItemFn, Local, Macro,
-    Pat, Type, TypeReference,
-};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprCall, ExprMethodCall, FnArg, ItemFn, Local, Macro, Pat, Type, TypeReference, ExprAssignOp};
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -64,9 +61,18 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
         let id = i.into_token_stream().to_string();
         println!("id expr: {}", &id);
         match i {
+            //no need to star method call left side but need to for args
             Expr::MethodCall(e) => {
                 e.args.iter_mut().for_each(|el| self.visit_expr_mut(el));
-            } //no need to star method call left side
+            }
+            //no starring index lhs but need to star its index
+            Expr::Index(e) => {
+                self.visit_expr_mut(e.index.as_mut());
+            }
+            //no need to star let binding lhs
+            Expr::Let(e) => {
+                self.visit_expr_mut(e.expr.as_mut());
+            }
             _ => match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
                 true => *i = syn::parse_quote! {*#i},
                 false => visit_sub_expr_find_id(self, i),
@@ -269,6 +275,23 @@ impl VisitMut for CallerHelper<'_> {
     }
 }
 
+struct MutBorrowLHSChecker<'a> {
+    make_mut: &'a mut Vec<String>,
+    make_ref: &'a mut Vec<String>,
+}
+
+impl VisitMut for MutBorrowLHSChecker<'_> {
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
+        let id  = i.clone().into_token_stream().to_string();
+        match self.make_ref.contains(&id) {
+            true => self.make_mut.push(id),
+            false => {
+                visit_sub_expr_find_id(self, i);
+            }
+        }
+    }
+}
+
 struct MutableBorrowerHelper<'a> {
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
@@ -279,8 +302,22 @@ impl VisitMut for MutableBorrowerHelper<'_> {
     fn visit_expr_assign_mut(&mut self, i: &mut ExprAssign) {
         let id = i.left.clone().into_token_stream().to_string();
         match self.make_ref.contains(&id) {
-            false => (),
             true => self.make_mut.push(id),
+            false => {
+                let mut lhs_checker = MutBorrowLHSChecker { make_mut: self.make_mut, make_ref: self.make_ref };
+                lhs_checker.visit_expr_mut(&mut i.left.clone());
+            }
+        }
+    }
+
+    fn visit_expr_assign_op_mut(&mut self, i: &mut ExprAssignOp) {
+        let id = i.left.clone().into_token_stream().to_string();
+        match self.make_ref.contains(&id) {
+            true => self.make_mut.push(id),
+            false => {
+                let mut lhs_checker = MutBorrowLHSChecker { make_mut: self.make_mut, make_ref: self.make_ref };
+                lhs_checker.visit_expr_mut(&mut i.left.clone());
+            }
         }
     }
 
@@ -388,7 +425,6 @@ pub fn make_borrows(
     callee_fn_name: &str,
     caller_fn_name: &str,
 ) {
-    println!("file name: {}", file_name);
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))

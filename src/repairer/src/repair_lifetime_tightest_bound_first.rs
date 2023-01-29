@@ -6,11 +6,10 @@ use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
-    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, CompilerError,
-    RepairSystem,
+    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, CompilerError, RepairSystem,
 };
 use crate::repair_lifetime_simple;
-use utils::{format_source, compile_file};
+use utils::{compile_file, format_source};
 
 pub struct Repairer {}
 

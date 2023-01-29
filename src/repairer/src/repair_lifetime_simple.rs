@@ -1,9 +1,7 @@
 use std::borrow::Cow;
 use std::fs;
 
-use crate::common::{
-    repair_bounds_help, repair_iteration, repair_standard_help, RepairSystem,
-};
+use crate::common::{repair_bounds_help, repair_iteration, repair_standard_help, RepairSystem};
 use utils::compile_file;
 
 pub struct Repairer {}

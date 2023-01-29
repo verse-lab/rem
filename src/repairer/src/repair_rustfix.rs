@@ -1,8 +1,8 @@
 use crate::common::{repair_iteration, RepairSystem};
-use utils::compile_file;
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs;
+use utils::compile_file;
 
 pub struct Repairer {}
 
