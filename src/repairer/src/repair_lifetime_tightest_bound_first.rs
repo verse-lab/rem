@@ -6,7 +6,7 @@ use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
-    compile_file, elide_lifetimes_annotations, repair_bounds_help, repair_iteration, CompilerError,
+    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, CompilerError,
     RepairSystem,
 };
 use crate::repair_lifetime_simple;

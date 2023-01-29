@@ -1,5 +1,3 @@
-extern crate colored;
-
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 use std::iter::zip;

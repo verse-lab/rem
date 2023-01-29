@@ -11,7 +11,7 @@ use syn::{
     visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
     Type, WhereClause, WherePredicate,
 };
-use utils::{format_source, compile_file};
+use utils::{format_source};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////

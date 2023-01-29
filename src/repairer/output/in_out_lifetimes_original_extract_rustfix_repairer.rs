@@ -13,7 +13,7 @@ pub fn original_foo() {
 }
 
 fn extracted<'a>(x_ref: &'a i32, z: &'a mut &'a i32, y: &'a i32) -> &'a i32 {
-    if *z < &*x_ref {
+    if *z < x_ref {
         &y
     } else {
         &W

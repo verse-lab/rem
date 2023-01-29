@@ -388,6 +388,7 @@ pub fn make_borrows(
     callee_fn_name: &str,
     caller_fn_name: &str,
 ) {
+    println!("file name: {}", file_name);
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
