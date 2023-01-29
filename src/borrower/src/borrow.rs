@@ -1,10 +1,11 @@
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 
 use std::fs;
 
+use syn::punctuated::Punctuated;
 use syn::{
     visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn,
-    Local, Macro, Pat, Type, TypeReference,
+    Local, Macro, Pat, Token, Type, TypeReference,
 };
 use utils::format_source;
 
@@ -218,13 +219,11 @@ impl VisitMut for CallerCheckInput<'_> {
         let path = i.path.clone().into_token_stream().to_string();
         match path.contains("print") {
             false => (),
-            true => i.tokens.to_string().split(",").into_iter().for_each(|x| {
-                let id = x.trim().to_string();
-                match self.input.contains(&id) {
-                    true => self.make_ref.push(id),
-                    false => {}
-                }
-            }),
+            true => {
+                let tokens = i.tokens.clone();
+                let mut expr_punc: Punctuated<Expr, Token!(,)> = syn::parse_quote! {#tokens};
+                expr_punc.iter_mut().for_each(|e| self.visit_expr_mut(e));
+            }
         }
     }
 }
