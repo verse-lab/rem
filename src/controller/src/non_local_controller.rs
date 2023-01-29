@@ -278,9 +278,45 @@ impl VisitMut for MakeCallerReturn<'_>{
     }
 }
 
+struct MatchCallSiteHelper<'a> {
+    callee_fn_name: &'a str,
+    has_return: bool,
+    has_continue: bool,
+    has_break: bool,
+}
+
+impl VisitMut for MatchCallSiteHelper<'_>{
+    fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
+        let id = i.func.clone().as_ref().into_token_stream().to_string();
+        match id == self.callee_fn_name {
+            true => {
+                let e = i.clone();
+
+            }
+            false => {}
+        }
+    }
+}
+
+
 struct MatchCallSite<'a> {
     caller_fn_name: &'a str,
     callee_fn_name: &'a str,
+    has_return: bool,
+    has_continue: bool,
+    has_break: bool,
+}
+
+impl VisitMut for MatchCallSite<'_>{
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+
+            }
+            false => {}
+        }
+    }
 }
 
 pub fn make_controls(
