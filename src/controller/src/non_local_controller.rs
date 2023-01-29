@@ -1,10 +1,10 @@
 use std::fs;
-use std::process::id;
+
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
-use syn::{Expr, ExprCall, ExprReturn, Item, ItemEnum, ItemFn, parse_quote, ReturnType, Signature, Stmt, Token, Type};
-use syn::token::Return;
-use syn::visit::Visit;
+use syn::{Expr, ExprCall, ExprReturn, Item, ItemEnum, ItemFn, ReturnType, Stmt, Type};
+
+
 use syn::visit_mut::VisitMut;
 use utils::format_source;
 
@@ -290,7 +290,7 @@ impl VisitMut for MatchCallSiteHelper<'_>{
         let id = i.func.clone().as_ref().into_token_stream().to_string();
         match id == self.callee_fn_name {
             true => {
-                let e = i.clone();
+                let _e = i.clone();
 
             }
             false => {}

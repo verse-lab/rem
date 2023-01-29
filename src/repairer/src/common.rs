@@ -174,7 +174,7 @@ pub fn repair_iteration(
     let result = loop {
         let out = compile_cmd.output().unwrap();
         let stderr = String::from_utf8_lossy(&out.stderr);
-        if stderr.len() == 0 {
+        if out.status.success() {
             break true;
         }
         count += 1;
@@ -449,8 +449,7 @@ pub fn repair_iteration_project(
     let max_iterations = max_iterations.unwrap_or(25);
     let result = loop {
         let out = compile_cmd.output().unwrap();
-        let stderr = String::from_utf8_lossy(&out.stderr);
-        if stderr.len() == 0 {
+        if out.status.success() {
             break true;
         }
         // cargo give rustc error to stdout not stderr
@@ -490,6 +489,7 @@ pub fn repair_iteration_project(
 
     if print_stats {
         println!("repair count: {}", count);
+        println!("status: {}", result);
     }
 
     result

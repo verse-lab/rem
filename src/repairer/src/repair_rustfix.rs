@@ -1,5 +1,5 @@
 use crate::common::{repair_iteration, RepairSystem};
-use std::borrow::Cow;
+
 use std::collections::HashSet;
 use std::fs;
 use utils::compile_file;
@@ -11,7 +11,7 @@ impl RepairSystem for Repairer {
         "_rustfix_repairer"
     }
 
-    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
+    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> bool {
         false
     }
 

@@ -5,7 +5,6 @@ pub fn original_foo() {
         *p = &x;
     }
 }
-
 pub fn new_foo() {
     let p: &mut &i32 = &mut &0;
     {
@@ -14,9 +13,10 @@ pub fn new_foo() {
         println!("{}", **p);
     }
 }
-
-fn bar_extracted(p: &mut &i32, x: &i32) {
+fn bar_extracted<'lt0, 'lt1>(p: &mut &'lt0 i32, x: &'lt1 i32)
+where
+    'lt1: 'lt0,
+{
     *p = &x;
 }
-
 fn main() {}

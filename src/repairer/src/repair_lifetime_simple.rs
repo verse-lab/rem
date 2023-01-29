@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+
 use std::fs;
 
 use crate::common::{repair_bounds_help, repair_iteration, repair_standard_help, RepairSystem};
@@ -11,7 +11,7 @@ impl RepairSystem for Repairer {
         "_simple_repairer"
     }
 
-    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
+    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> bool {
         false
     }
 

@@ -1,15 +1,16 @@
 use proc_macro2::Span;
 use quote::ToTokens;
 use regex::Regex;
-use std::borrow::Cow;
+
 use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, RustcError, RepairSystem,
+    repair_iteration_project
 };
 use crate::repair_lifetime_simple;
-use utils::{compile_file, format_source};
+use utils::{compile_file, format_source, compile_project};
 
 pub struct Repairer {}
 
@@ -19,7 +20,22 @@ impl RepairSystem for Repairer {
     }
 
     fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
-        false
+        annotate_tight_named_lifetime(src_path, fn_name);
+        let mut compile_cmd = compile_project(manifest_path, &vec![]);
+        let process_errors = |ce: &RustcError| {
+            if repair_bounds_help(ce.rendered.as_str(), src_path, fn_name) {
+                true
+            } else {
+                loosen_bounds(ce.rendered.as_str(), src_path, fn_name)
+            }
+        };
+        match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50)) {
+            true => {
+                elide_lifetimes_annotations(src_path, fn_name);
+                true
+            }
+            false => false,
+        }
     }
 
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
@@ -225,7 +241,10 @@ pub fn loosen_bounds(stderr: &str, new_file_name: &str, fn_name: &str) -> bool {
     let stream = deserializer.into_iter::<RustcError>();
     let mut helped = false;
     for item in stream {
-        let rendered = item.unwrap().rendered;
+        let rendered = match item {
+            Ok(item) => item.rendered,
+            Err(_) => stderr.to_string(),
+        };
         let reference_re = Regex::new(r"error.*`(?P<ref_full>\**(?P<ref>[a-z]+))`").unwrap();
         let error_lines = reference_re.captures_iter(rendered.as_str());
 
