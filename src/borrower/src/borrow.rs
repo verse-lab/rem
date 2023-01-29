@@ -1,4 +1,4 @@
-use quote::{quote, ToTokens};
+use quote::ToTokens;
 
 use std::fs;
 
