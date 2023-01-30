@@ -314,6 +314,7 @@ struct MutableBorrowerHelper<'a> {
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
     decl_mut: &'a mut Vec<String>,
+    mut_methods: &'a Vec<ExprMethodCall>,
 }
 
 impl VisitMut for MutableBorrowerHelper<'_> {
@@ -354,7 +355,14 @@ impl VisitMut for MutableBorrowerHelper<'_> {
             i.clone().into_token_stream().to_string()
         );
         match self.decl_mut.contains(&id) {
-            true => self.make_mut.push(id),
+            true => {
+                self.mut_methods.clone().iter().for_each(|mut_call| {
+                    let mut_call_id = mut_call.receiver.as_ref().into_token_stream().to_string();
+                    if i.clone().method == mut_call.method && id == mut_call_id {
+                        self.make_mut.push(id.clone())
+                    }
+                })
+            },
             false => (),
         }
     }
@@ -365,6 +373,7 @@ struct MutableBorrower<'a> {
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
     decl_mut: &'a mut Vec<String>,
+    mut_methods: &'a Vec<ExprMethodCall>,
 }
 
 impl VisitMut for MutableBorrower<'_> {
@@ -377,6 +386,7 @@ impl VisitMut for MutableBorrower<'_> {
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
                     decl_mut: self.decl_mut,
+                    mut_methods: self.mut_methods,
                 };
                 i.block
                     .stmts
@@ -446,9 +456,21 @@ impl VisitMut for CallerFnArg<'_> {
 pub fn make_borrows(
     file_name: &str,
     new_file_name: &str,
+    mut_method_call_expr_file: &str,
     callee_fn_name: &str,
     caller_fn_name: &str,
 ) {
+    println!("{}", mut_method_call_expr_file);
+    let mut_methods_content: String = fs::read_to_string(&mut_method_call_expr_file).unwrap().parse().unwrap();
+    let mut mut_methods = vec![];
+    for call in mut_methods_content.split("\n") {
+        match syn::parse_str::<syn::ExprMethodCall>(call)
+            .map_err(|e| format!("{:?}", e)) {
+            Ok(call) => mut_methods.push(call),
+            Err(_) => (),
+        }
+    }
+
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
@@ -480,6 +502,7 @@ pub fn make_borrows(
         make_ref: &mut make_ref,
         make_mut: &mut make_mut,
         decl_mut: &mut decl_mut,
+        mut_methods: &mut_methods,
     };
     mut_borrower.visit_file_mut(&mut file);
     let mut callee_assigner = CalleeBorrowAssigner {

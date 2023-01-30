@@ -18,6 +18,7 @@ enum Commands {
     Run {
         file_name: String,
         new_file_name: String,
+        mut_method_call_expr_file: String,
         caller_fn_name: String,
         callee_fn_name: String,
     },
@@ -32,11 +33,12 @@ fn main() {
         Commands::Run {
             file_name,
             new_file_name,
-            caller_fn_name,
+            mut_method_call_expr_file, caller_fn_name,
             callee_fn_name,
         } => borrow::make_borrows(
             file_name.as_str(),
             new_file_name.as_str(),
+            mut_method_call_expr_file.as_str(),
             callee_fn_name.as_str(),
             caller_fn_name.as_str(),
         ),
@@ -51,12 +53,14 @@ fn test() {
         }
         let file_name = format!("./input/{}", test_name.to_str().unwrap());
         let new_file_name = format!("./output/{}", test_name.to_str().unwrap());
+        let mut_method_call_expr_file = format!("./method_call_mut/{}", test_name.to_str().unwrap());
         let callee_fn_name = "bar";
         let caller_fn_name = "new_foo";
         let now = SystemTime::now();
         borrow::make_borrows(
             file_name.as_str(),
             new_file_name.as_str(),
+            mut_method_call_expr_file.as_str(),
             callee_fn_name,
             caller_fn_name,
         );
