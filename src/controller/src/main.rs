@@ -48,7 +48,7 @@ fn main() {
 fn test() {
     for file in fs::read_dir("./input").unwrap() {
         let test_name = file.unwrap().file_name().to_owned();
-        if test_name.to_str().unwrap() == "borrow.rs" {
+        if test_name.to_str().unwrap() == "if_return_unit_controller.rs" {
             continue;
         }
         let file_name = format!("./input/{}", test_name.to_str().unwrap());
