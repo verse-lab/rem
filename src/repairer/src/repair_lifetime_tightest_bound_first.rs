@@ -6,11 +6,11 @@ use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
 use crate::common::{
-    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, RustcError, RepairSystem,
-    repair_iteration_project
+    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
+    RepairSystem, RustcError,
 };
 use crate::repair_lifetime_simple;
-use utils::{compile_file, format_source, compile_project};
+use utils::{compile_file, compile_project, format_source};
 
 pub struct Repairer {}
 
@@ -29,7 +29,8 @@ impl RepairSystem for Repairer {
                 loosen_bounds(ce.rendered.as_str(), src_path, fn_name)
             }
         };
-        match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50)) {
+        match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
+        {
             true => {
                 elide_lifetimes_annotations(src_path, fn_name);
                 true

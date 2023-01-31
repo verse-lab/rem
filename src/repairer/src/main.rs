@@ -74,7 +74,13 @@ fn main() {
                 exit(1)
             }
         }
-        Commands::Cargo { src_path, manifest_path, fn_name, repairer, verbose} => {
+        Commands::Cargo {
+            src_path,
+            manifest_path,
+            fn_name,
+            repairer,
+            verbose,
+        } => {
             let repair_system: &dyn RepairSystem = match repairer {
                 RepairerType::Simple => &repair_lifetime_simple::Repairer {},
                 TightestBoundsFirst => &repair_lifetime_tightest_bound_first::Repairer {},

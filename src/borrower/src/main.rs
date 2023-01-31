@@ -33,7 +33,8 @@ fn main() {
         Commands::Run {
             file_name,
             new_file_name,
-            mut_method_call_expr_file, caller_fn_name,
+            mut_method_call_expr_file,
+            caller_fn_name,
             callee_fn_name,
         } => borrow::make_borrows(
             file_name.as_str(),
@@ -53,7 +54,8 @@ fn test() {
         }
         let file_name = format!("./input/{}", test_name.to_str().unwrap());
         let new_file_name = format!("./output/{}", test_name.to_str().unwrap());
-        let mut_method_call_expr_file = format!("./method_call_mut/{}", test_name.to_str().unwrap());
+        let mut_method_call_expr_file =
+            format!("./method_call_mut/{}", test_name.to_str().unwrap());
         let callee_fn_name = "bar";
         let caller_fn_name = "new_foo";
         let now = SystemTime::now();

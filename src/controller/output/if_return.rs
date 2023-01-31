@@ -9,22 +9,25 @@ fn foo() -> i32 {
 }
 fn new_foo() -> i32 {
     let x = 1;
-    let y = bar(x);
+    let y = match bar(x) {
+        RetBar::Ok(x) => x,
+        RetBar::Return(x) => return x,
+    };
     y
 }
-fn bar(x: i32) -> Ret_bar<i32, i32> {
+fn bar(x: i32) -> RetBar<i32, i32> {
     let result = if x < 2 {
         5
     } else {
-        return Ret_bar::Return(-1);
+        return RetBar::Return(-1);
     };
-    Ret_bar::Ok(result)
+    RetBar::Ok(result)
 }
 fn main() {
     foo();
     new_foo();
 }
-enum Ret_bar<A, B> {
+enum RetBar<A, B> {
     Ok(A),
     Return(B),
 }

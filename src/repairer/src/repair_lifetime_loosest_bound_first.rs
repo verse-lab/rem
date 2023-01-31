@@ -3,7 +3,10 @@ use quote::ToTokens;
 use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
-use crate::common::{RustcError, elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project, RepairSystem};
+use crate::common::{
+    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
+    RepairSystem, RustcError,
+};
 use crate::repair_lifetime_simple;
 use utils::{compile_file, compile_project, format_source};
 
@@ -17,8 +20,10 @@ impl RepairSystem for Repairer {
     fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
         annotate_loose_named_lifetime(src_path, fn_name);
         let mut compile_cmd = compile_project(manifest_path, &vec![]);
-        let process_errors = |ce: &RustcError| repair_bounds_help(ce.rendered.as_str(), src_path, fn_name);
-        match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50)) {
+        let process_errors =
+            |ce: &RustcError| repair_bounds_help(ce.rendered.as_str(), src_path, fn_name);
+        match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
+        {
             true => {
                 elide_lifetimes_annotations(src_path, fn_name);
                 true

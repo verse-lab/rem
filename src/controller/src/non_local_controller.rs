@@ -2,15 +2,20 @@ use std::fs;
 
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
-use syn::{Expr, ExprCall, ExprReturn, Item, ItemEnum, ItemFn, ReturnType, Stmt, Type};
-
-
+use syn::{Expr, ExprCall, ExprMatch, ExprReturn, Item, ItemEnum, ItemFn, ReturnType, Stmt, Type};
+use convert_case::{Case, Casing};
 use syn::visit_mut::VisitMut;
 use utils::format_source;
 
+const ENUM_NAME: &str = "Ret";
+
+fn make_pascal_case(s: &str) -> String {
+    s.to_case(Case::Pascal)
+}
+
 fn visit_subexpr<V>(v: &mut V, node: &mut Expr)
-    where
-        V: VisitMut,
+where
+    V: VisitMut,
 {
     match node {
         Expr::Array(e) => v.visit_expr_array_mut(e),
@@ -76,32 +81,38 @@ struct CheckCalleeWithinLoop<'a> {
 
 impl VisitMut for CheckCalleeWithinLoop<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
-        let mut helper = CheckCalleeWithinLoopHelper { callee_fn_name: self.callee_fn_name, callee_in_loop: self.callee_in_loop };
+        let mut helper = CheckCalleeWithinLoopHelper {
+            callee_fn_name: self.callee_fn_name,
+            callee_in_loop: self.callee_in_loop,
+        };
         match i {
             Expr::ForLoop(l) => {
-                l.body.stmts.iter_mut().for_each(|stmt| {
-                    helper.visit_stmt_mut(stmt)
-                });
+                l.body
+                    .stmts
+                    .iter_mut()
+                    .for_each(|stmt| helper.visit_stmt_mut(stmt));
                 if helper.callee_in_loop {
                     self.callee_in_loop = true
                 };
-            },
+            }
             Expr::Loop(l) => {
-                l.body.stmts.iter_mut().for_each(|stmt| {
-                    helper.visit_stmt_mut(stmt)
-                });
+                l.body
+                    .stmts
+                    .iter_mut()
+                    .for_each(|stmt| helper.visit_stmt_mut(stmt));
                 if helper.callee_in_loop {
                     self.callee_in_loop = true
                 };
-            },
+            }
             Expr::While(l) => {
-                l.body.stmts.iter_mut().for_each(|stmt| {
-                    helper.visit_stmt_mut(stmt)
-                });
+                l.body
+                    .stmts
+                    .iter_mut()
+                    .for_each(|stmt| helper.visit_stmt_mut(stmt));
                 if helper.callee_in_loop {
                     self.callee_in_loop = true
                 };
-            },
+            }
 
             _ => visit_subexpr(self, i),
         }
@@ -124,7 +135,10 @@ impl VisitMut for CallerVisitor<'_> {
             false => (),
             true => {
                 *self.caller_rety = i.sig.output.clone();
-                let mut helper = CheckCalleeWithinLoop { callee_fn_name: self.callee_fn_name, callee_in_loop: false };
+                let mut helper = CheckCalleeWithinLoop {
+                    callee_fn_name: self.callee_fn_name,
+                    callee_in_loop: false,
+                };
                 helper.visit_item_fn_mut(i);
                 self.callee_in_loop = helper.callee_in_loop;
             }
@@ -177,9 +191,14 @@ impl VisitMut for CalleeCheckNCF<'_> {
         match id == self.callee_fn_name {
             false => (),
             true => {
-                let mut check_return = CalleeCheckReturn { has_return: self.has_return };
-                let mut check_loops = CalleeCheckLoops{ has_break: self.has_break, has_continue: self.has_continue };
-                i.block.stmts.iter_mut().for_each(|stmt|{
+                let mut check_return = CalleeCheckReturn {
+                    has_return: self.has_return,
+                };
+                let mut check_loops = CalleeCheckLoops {
+                    has_break: self.has_break,
+                    has_continue: self.has_continue,
+                };
+                i.block.stmts.iter_mut().for_each(|stmt| {
                     check_return.visit_stmt_mut(stmt);
                     if self.within_caller_loop {
                         check_loops.visit_stmt_mut(stmt);
@@ -201,7 +220,7 @@ impl VisitMut for MakeLastReturnBlkVisitor {
             Stmt::Expr(e) => {
                 let re = quote!(result);
                 let e = e.clone();
-                *i = syn::parse_quote!{let #re = #e;}
+                *i = syn::parse_quote! {let #re = #e;}
             }
             _ => (),
         }
@@ -219,20 +238,20 @@ impl VisitMut for MakeReturn<'_> {
         match id == self.callee_fn_name {
             false => (),
             true => {
-                let enum_name = format!("Ret_{}", self.callee_fn_name);
-                let ident = Ident::new( enum_name.as_str(), Span::call_site());
+                let ident_str = format!("{}{}",ENUM_NAME, make_pascal_case(self.callee_fn_name));
+                let ident = Ident::new(ident_str.as_str(), Span::call_site());
                 let caller_rety = self.caller_rety.clone();
                 let callee_rety = match i.sig.output.clone() {
-                    ReturnType::Default => Type::Verbatim(quote!{()}),
+                    ReturnType::Default => Type::Verbatim(quote! {()}),
                     ReturnType::Type(_, t) => t.as_ref().clone(),
                 };
-                let ty : Type = Type::Verbatim(quote!{#ident<#callee_rety,#caller_rety>});
-                i.sig.output = ReturnType::Type(syn::parse_quote!{->}, Box::new(ty));
-                let mut helper = MakeLastReturnBlkVisitor{};
+                let ty: Type = Type::Verbatim(quote! {#ident<#callee_rety,#caller_rety>});
+                i.sig.output = ReturnType::Type(syn::parse_quote! {->}, Box::new(ty));
+                let mut helper = MakeLastReturnBlkVisitor {};
                 helper.visit_block_mut(i.block.as_mut());
                 let re = quote!(result);
                 let ok = quote!(Ok);
-                let ret_stmt_expr : Expr = syn::parse_quote!{#ident::#ok(#re)};
+                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
                 i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
             }
         }
@@ -244,17 +263,17 @@ struct MakeCallerReturnHelper<'a> {
 }
 impl VisitMut for MakeCallerReturnHelper<'_> {
     fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
-        let enum_name = format!("Ret_{}", self.callee_fn_name);
-        let ident = Ident::new( enum_name.as_str(), Span::call_site());
-        let return_t = quote!{Return};
+        let ident_str = format!("{}{}",ENUM_NAME, make_pascal_case(self.callee_fn_name));
+        let ident = Ident::new(ident_str.as_str(), Span::call_site());
+        let return_t = quote! {Return};
         match i.expr.clone() {
             None => {
-                let rety : Expr = syn::parse_quote!{#ident::#return_t(())};
+                let rety: Expr = syn::parse_quote! {#ident::#return_t(())};
                 i.expr = Some(Box::new(rety))
             }
             Some(e) => {
                 let e = e.as_ref().clone();
-                let rety : Expr = syn::parse_quote!{#ident::#return_t(#e)};
+                let rety: Expr = syn::parse_quote! {#ident::#return_t(#e)};
                 i.expr = Some(Box::new(rety));
             }
         }
@@ -265,13 +284,15 @@ struct MakeCallerReturn<'a> {
     callee_fn_name: &'a str,
 }
 
-impl VisitMut for MakeCallerReturn<'_>{
+impl VisitMut for MakeCallerReturn<'_> {
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
             false => (),
             true => {
-                let mut helper = MakeCallerReturnHelper { callee_fn_name: self.callee_fn_name };
+                let mut helper = MakeCallerReturnHelper {
+                    callee_fn_name: self.callee_fn_name,
+                };
                 helper.visit_item_fn_mut(i)
             }
         }
@@ -285,19 +306,46 @@ struct MatchCallSiteHelper<'a> {
     has_break: bool,
 }
 
-impl VisitMut for MatchCallSiteHelper<'_>{
-    fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
-        let id = i.func.clone().as_ref().into_token_stream().to_string();
-        match id == self.callee_fn_name {
-            true => {
-                let _e = i.clone();
-
+impl VisitMut for MatchCallSiteHelper<'_> {
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
+        println!("visit expr: {}", i.into_token_stream().to_string());
+        match i {
+            Expr::Call(c) => {
+                let id = c.func.clone().as_ref().into_token_stream().to_string();
+                match id == self.callee_fn_name {
+                    true => {
+                        let e = i.clone().into_token_stream().to_string();
+                        let enum_name_fn = make_pascal_case(self.callee_fn_name);
+                        let match_str = format!(
+                            "match {} {{\n{} {} {} {}\n}}",
+                            e,
+                            format!("{}{}::Ok(x) => x,\n", ENUM_NAME, enum_name_fn),
+                            if self.has_return {
+                                format!("{}{}::Return(x) => return x,\n", ENUM_NAME, enum_name_fn)
+                            } else {
+                                "".to_string()
+                            },
+                            if self.has_break {
+                                format!("{}{}::Break(x) => break x,\n", ENUM_NAME, enum_name_fn)
+                            } else {
+                                "".to_string()
+                            },
+                            if self.has_continue {
+                                format!("{}{}::Continue => continue,", ENUM_NAME, enum_name_fn)
+                            } else {
+                                "".to_string()
+                            },
+                        );
+                        let match_expr: ExprMatch = syn::parse_str(match_str.as_str()).unwrap();
+                        *i = Expr::Match(match_expr)
+                    }
+                    false => visit_subexpr(self, i),
+                }
             }
-            false => {}
+            _ => visit_subexpr(self, i),
         }
     }
 }
-
 
 struct MatchCallSite<'a> {
     caller_fn_name: &'a str,
@@ -307,12 +355,18 @@ struct MatchCallSite<'a> {
     has_break: bool,
 }
 
-impl VisitMut for MatchCallSite<'_>{
+impl VisitMut for MatchCallSite<'_> {
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.caller_fn_name {
             true => {
-
+                let mut helper = MatchCallSiteHelper {
+                    callee_fn_name: self.callee_fn_name,
+                    has_return: self.has_return,
+                    has_continue: self.has_continue,
+                    has_break: self.has_break,
+                };
+                helper.visit_item_fn_mut(i)
             }
             false => {}
         }
@@ -330,7 +384,7 @@ pub fn make_controls(
         .map_err(|e| format!("{:?}", e))
         .unwrap();
     let mut caller_rety = ReturnType::Default;
-    let mut caller_visitor = CallerVisitor{
+    let mut caller_visitor = CallerVisitor {
         caller_fn_name,
         callee_fn_name,
         callee_in_loop: false,
@@ -338,7 +392,7 @@ pub fn make_controls(
     };
     caller_visitor.visit_file_mut(&mut file);
 
-    let mut callee_visitor = CalleeCheckNCF{
+    let mut callee_visitor = CalleeCheckNCF {
         callee_fn_name,
         within_caller_loop: caller_visitor.callee_in_loop,
         has_break: false,
@@ -350,25 +404,33 @@ pub fn make_controls(
     if callee_visitor.has_return {
         println!("has return: {}", callee_visitor.has_return);
         let caller_rety = match caller_visitor.caller_rety {
-            ReturnType::Default => Type::Verbatim(quote!{()}),
+            ReturnType::Default => Type::Verbatim(quote! {()}),
             ReturnType::Type(_, t) => t.as_ref().clone(),
         };
-        let mut make_ret = MakeReturn { callee_fn_name, caller_rety: &caller_rety };
+        let mut make_ret = MakeReturn {
+            callee_fn_name,
+            caller_rety: &caller_rety,
+        };
         make_ret.visit_file_mut(&mut file);
 
-        let mut make_caller_ret = MakeCallerReturn{ callee_fn_name };
+        let mut make_caller_ret = MakeCallerReturn { callee_fn_name };
         make_caller_ret.visit_file_mut(&mut file);
 
-        let enum_name = format!("Ret_{}", callee_fn_name);
-        let ident = Ident::new( enum_name.as_str(), Span::call_site());
-        let a = quote!(A);
-        let b = quote!(B);
-        let ok_t = quote!(Ok);
-        let ok = quote!{#ok_t(#a)};
-        let ret_t = quote!(Return);
-        let ret = quote!{#ret_t(#b)};
-        let enum_ret : ItemEnum = syn::parse_quote!{enum #ident<A,B> { #ok, #ret }};
+        let ident_str = format!("{}{}",ENUM_NAME, make_pascal_case(callee_fn_name));
+        let enum_str = format!("enum {}<A, B> \n{{Ok(A),\nReturn(B) }}", ident_str);
+        let enum_ret: ItemEnum = syn::parse_str(enum_str.as_str()).unwrap();
         file.items.push(Item::Enum(enum_ret));
+    }
+
+    if callee_visitor.has_return || callee_visitor.has_continue || callee_visitor.has_break {
+        let mut caller_matcher = MatchCallSite {
+            caller_fn_name,
+            callee_fn_name,
+            has_return: callee_visitor.has_return,
+            has_continue: callee_visitor.has_continue,
+            has_break: callee_visitor.has_break,
+        };
+        caller_matcher.visit_file_mut(&mut file);
     }
 
     let file = file.into_token_stream().to_string();

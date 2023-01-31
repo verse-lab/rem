@@ -470,7 +470,7 @@ pub fn repair_iteration_project(
                             if process_errors(&item.message) {
                                 help = true;
                             }
-                            break
+                            break;
                         }
                     }
                 }

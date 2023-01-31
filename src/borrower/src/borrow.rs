@@ -3,7 +3,10 @@ use quote::ToTokens;
 use std::fs;
 
 use syn::punctuated::Punctuated;
-use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn, Local, Macro, Pat, Token, Type, TypeReference};
+use syn::{
+    visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn,
+    Local, Macro, Pat, Token, Type, TypeReference,
+};
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -184,7 +187,10 @@ impl VisitMut for CallerCheckCallee<'_> {
     }
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let id = i.func.as_ref().into_token_stream().to_string();
-        println!("expression call: {}", i.clone().into_token_stream().to_string());
+        println!(
+            "expression call: {}",
+            i.clone().into_token_stream().to_string()
+        );
         println!("func call: {}", id.as_str());
         match id == self.callee_fn_name {
             false => (),
@@ -226,7 +232,10 @@ impl VisitMut for CallerCheckInput<'_> {
         match path.contains("print") {
             false => (),
             true => {
-                println!("visiting macro:{}", i.clone().into_token_stream().to_string());
+                println!(
+                    "visiting macro:{}",
+                    i.clone().into_token_stream().to_string()
+                );
                 let tokens = i.tokens.clone();
                 let mut expr_punc: Punctuated<Expr, Token!(,)> = syn::parse_quote! {#tokens};
                 expr_punc.iter_mut().for_each(|e| self.visit_expr_mut(e));
@@ -355,14 +364,12 @@ impl VisitMut for MutableBorrowerHelper<'_> {
             i.clone().into_token_stream().to_string()
         );
         match self.decl_mut.contains(&id) {
-            true => {
-                self.mut_methods.clone().iter().for_each(|mut_call| {
-                    let mut_call_id = mut_call.receiver.as_ref().into_token_stream().to_string();
-                    if i.clone().method == mut_call.method && id == mut_call_id {
-                        self.make_mut.push(id.clone())
-                    }
-                })
-            },
+            true => self.mut_methods.clone().iter().for_each(|mut_call| {
+                let mut_call_id = mut_call.receiver.as_ref().into_token_stream().to_string();
+                if i.clone().method == mut_call.method && id == mut_call_id {
+                    self.make_mut.push(id.clone())
+                }
+            }),
             false => (),
         }
     }
@@ -461,11 +468,13 @@ pub fn make_borrows(
     caller_fn_name: &str,
 ) {
     println!("{}", mut_method_call_expr_file);
-    let mut_methods_content: String = fs::read_to_string(&mut_method_call_expr_file).unwrap().parse().unwrap();
+    let mut_methods_content: String = fs::read_to_string(&mut_method_call_expr_file)
+        .unwrap()
+        .parse()
+        .unwrap();
     let mut mut_methods = vec![];
     for call in mut_methods_content.split("\n") {
-        match syn::parse_str::<syn::ExprMethodCall>(call)
-            .map_err(|e| format!("{:?}", e)) {
+        match syn::parse_str::<syn::ExprMethodCall>(call).map_err(|e| format!("{:?}", e)) {
             Ok(call) => mut_methods.push(call),
             Err(_) => (),
         }
