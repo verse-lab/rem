@@ -2,7 +2,7 @@ use proc_macro2::Span;
 use quote::ToTokens;
 use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
-use syn::token::And;
+
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
