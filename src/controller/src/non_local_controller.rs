@@ -280,11 +280,24 @@ impl VisitMut for MakeBrkAndCont<'_> {
                 self.success = helper.success;
 
                 let ok = quote!(Ok);
-                let mut helper = MakeLastReturnBlkVisitor {};
-                helper.visit_block_mut(i.block.as_mut());
-                let re = quote!(result);
-                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
-                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                match i.block.stmts.last() {
+                    None => {}
+                    Some(s) => {
+                        match s {
+                            Stmt::Expr(_) => {
+                                let mut helper = MakeLastReturnBlkVisitor {};
+                                helper.visit_block_mut(i.block.as_mut());
+                                let re = quote!(result);
+                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
+                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                            }
+                            _ => {
+                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
+                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -312,11 +325,26 @@ impl VisitMut for MakeReturn<'_> {
                 i.sig.output = ReturnType::Type(syn::parse_quote! {->}, Box::new(ty));
 
                 let ok = quote!(Ok);
-                let mut helper = MakeLastReturnBlkVisitor {};
-                helper.visit_block_mut(i.block.as_mut());
-                let re = quote!(result);
-                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
-                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                match i.block.stmts.last() {
+                    None => {}
+                    Some(s) => {
+                        println!("last stmt: {}", s.into_token_stream().to_string());
+                        match s {
+                            Stmt::Expr(_) => {
+                                let mut helper = MakeLastReturnBlkVisitor {};
+                                helper.visit_block_mut(i.block.as_mut());
+                                let re = quote!(result);
+                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
+                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                            }
+                            _ => {
+                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
+                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                            }
+                        }
+                    }
+                }
+
             }
         }
     }

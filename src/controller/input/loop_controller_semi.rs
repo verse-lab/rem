@@ -11,7 +11,9 @@ fn new_foo() -> i32 {
 fn bar(y: i32) {
     if y == 5 {
         continue
-    } else { break }
+    } else {
+        break
+    };
 }
 
 fn main() {

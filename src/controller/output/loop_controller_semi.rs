@@ -12,12 +12,12 @@ fn new_foo() -> i32 {
     x
 }
 fn bar(y: i32) -> RetBar<()> {
-    let result = if y == 5 {
+    if y == 5 {
         return RetBar::Continue;
     } else {
         return RetBar::Break;
     };
-    RetBar::Ok(result)
+    RetBar::Ok(())
 }
 fn main() {
     new_foo();
