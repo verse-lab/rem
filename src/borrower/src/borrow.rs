@@ -1,3 +1,6 @@
+extern crate rustc_driver;
+extern crate rustc_mir_dataflow;
+
 use quote::ToTokens;
 
 use std::fs;
@@ -479,7 +482,7 @@ pub fn make_borrows(
             Err(_) => (),
         }
     }
-
+    
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
