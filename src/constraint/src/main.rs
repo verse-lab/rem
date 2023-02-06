@@ -9,10 +9,12 @@ use syn::visit::Visit;
 fn main() {
     let ast: syn::ItemFn = syn::parse_str(
         "
-pub unsafe extern \"C\" fn reset(mut arr: *mut libc::c_int,
-                               mut size: libc::c_int) {
-    let mut i: libc::c_int = 0 as libc::c_int;
-    while i < size { *arr.offset(i as isize) = 0 as libc::c_int; i += 1 };
+fn new_foo() {
+    let mut x = vec![];
+    x.get(1);
+    if x[0] > 1 {
+        println!(\"something\")
+    }
 }
 ",
     )
