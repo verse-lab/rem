@@ -1,5 +1,3 @@
-#![feature(rustc_private)]
-
 mod borrow;
 
 use clap::{Parser, Subcommand};

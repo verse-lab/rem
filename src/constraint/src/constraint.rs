@@ -1,9 +1,9 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
+use std::fmt::{Display};
 
-use utils::labelling::Label;
-use utils::typ::RustType;
+
+
 
 use utils::annotation::Annotated;
 
@@ -43,7 +43,7 @@ impl<C: LocalConstraint + 'static> LocalConstraintSystem for ConstraintSystem<C>
     }
 
     fn constraints(&self) -> Vec<Box<dyn Any>> {
-        let mut constraints: Vec<C> = self.constraints.clone();
+        let constraints: Vec<C> = self.constraints.clone();
         let constraints: Vec<Box<dyn Any>> = constraints
             .into_iter()
             .map(|v| {
@@ -102,7 +102,7 @@ impl ConstraintManager {
     }
 
     pub fn analyze<'a>(&mut self, fun: &Annotated<'a, &'a syn::ItemFn>) {
-        for (k, (_, v)) in self.constraint_systems.iter_mut() {
+        for (_k, (_, v)) in self.constraint_systems.iter_mut() {
             v.analyze(fun)
         }
     }

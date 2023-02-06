@@ -1,7 +1,7 @@
 use std::fmt::Write as fmtWrite;
 use std::io::prelude::*;
 use std::io::Write;
-use std::os::unix::prelude::FileExt;
+
 use std::process::{Command, Stdio};
 use utils::parser::ws;
 

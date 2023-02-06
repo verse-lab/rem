@@ -1,9 +1,8 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{char, multispace0, u64},
-    multi::separated_list1,
-    sequence::{self, delimited, terminated},
+    character::complete::{multispace0, u64},
+    sequence::{delimited},
     IResult,
 };
 

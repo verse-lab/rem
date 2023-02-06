@@ -16,3 +16,6 @@ utils = { path = "../utils" }
 [[bin]]
 name = "main"
 path = "src/main.rs"
+
+[package.metadata.rust-analyzer]
+rustc_private=true

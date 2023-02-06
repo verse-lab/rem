@@ -1,6 +1,6 @@
 use std::{
     io::Write,
-    process::{ChildStdout, Command, Stdio},
+    process::{Command, Stdio},
 };
 
 use crate::error::Error;

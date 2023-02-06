@@ -552,7 +552,7 @@ impl From<Type> for RustType {
                 let inputs = inputs
                     .into_iter()
                     .map(|v| match v.ty {
-                        Type::Verbatim(v) => {
+                        Type::Verbatim(_v) => {
                             variadic = true;
                             None
                         }
@@ -954,7 +954,7 @@ fn check_recursive(
 pub fn normalize_type_context(ctxt: &mut ProgramTypeContext) -> HashSet<syn::Ident> {
     let mut usage_map = HashMap::new();
     let ref_ctx = (ctxt.0.clone(), ctxt.1.clone());
-    for (name, st) in ctxt.0.iter_mut() {
+    for (_name, st) in ctxt.0.iter_mut() {
         st.resolve(&ref_ctx);
     }
     for (name, st) in ctxt.1.iter_mut() {

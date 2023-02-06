@@ -1,10 +1,10 @@
 #![feature(box_patterns)]
 use constraint::{
-    common::{ArrayConstraint, MutabilityConstraint},
+    common::{MutabilityConstraint},
     ConstraintManager,
 };
 
-use syn::visit::Visit;
+
 
 fn main() {
     let ast: syn::ItemFn = syn::parse_str(

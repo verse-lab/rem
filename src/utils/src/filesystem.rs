@@ -1,11 +1,10 @@
-use std::ops::Index;
+
 use std::{
     cell::RefCell,
     collections::HashMap,
     fmt::Display,
     path::{Path, PathBuf},
     rc::Rc,
-    sync::Arc,
 };
 
 /// Representation of a file system

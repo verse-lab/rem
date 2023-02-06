@@ -3,16 +3,15 @@ use std::collections::HashMap;
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{char, multispace0, u64},
-    multi::separated_list1,
-    sequence::{self, delimited, terminated},
+    character::complete::{char},
+    sequence::{self, delimited},
     IResult,
 };
 
-use quote::quote;
-use syn::{__private::ToTokens, visit::Visit};
+
+use syn::{visit::Visit};
 use utils::{annotation::Annotations, typ::RustType};
-use utils::{labelling::Label, pprint_ast, wrappers::IndexWrapper};
+use utils::{labelling::Label, wrappers::IndexWrapper};
 
 /// Array Constraints
 #[derive(Clone, Debug)]
@@ -169,7 +168,7 @@ impl crate::LocalConstraint for ArrayConstraint {
                         let ident = &p.ident;
                         // bind LHS identifier with new label
                         let label = self.lookup_ast(ident).unwrap();
-                        if let syn::Type::Path(e) = ty {
+                        if let syn::Type::Path(_e) = ty {
                             // if LHS has type signature, add compat constraint
                             self.add_constraint(ArrayConstraint::Compat(label, ty.clone().into()));
                         }
@@ -199,17 +198,17 @@ impl crate::LocalConstraint for ArrayConstraint {
                                 self.visit_expr(expr);
                                 let expr_label = self.lookup_ast(expr).unwrap();
                                 match (by_ref, mutability) {
-                                    (Some(r), Some(m)) => {
+                                    (Some(_r), Some(_m)) => {
                                         self.add_constraint(ArrayConstraint::Ref(
                                             label, expr_label,
                                         ));
                                     }
-                                    (Some(r), None) => {
+                                    (Some(_r), None) => {
                                         self.add_constraint(ArrayConstraint::Ref(
                                             label, expr_label,
                                         ));
                                     }
-                                    (None, Some(m)) => (),
+                                    (None, Some(_m)) => (),
                                     (None, None) => (),
                                 }
                                 self.add_constraint(ArrayConstraint::Eq(label, expr_label))
@@ -224,7 +223,7 @@ impl crate::LocalConstraint for ArrayConstraint {
 
             fn visit_expr(&mut self, i: &'ast syn::Expr) {
                 use syn::{
-                    Expr, ExprAssign, ExprAssignOp, ExprBinary, ExprLit, ExprMethodCall, ExprParen,
+                    Expr, ExprAssign, ExprAssignOp, ExprBinary, ExprMethodCall, ExprParen,
                     ExprPath, ExprUnary, Path, UnOp,
                 };
                 syn::visit::visit_expr(self, i);
@@ -311,7 +310,7 @@ impl crate::LocalConstraint for ArrayConstraint {
                                                 label, expr_label,
                                             ));
                                         }
-                                        Some(lbl) => {
+                                        Some(_lbl) => {
                                             self.add_constraint(ArrayConstraint::Compat(
                                                 label,
                                                 ty.clone().into(),
@@ -326,7 +325,7 @@ impl crate::LocalConstraint for ArrayConstraint {
                                         path: syn::Path { segments, .. },
                                         ..
                                     }),
-                                args,
+                                args: _,
                                 ..
                             }) => {
                                 let ident = &segments[0].ident;
@@ -369,7 +368,7 @@ impl crate::LocalConstraint for ArrayConstraint {
                     }) => {
                         // offset method call
                         if method.to_string().as_str() == "offset" && args.len() == 1 {
-                            let offset_ind = &args[0];
+                            let _offset_ind = &args[0];
                             let expr_label = self.lookup_ast(receiver).unwrap();
                             self.add_constraint(ArrayConstraint::Offset(expr_label, label));
                         } else {
@@ -403,7 +402,7 @@ impl crate::LocalConstraint for ArrayConstraint {
 
                     Expr::Return(_) => (),
                     Expr::Reference(syn::ExprReference {
-                        mutability,
+                        mutability: _,
                         box expr,
                         ..
                     }) => {
@@ -496,7 +495,7 @@ impl crate::LocalConstraint for MutabilityConstraint {
     const CHR_RULES: &'static str = include_str!("constraint_rules/arr_constraint_rules.pl");
 
     fn parse(s: &str) -> nom::IResult<&str, Self> {
-        use utils::parser::{label, ws};
+        use utils::parser::{label};
         fn muta(s: &str) -> IResult<&str, MutabilityConstraint> {
             let (s, _) = tag("mut")(s)?;
             let (s, l1) = delimited(char('('), label, char(')'))(s)?;
@@ -557,12 +556,12 @@ impl crate::LocalConstraint for MutabilityConstraint {
                     // Case of the form `let lhs : T = rhs`
                     syn::Pat::Type(syn::PatType {
                         pat: box syn::Pat::Ident(p),
-                        ty: box ty,
+                        ty: box _ty,
                         ..
                     }) => {
                         let ident = &p.ident;
                         // bind LHS identifier with new label
-                        let label = self.lookup_ast(ident).unwrap();
+                        let _label = self.lookup_ast(ident).unwrap();
                         // check the RHS of the let expr
                         // if None (so, an uninitialized variable like "let i;") then we ignore
                         // otherwise, we want to have a constraint stating that LHS = RHS
@@ -587,13 +586,13 @@ impl crate::LocalConstraint for MutabilityConstraint {
                             None => (),
                             Some((_, box expr)) => {
                                 self.visit_expr(expr);
-                                let expr_label = self.lookup_ast(expr).unwrap();
+                                let _expr_label = self.lookup_ast(expr).unwrap();
                                 match (by_ref, mutability) {
-                                    (Some(r), Some(m)) => {
+                                    (Some(_r), Some(_m)) => {
                                         self.add_constraint(MutabilityConstraint::Mut(label));
                                     }
-                                    (Some(r), None) => {}
-                                    (None, Some(m)) => {
+                                    (Some(_r), None) => {}
+                                    (None, Some(_m)) => {
                                         self.add_constraint(MutabilityConstraint::Mut(label));
                                     }
                                     (None, None) => (),
@@ -608,7 +607,7 @@ impl crate::LocalConstraint for MutabilityConstraint {
             }
 
             fn visit_expr(&mut self, i: &'ast syn::Expr) {
-                use syn::{Expr, ExprAssign, ExprReference};
+                use syn::{Expr, ExprAssign};
                 let label = self.lookup_ast(i).unwrap();
                 syn::visit::visit_expr(self, i);
 
@@ -619,7 +618,7 @@ impl crate::LocalConstraint for MutabilityConstraint {
                         ..
                     }) => {
                         let left_label = self.lookup_ast(left).unwrap();
-                        let right_label = self.lookup_ast(right).unwrap();
+                        let _right_label = self.lookup_ast(right).unwrap();
                         self.add_constraint(MutabilityConstraint::Mut(left_label));
                     }
                     Expr::Reference(syn::ExprReference {
@@ -627,7 +626,7 @@ impl crate::LocalConstraint for MutabilityConstraint {
                         box expr,
                         ..
                     }) => {
-                        let ident_label = self.lookup_ast(expr).unwrap();
+                        let _ident_label = self.lookup_ast(expr).unwrap();
                         //e.g., (&mut x: L1):L2 means that L2 is a reference to L1, and that L2 is mutable
                         match mutability {
                             None => (),

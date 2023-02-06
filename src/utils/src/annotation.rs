@@ -121,7 +121,7 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
             // Case of the form `let lhs : T = rhs`
             syn::Pat::Type(syn::PatType {
                 pat: box syn::Pat::Ident(p),
-                ty: box ty,
+                ty: box _ty,
                 ..
             }) => {
                 let ident = &p.ident;
@@ -132,8 +132,8 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
             }
             // Case of the form `let lhs = rhs`
             syn::Pat::Ident(syn::PatIdent {
-                by_ref,
-                mutability,
+                by_ref: _,
+                mutability: _,
                 ident,
                 ..
             }) => {
