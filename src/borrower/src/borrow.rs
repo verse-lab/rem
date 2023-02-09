@@ -199,14 +199,28 @@ impl VisitMut for CallerCheckCallee<'_> {
     }
 
     fn visit_local_mut(&mut self, i: &mut Local) {
+        println!("decl mut: {}", i.clone().into_token_stream().to_string());
         match &mut i.pat {
             Pat::Ident(id) => match &id.mutability {
                 None => (),
                 Some(_) => {
-                    self.decl_mut.push(id.ident.to_string());
+                    println!("decl mut: {}", id.ident.clone().into_token_stream().to_string());
+                    self.decl_mut.push(id.ident.clone().into_token_stream().to_string());
                 }
             },
-            _ => (),
+            Pat::Type(t) => {
+                match t.pat.as_ref() {
+                    Pat::Ident(id) => match id.mutability {
+                        None => (),
+                        Some(_) => {
+                            println!("decl mut: {}", id.ident.clone().into_token_stream().to_string());
+                            self.decl_mut.push(id.ident.clone().into_token_stream().to_string());
+                        }
+                    },
+                    _ => ()
+                }
+            }
+            _ => ()
         };
     }
 }
