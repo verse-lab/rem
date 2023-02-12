@@ -8,11 +8,11 @@ use nom::{
     sequence::{self, delimited},
     IResult,
 };
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 
 
-use syn::{Expr, Stmt, Type, visit::Visit, visit_mut::VisitMut};
+use syn::{Expr, ExprAssign, Stmt, Type, visit::Visit, visit_mut::VisitMut};
 use utils::{annotation::Annotations, typ::RustType};
 use utils::{labelling::Label, wrappers::IndexWrapper};
 use utils::annotation::Annotated;
@@ -39,7 +39,7 @@ impl crate::LocalConstraint for AliasConstraints {
     fn parse(s: &str) -> nom::IResult<&str, Self> {
         use utils::parser::{label, rust_type, ws};
         fn ref_(s: &str) -> IResult<&str, AliasConstraints> {
-            let (s, _) = tag("ref")(s)?;
+            let (s, _) = tag("ref_")(s)?;
             let (s, l1) = delimited(char('('), label, char(')'))(s)?;
             Ok((s, AliasConstraints::Ref(l1)))
         }
@@ -61,7 +61,7 @@ impl crate::LocalConstraint for AliasConstraints {
                 sequence::separated_pair(label, ws(char(',')), label),
                 char(')'),
             )(s)?;
-            Ok((s, AliasConstraints::Alias(l1, l2)))
+            Ok((s, AliasConstraints::Assign(l1, l2)))
         }
 
         alt((
@@ -128,9 +128,29 @@ impl crate::LocalConstraint for AliasConstraints {
             
         }
 
+        struct LHSHelper<'a> {
+            ident: &'a mut Ident,
+        }
+
+        impl VisitMut for LHSHelper<'_> {
+            fn visit_ident_mut(&mut self, i: &mut Ident) {
+                *self.ident = i.clone()
+            }
+        }
+
         impl VisitMut for Traverse<'_> {
             fn visit_item_fn_mut(&mut self, f: &mut syn::ItemFn) {
                 self.visit_block_mut(f.block.as_mut());
+            }
+
+            fn visit_expr_assign_mut(&mut self, i: &mut ExprAssign) {
+                let mut ident = Ident::new("IDENT", Span::call_site());
+                let mut ident_helper = LHSHelper {ident: &mut ident};
+                ident_helper.visit_expr_mut(i.left.as_mut());
+                let label = lookup_ast(self.ast, &ident).unwrap();
+                let lhs = &label;
+                let mut expr_helper = ExprHelper { lhs, ast: self.ast, constraints: self.constraints };
+                expr_helper.visit_expr_mut(i.right.as_mut())
             }
 
             fn visit_local_mut(&mut self, i: &mut syn::Local) {
