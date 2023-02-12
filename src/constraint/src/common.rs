@@ -13,6 +13,41 @@ use syn::{visit::Visit};
 use utils::{annotation::Annotations, typ::RustType};
 use utils::{labelling::Label, wrappers::IndexWrapper};
 
+/// Aliasing Constraints
+#[derive(Clone, Debug)]
+pub enum AliasConstraints {
+    Ref(Label),
+    Alias(Label, Label),
+    Assign(Label, Label),
+}
+
+impl std::fmt::Display for AliasConstraints {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AliasConstraints::Ref(r) => write!(f, "ref({})", r),
+            AliasConstraints::Alias(l, r) => write!(f, "alias({}, {})", l, r),
+            AliasConstraints::Assign(l, r) => write!(f, "assign({}, {})", l, r),
+        }
+    }
+}
+impl crate::LocalConstraint for AliasConstraints {
+    const CHR_RULES: &'static str = include_str!("constraint_rules/alias_constraint_rules.pl");
+    fn parse(s: &str) -> nom::IResult<&str, Self> {
+        use utils::parser::{label, rust_type, ws};
+        fn ref_(s: &str) -> IResult<&str, AliasConstraints> {
+            let (s, _) = tag("ref")(s)?;
+            let (s, l1) = delimited(char('('), label, char(')'))(s)?;
+            Ok((s, AliasConstraints::Ref(l1)))
+        }
+
+        fn eq(s: &str) -> IResult<&str, AliasConstraints> {
+            let (s, _) = tag("ref")(s)?;
+            let (s, (l1, l2)) = sequence::separated_pair(label, ws(char('=')), label)(s)?;
+            Ok((s, AliasConstraints::Alias(l1, l2)))
+        }
+    }
+}
+
 /// Array Constraints
 #[derive(Clone, Debug)]
 pub enum ArrayConstraint {
