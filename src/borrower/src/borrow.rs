@@ -494,6 +494,7 @@ pub fn make_borrows(
     mut_method_call_expr_file: &str,
     callee_fn_name: &str,
     caller_fn_name: &str,
+    pre_extract_file_name: &str,
 ) {
     let mut_methods_content: String = fs::read_to_string(&mut_method_call_expr_file)
         .unwrap()

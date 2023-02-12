@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::fs;
+use std::io::Write;
+use std::fs::OpenOptions;
 use syn::__private::ToTokens;
 use syn::visit::Visit;
 use syn::{Expr, ExprPath, ItemFn, Path};
@@ -12,6 +15,8 @@ pub type Annotations<'a> = HashMap<&'a dyn ASTKey, Label>;
 /// A pair of an AST and its annotations
 pub type Annotated<'a, T> = (Annotations<'a>, T);
 
+const LOOKUP_FILE: &str = "/tmp/annotation_rev_lookup";
+
 /// Internal helper struct to annotate an AST
 struct ASTAnnotator<'a> {
     annotations: Annotations<'a>,
@@ -24,6 +29,7 @@ impl<'a> ASTAnnotator<'a> {
         let map = HashMap::new();
         let label = Label::new();
         let context = Default::default();
+        fs::write(LOOKUP_FILE, "").unwrap();
         ASTAnnotator {
             annotations: map,
             next_label: label,
@@ -95,6 +101,12 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                     let value = self.new_label();
                     self.annotations.insert(ident, value);
                     println!("{} -> {}", value, ident);
+                    let mut file = OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open(LOOKUP_FILE)
+                        .unwrap();
+                    writeln!(file, "{} -> {}", value, ident).unwrap();
                     self.add_binding(ident, value)
                 }
                 _ => panic!(
@@ -130,6 +142,12 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 self.add_binding(ident, label);
                 self.annotations.insert(ident, label);
                 println!("{} -> {}", label, ident);
+                let mut file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open(LOOKUP_FILE)
+                    .unwrap();
+                writeln!(file, "{} -> {}", label, ident).unwrap();
                 self.annotations.insert(&i.pat, label);
             }
             // Case of the form `let lhs = rhs`
@@ -142,6 +160,12 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 self.add_binding(ident, label);
                 self.annotations.insert(ident, label);
                 println!("{} -> {}", label, ident);
+                let mut file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open(LOOKUP_FILE)
+                    .unwrap();
+                writeln!(file, "{} -> {}", label, ident).unwrap();
                 self.annotations.insert(&i.pat, label);
             }
             lb => {

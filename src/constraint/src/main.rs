@@ -11,7 +11,6 @@ use itertools::Itertools;
 fn main() {
     let ast: syn::ItemFn = syn::parse_str("
     pub fn new_foo() {
-    let W: i32 = 5;
     let x = 1;
     let x_ref = &x;
     let m = x_ref;

@@ -96,8 +96,10 @@ impl crate::LocalConstraint for AliasConstraints {
         impl VisitMut for  IdentHelper<'_> {
             fn visit_ident_mut(&mut self, i: &mut Ident) {
                 println!("in ident: {}", i.clone().to_string());
-                let rhs = lookup_ast(self.ast, i).unwrap();
-                add_constraint(self.constraints, AliasConstraints::Assign(self.lhs.clone(), rhs));
+                lookup_ast(self.ast, i).and_then(|rhs| {
+                    add_constraint(self.constraints, AliasConstraints::Assign(self.lhs.clone(), rhs));
+                    Some(())
+                });
                 syn::visit_mut::visit_ident_mut(self, i)
             }
         }
@@ -236,8 +238,10 @@ impl crate::LocalConstraint for AliasConstraints {
                                         ident: &mut ident,
                                     };
                                     ident_helper.visit_pat_mut(ty.pat.clone().as_mut());
-                                    let label = lookup_ast(self.ast, &ident).unwrap();
-                                    add_constraint(self.constraints, AliasConstraints::Ref(label))
+                                    lookup_ast(self.ast, &ident).and_then(|label| {
+                                        add_constraint(self.constraints, AliasConstraints::Ref(label));
+                                        Some(())
+                                    });
                                 }
                                 _ => (),
                             }
@@ -251,10 +255,12 @@ impl crate::LocalConstraint for AliasConstraints {
                 let mut ident = Ident::new("IDENT", Span::call_site());
                 let mut ident_helper = LHSHelper {ident: &mut ident};
                 ident_helper.visit_expr_mut(i.left.as_mut());
-                let label = lookup_ast(self.ast, &ident).unwrap();
-                let lhs = &label;
-                let mut expr_helper = StmtHelper { lhs, ast: self.ast, constraints: self.constraints };
-                expr_helper.visit_stmt_mut(&mut Stmt::Expr(*i.right.clone()))
+                lookup_ast(self.ast, &ident).and_then(|label| {
+                    let lhs = &label;
+                    let mut expr_helper = StmtHelper { lhs, ast: self.ast, constraints: self.constraints };
+                    expr_helper.visit_stmt_mut(&mut Stmt::Expr(*i.right.clone()));
+                    Some(())
+                });
             }
 
             fn visit_local_mut(&mut self, i: &mut syn::Local) {
@@ -270,16 +276,18 @@ impl crate::LocalConstraint for AliasConstraints {
                         match ty {
                             Type::Reference(_) => {
                                 let ident = &p.ident;
-                                let label = lookup_ast(self.ast, ident).unwrap();
-                                let lhs = &label;
-                                add_constraint(self.constraints, AliasConstraints::Ref(label));
-                                match i.init.clone() {
-                                    None => (),
-                                    Some((_, mut init)) => {
-                                        let mut expr_helper = StmtHelper { lhs, ast: self.ast, constraints: self.constraints };
-                                        expr_helper.visit_stmt_mut(&mut Stmt::Expr(*init.clone()))
-                                    }
-                                }
+                                lookup_ast(self.ast, ident).and_then(|label| {
+                                    let lhs = &label;
+                                    add_constraint(self.constraints, AliasConstraints::Ref(label));
+                                    match i.init.clone() {
+                                        None => (),
+                                        Some((_, mut init)) => {
+                                            let mut expr_helper = StmtHelper { lhs, ast: self.ast, constraints: self.constraints };
+                                            expr_helper.visit_stmt_mut(&mut Stmt::Expr(*init.clone()))
+                                        }
+                                    };
+                                    Some(())
+                                });
                             }
                             _ => {}
                         }
@@ -289,10 +297,12 @@ impl crate::LocalConstraint for AliasConstraints {
                         match i.init.clone() {
                             None => (),
                             Some((_, init)) => {
-                                let label = lookup_ast(self.ast, ident).unwrap();
-                                let lhs = &label;
-                                let mut expr_helper = StmtHelper { lhs, ast: self.ast, constraints: self.constraints };
-                                expr_helper.visit_stmt_mut(&mut Stmt::Expr(*init.clone()))
+                                lookup_ast(self.ast, ident).and_then(|label| {
+                                    let lhs = &label;
+                                    let mut expr_helper = StmtHelper { lhs, ast: self.ast, constraints: self.constraints };
+                                    expr_helper.visit_stmt_mut(&mut Stmt::Expr(*init.clone()));
+                                    Some(())
+                                });
                             }
                         }
                     }
