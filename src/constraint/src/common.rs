@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ops::Deref;
+use itertools::Itertools;
 
 use nom::{
     branch::alt,
@@ -18,7 +19,7 @@ use utils::{labelling::Label, wrappers::IndexWrapper};
 use utils::annotation::Annotated;
 
 /// Aliasing Constraints
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum AliasConstraints {
     Ref(Label),
     Alias(Label, Label),
@@ -129,6 +130,17 @@ impl crate::LocalConstraint for AliasConstraints {
             fn visit_stmt_mut(&mut self, i: &mut Stmt) {
                 match i {
                     Stmt::Expr(e) => {
+                        let mut ident = Ident::new("__IDENT__", Span::call_site());
+                        let mut rhs_helper = LHSHelper { ident: &mut ident };
+                        rhs_helper.visit_expr_mut(e);
+                        if ident.to_string() != "__IDENT__" {
+                            let rhs = lookup_ast(self.ast, &ident).unwrap();
+                            add_constraint(self.constraints, AliasConstraints::Assign(*self.lhs, rhs));
+                        } else {
+                            let rhs = lookup_ast(self.ast, e).unwrap();
+                            add_constraint(self.constraints, AliasConstraints::Assign(*self.lhs, rhs));
+                        }
+
                         match e {
                             Expr::MethodCall(_) => {} // can ret ref but no idea the ret ty
                             Expr::Call(_) => {}
@@ -288,8 +300,7 @@ impl crate::LocalConstraint for AliasConstraints {
         let mut constraints = vec![];
         let mut collector = Traverse { ast: map, constraints: &mut constraints };
         collector.visit_item_fn_mut(&mut fun.clone().clone());
-        constraints.dedup();
-        constraints
+        constraints.into_iter().unique().collect()
     }
 }
 

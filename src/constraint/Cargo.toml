@@ -12,6 +12,7 @@ quote = "1.0"
 nom = {version="7.1.0"}
 mktemp = {version="0.4.1"}
 utils = { path = "../utils" }
+itertools = "0.10.5"
 
 [[bin]]
 name = "main"

@@ -5,6 +5,7 @@ use constraint::{
     common::{AliasConstraints},
     ConstraintManager,
 };
+use itertools::Itertools;
 
 
 fn main() {
@@ -13,12 +14,13 @@ fn main() {
     let W: i32 = 5;
     let x = 1;
     let x_ref = &x;
+    let m = x_ref;
     let mut z: &i32;
     {
         let y = 2;
         z = &y;
         z = if *z < *x_ref {
-        &y
+        m
     } else {
         &W
     };
@@ -35,8 +37,10 @@ fn main() {
     cs.add_constraint::<AliasConstraints>();
 
     cs.analyze(&annot_ast);
+    let constraints = cs.get_constraints::<AliasConstraints>();
+    let constraints : Vec<AliasConstraints> = constraints.into_iter().unique().collect();
 
-    for constraint in cs.get_constraints::<AliasConstraints>().iter() {
+    for constraint in constraints {
         println!("{}", constraint);
         // match constraint {
         //     AliasConstraints::Ref(l) => println!("{} -> {:?}", l, lookup.get(&l)),
