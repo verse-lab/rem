@@ -15,7 +15,7 @@ pub type Annotations<'a> = HashMap<&'a dyn ASTKey, Label>;
 /// A pair of an AST and its annotations
 pub type Annotated<'a, T> = (Annotations<'a>, T);
 
-const LOOKUP_FILE: &str = "/tmp/annotation_rev_lookup";
+pub const LOOKUP_FILE: &str = "/tmp/annotation_rev_lookup";
 
 /// Internal helper struct to annotate an AST
 struct ASTAnnotator<'a> {
