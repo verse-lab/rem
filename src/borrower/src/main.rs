@@ -59,8 +59,7 @@ fn test() {
         let new_file_name = format!("./output/{}", test_name.to_str().unwrap());
         let mut_method_call_expr_file =
             format!("./method_call_mut/{}", test_name.to_str().unwrap());
-        let pre_extract_file_name =
-            format!("./pre_extract/{}", test_name.to_str().unwrap());
+        let pre_extract_file_name = format!("./pre_extract/{}", test_name.to_str().unwrap());
         let callee_fn_name = "bar";
         let caller_fn_name = "new_foo";
         let now = SystemTime::now();
