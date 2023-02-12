@@ -6,20 +6,20 @@
 #![feature(iter_intersperse)]
 #![feature(box_syntax)]
 
-pub extern crate string_cache;
 extern crate rustc_driver;
 pub extern crate rustc_lint;
 pub extern crate rustc_span;
+pub extern crate string_cache;
 
-pub mod parser;
-pub mod typ;
+pub mod annotation;
+pub mod error;
+pub mod filesystem;
+pub mod formatter;
 pub mod labelling;
 pub mod location;
-pub mod filesystem;
-pub mod annotation;
-pub mod formatter;
-pub mod error;
 pub mod macros;
+pub mod parser;
+pub mod typ;
 pub mod wrappers;
 
 use std::io::Write;

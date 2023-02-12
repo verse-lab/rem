@@ -3,7 +3,6 @@ use quote::ToTokens;
 use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
-
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
     RepairSystem, RustcError,
@@ -84,16 +83,14 @@ struct LooseLifetimeAnnotatorFnArgHelper {
 impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
     fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
         match i {
-            FnArg::Receiver(r) => {
-                match &mut r.reference {
-                    None => {}
-                    Some((_, lt)) => {
-                        *lt = Some(Lifetime::new(
-                            format!("'lt{}", self.lt_num).as_str(),
-                            Span::call_site(),
-                        ));
-                        self.lt_num += 1;
-                    }
+            FnArg::Receiver(r) => match &mut r.reference {
+                None => {}
+                Some((_, lt)) => {
+                    *lt = Some(Lifetime::new(
+                        format!("'lt{}", self.lt_num).as_str(),
+                        Span::call_site(),
+                    ));
+                    self.lt_num += 1;
                 }
             },
             FnArg::Typed(t) => {

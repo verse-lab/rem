@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
-use std::io::Write;
 use std::fs::OpenOptions;
+use std::io::Write;
 use syn::__private::ToTokens;
 use syn::visit::Visit;
 use syn::{Expr, ExprPath, ItemFn, Path};

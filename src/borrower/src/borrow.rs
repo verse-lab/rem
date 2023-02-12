@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use quote::ToTokens;
+use std::collections::HashMap;
 
 use proc_macro2::Ident;
 use std::fs;
@@ -189,7 +189,9 @@ impl VisitMut for CalleeInputs<'_> {
                     FnArg::Receiver(_) => (),
                     FnArg::Typed(t) => {
                         match t.ty.as_ref() {
-                            Type::Reference(_) => self.refs_inputs.push(t.pat.as_ref().into_token_stream().to_string()), // don't add reference no need to make it a ref
+                            Type::Reference(_) => self
+                                .refs_inputs
+                                .push(t.pat.as_ref().into_token_stream().to_string()), // don't add reference no need to make it a ref
                             _ => self
                                 .inputs
                                 .push(t.pat.as_ref().into_token_stream().to_string()),
@@ -537,7 +539,10 @@ impl VisitMut for PreExtracter<'_> {
                 let constraints: Vec<AliasConstraints> = constraints.into_iter().unique().collect();
 
                 let mut lookup = HashMap::new();
-                let lookup_str: String = fs::read_to_string(utils::annotation::LOOKUP_FILE).unwrap().parse().unwrap();
+                let lookup_str: String = fs::read_to_string(utils::annotation::LOOKUP_FILE)
+                    .unwrap()
+                    .parse()
+                    .unwrap();
                 let re_lookup = Regex::new(r"(?P<label>\S+) -> (?P<expr>\S+)").unwrap();
                 lookup_str.split("\n").for_each(|x| {
                     let lookup_inner = re_lookup.captures_iter(x);
@@ -553,24 +558,24 @@ impl VisitMut for PreExtracter<'_> {
                 for constraint in constraints {
                     println!("{}", constraint);
                     match constraint {
-                         AliasConstraints::Alias(l, r) => {
-                             match lookup.get(l.to_string().as_str()) {
-                                 None => {}
-                                 Some(expr) => {
-                                     if self.inputs.contains(&expr.trim().to_string()) || self.ref_inputs.contains(&expr.trim().to_string()) {
-                                         match lookup.get(r.to_string().as_str()) {
-                                             None => {}
-                                             Some(expr) => {
-                                                 if self.inputs.contains(&expr.trim().to_string()) {
-                                                     self.make_ref.push(expr.clone());
-                                                 }
-                                             }
-                                         }
-                                     }
-                                 }
-                             }
-                         }
-                         _ => ()
+                        AliasConstraints::Alias(l, r) => match lookup.get(l.to_string().as_str()) {
+                            None => {}
+                            Some(expr) => {
+                                if self.inputs.contains(&expr.trim().to_string())
+                                    || self.ref_inputs.contains(&expr.trim().to_string())
+                                {
+                                    match lookup.get(r.to_string().as_str()) {
+                                        None => {}
+                                        Some(expr) => {
+                                            if self.inputs.contains(&expr.trim().to_string()) {
+                                                self.make_ref.push(expr.clone());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        _ => (),
                     }
                 }
             }
@@ -623,7 +628,12 @@ pub fn make_borrows(
     };
     callee_input_helper.visit_file_mut(&mut file);
 
-    let mut constraint_visitor = PreExtracter { caller_fn_name, inputs: &callee_inputs, ref_inputs: &callee_ref_inputs, make_ref: &mut make_ref };
+    let mut constraint_visitor = PreExtracter {
+        caller_fn_name,
+        inputs: &callee_inputs,
+        ref_inputs: &callee_ref_inputs,
+        make_ref: &mut make_ref,
+    };
     constraint_visitor.visit_file_mut(&mut pre_extract_file);
 
     let mut decl_mut = vec![];

@@ -2,7 +2,7 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{multispace0, u64},
-    sequence::{delimited},
+    sequence::delimited,
     IResult,
 };
 

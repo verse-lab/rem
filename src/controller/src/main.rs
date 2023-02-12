@@ -33,15 +33,18 @@ fn main() {
             new_file_name,
             caller_fn_name,
             callee_fn_name,
-        } => {if non_local_controller::make_controls(
-            file_name.as_str(),
-            new_file_name.as_str(),
-            callee_fn_name.as_str(),
-            caller_fn_name.as_str(),
-        ) {
-            exit(0)
-        } else { exit(1) }
-        },
+        } => {
+            if non_local_controller::make_controls(
+                file_name.as_str(),
+                new_file_name.as_str(),
+                callee_fn_name.as_str(),
+                caller_fn_name.as_str(),
+            ) {
+                exit(0)
+            } else {
+                exit(1)
+            }
+        }
     }
 }
 

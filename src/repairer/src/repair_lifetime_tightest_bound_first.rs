@@ -88,12 +88,10 @@ struct TightLifetimeAnnotatorFnArgHelper {}
 impl VisitMut for TightLifetimeAnnotatorFnArgHelper {
     fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
         match i {
-            FnArg::Receiver(r) => {
-                match &mut r.reference {
-                    None => {}
-                    Some((_, lt)) => {
-                        *lt = Some(Lifetime::new("'lt0", Span::call_site()));
-                    }
+            FnArg::Receiver(r) => match &mut r.reference {
+                None => {}
+                Some((_, lt)) => {
+                    *lt = Some(Lifetime::new("'lt0", Span::call_site()));
                 }
             },
             FnArg::Typed(t) => {

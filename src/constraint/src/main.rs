@@ -1,15 +1,11 @@
 #![feature(box_patterns)]
 
-use std::collections::HashMap;
-use constraint::{
-    common::{AliasConstraints},
-    ConstraintManager,
-};
+use constraint::{common::AliasConstraints, ConstraintManager};
 use itertools::Itertools;
 
-
 fn main() {
-    let ast: syn::ItemFn = syn::parse_str("
+    let ast: syn::ItemFn = syn::parse_str(
+        "
     pub fn new_foo() {
     let x = 1;
     let x_ref = &x;
@@ -25,7 +21,8 @@ fn main() {
     };
         println!(\"{}\", *z);
     }
-}")
+}",
+    )
     .unwrap();
     let mut cs = ConstraintManager::default();
 
@@ -36,7 +33,7 @@ fn main() {
 
     cs.analyze(&annot_ast);
     let constraints = cs.get_constraints::<AliasConstraints>();
-    let constraints : Vec<AliasConstraints> = constraints.into_iter().unique().collect();
+    let constraints: Vec<AliasConstraints> = constraints.into_iter().unique().collect();
 
     for constraint in constraints {
         println!("{}", constraint);

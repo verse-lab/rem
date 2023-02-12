@@ -13,7 +13,6 @@ fn make_pascal_case(s: &str) -> String {
     s.to_case(Case::Pascal)
 }
 
-
 struct CheckCalleeWithinLoopHelper<'a> {
     callee_fn_name: &'a str,
     callee_in_loop: bool,
@@ -189,20 +188,31 @@ struct MakeBrkAndContVisitor<'a> {
 
 impl VisitMut for MakeBrkAndContVisitor<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
-        println!("expr make brk: {}", i.clone().into_token_stream().to_string());
+        println!(
+            "expr make brk: {}",
+            i.clone().into_token_stream().to_string()
+        );
         match i {
             Expr::Break(e) => {
                 match &e.expr {
                     None => {}
                     Some(_) => self.success = false,
                 }
-                let new_e_str = format!("return {}{}::Break", ENUM_NAME, make_pascal_case(self.callee_fn_name));
-                let new_e : Expr = syn::parse_str(new_e_str.as_str()).unwrap();
+                let new_e_str = format!(
+                    "return {}{}::Break",
+                    ENUM_NAME,
+                    make_pascal_case(self.callee_fn_name)
+                );
+                let new_e: Expr = syn::parse_str(new_e_str.as_str()).unwrap();
                 *i = new_e
             }
             Expr::Continue(_) => {
-                let new_e_str = format!("return {}{}::Continue", ENUM_NAME, make_pascal_case(self.callee_fn_name));
-                let new_e : Expr = syn::parse_str(new_e_str.as_str()).unwrap();
+                let new_e_str = format!(
+                    "return {}{}::Continue",
+                    ENUM_NAME,
+                    make_pascal_case(self.callee_fn_name)
+                );
+                let new_e: Expr = syn::parse_str(new_e_str.as_str()).unwrap();
                 *i = new_e
             }
             _ => syn::visit_mut::visit_expr_mut(self, i),
@@ -230,28 +240,29 @@ impl VisitMut for MakeBrkAndCont<'_> {
                 let ty: Type = Type::Verbatim(quote! {#ident<#callee_rety>});
                 i.sig.output = ReturnType::Type(syn::parse_quote! {->}, Box::new(ty));
 
-                let mut helper = MakeBrkAndContVisitor { callee_fn_name: self.callee_fn_name, success: self.success };
+                let mut helper = MakeBrkAndContVisitor {
+                    callee_fn_name: self.callee_fn_name,
+                    success: self.success,
+                };
                 helper.visit_block_mut(i.block.as_mut());
                 self.success = helper.success;
 
                 let ok = quote!(Ok);
                 match i.block.stmts.last() {
                     None => {}
-                    Some(s) => {
-                        match s {
-                            Stmt::Expr(_) => {
-                                let mut helper = MakeLastReturnBlkVisitor {};
-                                helper.visit_block_mut(i.block.as_mut());
-                                let re = quote!(result);
-                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
-                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
-                            }
-                            _ => {
-                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
-                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
-                            }
+                    Some(s) => match s {
+                        Stmt::Expr(_) => {
+                            let mut helper = MakeLastReturnBlkVisitor {};
+                            helper.visit_block_mut(i.block.as_mut());
+                            let re = quote!(result);
+                            let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
+                            i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
                         }
-                    }
+                        _ => {
+                            let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
+                            i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                        }
+                    },
                 }
             }
         }
@@ -299,7 +310,6 @@ impl VisitMut for MakeReturn<'_> {
                         }
                     }
                 }
-
             }
         }
     }
@@ -467,8 +477,14 @@ pub fn make_controls(
         }
 
         if callee_visitor.has_break || callee_visitor.has_continue {
-            println!("has break {} or cont {}", callee_visitor.has_break, callee_visitor.has_continue);
-            let mut make_brk_and_cont = MakeBrkAndCont { callee_fn_name, success };
+            println!(
+                "has break {} or cont {}",
+                callee_visitor.has_break, callee_visitor.has_continue
+            );
+            let mut make_brk_and_cont = MakeBrkAndCont {
+                callee_fn_name,
+                success,
+            };
             make_brk_and_cont.visit_file_mut(&mut file);
             success = make_brk_and_cont.success
         }
