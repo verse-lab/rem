@@ -134,11 +134,15 @@ impl crate::LocalConstraint for AliasConstraints {
                         let mut rhs_helper = LHSHelper { ident: &mut ident };
                         rhs_helper.visit_expr_mut(e);
                         if ident.to_string() != "__IDENT__" {
-                            let rhs = lookup_ast(self.ast, &ident).unwrap();
-                            add_constraint(self.constraints, AliasConstraints::Assign(*self.lhs, rhs));
+                            lookup_ast(self.ast, &ident).and_then(|rhs| {
+                                add_constraint(self.constraints, AliasConstraints::Assign(*self.lhs, rhs));
+                                Some(())
+                            });
                         } else {
-                            let rhs = lookup_ast(self.ast, e).unwrap();
-                            add_constraint(self.constraints, AliasConstraints::Assign(*self.lhs, rhs));
+                            lookup_ast(self.ast, e).and_then(|rhs| {
+                                add_constraint(self.constraints, AliasConstraints::Assign(*self.lhs, rhs));
+                                Some(())
+                            });
                         }
 
                         match e {

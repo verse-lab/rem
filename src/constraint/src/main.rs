@@ -20,7 +20,7 @@ fn main() {
         let y = 2;
         z = &y;
         z = if *z < *x_ref {
-        m
+        mwfd
     } else {
         &W
     };
@@ -28,10 +28,9 @@ fn main() {
     }
 }")
     .unwrap();
-    let mut lookup = HashMap::new();
     let mut cs = ConstraintManager::default();
 
-    let annot_ast = utils::annotation::annotate_ast(&ast, &mut lookup);
+    let annot_ast = utils::annotation::annotate_ast(&ast);
 
     //cs.add_constraint::<ArrayConstraint>();
     cs.add_constraint::<AliasConstraints>();

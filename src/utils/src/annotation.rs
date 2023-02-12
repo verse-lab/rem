@@ -9,27 +9,23 @@ use crate::labelling::Label;
 /// Annotations of an AST
 pub type Annotations<'a> = HashMap<&'a dyn ASTKey, Label>;
 
-pub type AnnotationsIdentLookup<'a> = HashMap<Label, &'a proc_macro2::Ident>;
-
 /// A pair of an AST and its annotations
 pub type Annotated<'a, T> = (Annotations<'a>, T);
 
 /// Internal helper struct to annotate an AST
 struct ASTAnnotator<'a> {
     annotations: Annotations<'a>,
-    annotations_lookup: &'a mut AnnotationsIdentLookup<'a>,
     next_label: Label,
     env: crate::labelling::ScopedContext<syn::Ident, Label>,
 }
 
 impl<'a> ASTAnnotator<'a> {
-    pub fn init(rev_map:  &'a mut AnnotationsIdentLookup<'a>) -> Self {
+    pub fn init() -> Self {
         let map = HashMap::new();
         let label = Label::new();
         let context = Default::default();
         ASTAnnotator {
             annotations: map,
-            annotations_lookup: rev_map,
             next_label: label,
             env: context,
         }
@@ -98,7 +94,6 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 }) => {
                     let value = self.new_label();
                     self.annotations.insert(ident, value);
-                    self.annotations_lookup.insert(value, ident);
                     println!("{} -> {}", value, ident);
                     self.add_binding(ident, value)
                 }
@@ -134,7 +129,6 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 // bind LHS identifier with new label
                 self.add_binding(ident, label);
                 self.annotations.insert(ident, label);
-                self.annotations_lookup.insert(label, ident);
                 println!("{} -> {}", label, ident);
                 self.annotations.insert(&i.pat, label);
             }
@@ -147,7 +141,6 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
             }) => {
                 self.add_binding(ident, label);
                 self.annotations.insert(ident, label);
-                self.annotations_lookup.insert(label, ident);
                 println!("{} -> {}", label, ident);
                 self.annotations.insert(&i.pat, label);
             }
@@ -196,8 +189,8 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
 }
 
 /// Annotates a Rust AST
-pub fn annotate_ast<'a>(ast: &'a ItemFn, lookup: &'a mut HashMap<Label, &'a proc_macro2::Ident>) -> Annotated<'a, &'a ItemFn> {
-    let mut ast_annotation = ASTAnnotator::init(lookup);
+pub fn annotate_ast<'a>(ast: &'a ItemFn) -> Annotated<'a, &'a ItemFn> {
+    let mut ast_annotation = ASTAnnotator::init();
 
     ast_annotation.visit_item_fn(ast);
 
