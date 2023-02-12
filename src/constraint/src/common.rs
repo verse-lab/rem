@@ -86,6 +86,20 @@ impl crate::LocalConstraint for AliasConstraints {
             constraints.push(constraint)
         }
 
+        struct IdentHelper<'a> {
+            lhs: &'a Label,
+            ast: &'a Annotations<'a>,
+            constraints: &'a mut Vec<AliasConstraints>,
+        }
+
+        impl VisitMut for  IdentHelper<'_> {
+            fn visit_ident_mut(&mut self, i: &mut Ident) {
+                println!("in ident: {}", i.clone().to_string());
+                let rhs = lookup_ast(self.ast, i).unwrap();
+                add_constraint(self.constraints, AliasConstraints::Assign(self.lhs.clone(), rhs));
+                syn::visit_mut::visit_ident_mut(self, i)
+            }
+        }
 
         struct ExprHelper<'a>{
             lhs: &'a Label,
@@ -97,20 +111,6 @@ impl crate::LocalConstraint for AliasConstraints {
             fn visit_expr_mut(&mut self, i: &mut Expr) {
                 match i {
                     Expr::Reference(e) => {
-                        struct IdentHelper<'a> {
-                            lhs: &'a Label,
-                            ast: &'a Annotations<'a>,
-                            constraints: &'a mut Vec<AliasConstraints>,
-                        }
-
-                        impl VisitMut for  IdentHelper<'_> {
-                            fn visit_ident_mut(&mut self, i: &mut Ident) {
-                                let rhs = lookup_ast(self.ast, i).unwrap();
-                                add_constraint(self.constraints, AliasConstraints::Assign(self.lhs.clone(), rhs));
-                                syn::visit_mut::visit_ident_mut(self, i)
-                            }
-                        }
-
                         let mut id_helper = IdentHelper { lhs: self.lhs, ast: self.ast, constraints: self.constraints };
                         id_helper.visit_expr_mut(e.expr.as_mut());
                     }
@@ -135,6 +135,7 @@ impl crate::LocalConstraint for AliasConstraints {
 
             fn visit_local_mut(&mut self, i: &mut syn::Local) {
                 let pat = &i.pat;
+                println!("local: {}", i.clone().into_token_stream().to_string());
                 match &*pat {
                     // Case of the form `let lhs : T = rhs`
                     syn::Pat::Type(syn::PatType {
@@ -159,6 +160,17 @@ impl crate::LocalConstraint for AliasConstraints {
                         }
                         syn::visit_mut::visit_local_mut(self, i);
                     }
+                    syn::Pat::Ident(syn::PatIdent { ident, .. }) => {
+                        match i.init.clone() {
+                            None => (),
+                            Some((_, mut init)) => {
+                                let label = lookup_ast(self.ast, ident).unwrap();
+                                let lhs = &label;
+                                let mut expr_helper = ExprHelper { lhs, ast: self.ast, constraints: self.constraints };
+                                expr_helper.visit_expr_mut(init.as_mut())
+                            }
+                        }
+                    }
                     _ => syn::visit_mut::visit_local_mut(self, i),
                 }
             }
@@ -166,9 +178,9 @@ impl crate::LocalConstraint for AliasConstraints {
 
         let mut constraints = vec![];
         let mut collector = Traverse { ast: map, constraints: &mut constraints };
-
+        println!("initing collection...");
         collector.visit_item_fn_mut(&mut fun.clone().clone());
-
+        println!("done collection...");
         constraints
     }
 }
