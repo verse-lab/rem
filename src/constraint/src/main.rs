@@ -8,9 +8,11 @@ use constraint::{
 fn main() {
     let ast: syn::ItemFn = syn::parse_str(
         "
-fn new_foo() {
+fn new_foo(r: &i32) {
     let mut x = 0;
     let z = &x;
+    let y = &0;
+    y = r;
     if x[0] > 1 {
         println!(\"something\")
     }

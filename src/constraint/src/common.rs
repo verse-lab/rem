@@ -12,13 +12,13 @@ use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 
 
-use syn::{Expr, ExprAssign, Stmt, Type, visit::Visit, visit_mut::VisitMut};
+use syn::{Expr, ExprAssign, FnArg, Stmt, Type, visit::Visit, visit_mut::VisitMut};
 use utils::{annotation::Annotations, typ::RustType};
 use utils::{labelling::Label, wrappers::IndexWrapper};
 use utils::annotation::Annotated;
 
 /// Aliasing Constraints
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AliasConstraints {
     Ref(Label),
     Alias(Label, Label),
@@ -109,13 +109,8 @@ impl crate::LocalConstraint for AliasConstraints {
 
         impl VisitMut for ExprHelper<'_> {
             fn visit_expr_mut(&mut self, i: &mut Expr) {
-                match i {
-                    Expr::Reference(e) => {
-                        let mut id_helper = IdentHelper { lhs: self.lhs, ast: self.ast, constraints: self.constraints };
-                        id_helper.visit_expr_mut(e.expr.as_mut());
-                    }
-                    _ => (),
-                }
+                let mut id_helper = IdentHelper { lhs: self.lhs, ast: self.ast, constraints: self.constraints };
+                id_helper.visit_expr_mut(i);
                 syn::visit_mut::visit_expr_mut(self, i)
             }
 
@@ -141,6 +136,25 @@ impl crate::LocalConstraint for AliasConstraints {
         impl VisitMut for Traverse<'_> {
             fn visit_item_fn_mut(&mut self, f: &mut syn::ItemFn) {
                 self.visit_block_mut(f.block.as_mut());
+                for arg in &f.sig.inputs {
+                    match arg {
+                        FnArg::Typed(ty) => {
+                            match ty.ty.as_ref() {
+                                Type::Reference(_) => {
+                                    let mut ident = Ident::new("IDENT", Span::call_site());
+                                    let mut ident_helper = LHSHelper {
+                                        ident: &mut ident,
+                                    };
+                                    ident_helper.visit_pat_mut(ty.pat.clone().as_mut());
+                                    let label = lookup_ast(self.ast, &ident).unwrap();
+                                    add_constraint(self.constraints, AliasConstraints::Ref(label))
+                                }
+                                _ => (),
+                            }
+                        }
+                        FnArg::Receiver(_) => (),
+                    }
+                }
             }
 
             fn visit_expr_assign_mut(&mut self, i: &mut ExprAssign) {
@@ -201,6 +215,7 @@ impl crate::LocalConstraint for AliasConstraints {
         println!("initing collection...");
         collector.visit_item_fn_mut(&mut fun.clone().clone());
         println!("done collection...");
+        constraints.dedup();
         constraints
     }
 }
