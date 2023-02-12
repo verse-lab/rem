@@ -39,7 +39,7 @@ impl crate::LocalConstraint for AliasConstraints {
     fn parse(s: &str) -> nom::IResult<&str, Self> {
         use utils::parser::{label, rust_type, ws};
         fn ref_(s: &str) -> IResult<&str, AliasConstraints> {
-            let (s, _) = tag("ref_")(s)?;
+            let (s, _) = tag("ref")(s)?;
             let (s, l1) = delimited(char('('), label, char(')'))(s)?;
             Ok((s, AliasConstraints::Ref(l1)))
         }
@@ -111,6 +111,10 @@ impl crate::LocalConstraint for AliasConstraints {
             fn visit_expr_mut(&mut self, i: &mut Expr) {
                 let mut id_helper = IdentHelper { lhs: self.lhs, ast: self.ast, constraints: self.constraints };
                 id_helper.visit_expr_mut(i);
+                match &i {
+                    Expr::Reference(_) => add_constraint(self.constraints, AliasConstraints::Ref(*self.lhs)),
+                    _ => (),
+                }
                 syn::visit_mut::visit_expr_mut(self, i)
             }
 
@@ -184,6 +188,7 @@ impl crate::LocalConstraint for AliasConstraints {
                                     Some((_, mut init)) => {
                                         let ident = &p.ident;
                                         let label = lookup_ast(self.ast, ident).unwrap();
+                                        add_constraint(self.constraints, AliasConstraints::Ref(label));
                                         let lhs = &label;
                                         let mut expr_helper = ExprHelper { lhs, ast: self.ast, constraints: self.constraints };
                                         expr_helper.visit_expr_mut(init.as_mut())
@@ -212,9 +217,7 @@ impl crate::LocalConstraint for AliasConstraints {
 
         let mut constraints = vec![];
         let mut collector = Traverse { ast: map, constraints: &mut constraints };
-        println!("initing collection...");
         collector.visit_item_fn_mut(&mut fun.clone().clone());
-        println!("done collection...");
         constraints.dedup();
         constraints
     }

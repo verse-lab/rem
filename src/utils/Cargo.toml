@@ -10,5 +10,6 @@ nom = {version="7.1.0"}
 ena = {version="0.14"}
 syn = {version="1.0.80", features=["extra-traits", "full", "visit", "fold", "visit-mut", "printing", "parsing"]}
 log = "0.4"
+proc-macro2 = { version = "1.0", features = ["span-locations"]}
 string_cache = "0.8"
 quote = "1.0"
