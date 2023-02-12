@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 
 use nom::{
     branch::alt,
@@ -7,11 +8,14 @@ use nom::{
     sequence::{self, delimited},
     IResult,
 };
+use proc_macro2::Ident;
+use quote::ToTokens;
 
 
-use syn::{visit::Visit};
+use syn::{Expr, Stmt, Type, visit::Visit, visit_mut::VisitMut};
 use utils::{annotation::Annotations, typ::RustType};
 use utils::{labelling::Label, wrappers::IndexWrapper};
+use utils::annotation::Annotated;
 
 /// Aliasing Constraints
 #[derive(Clone, Debug)]
@@ -40,11 +44,132 @@ impl crate::LocalConstraint for AliasConstraints {
             Ok((s, AliasConstraints::Ref(l1)))
         }
 
-        fn eq(s: &str) -> IResult<&str, AliasConstraints> {
-            let (s, _) = tag("ref")(s)?;
-            let (s, (l1, l2)) = sequence::separated_pair(label, ws(char('=')), label)(s)?;
+        fn alias(s: &str) -> IResult<&str, AliasConstraints> {
+            let (s, _) = tag("alias")(s)?;
+            let (s, (l1, l2)) = delimited(
+                char('('),
+                sequence::separated_pair(label, ws(char(',')), label),
+                char(')'),
+            )(s)?;
             Ok((s, AliasConstraints::Alias(l1, l2)))
         }
+
+        fn assign(s: &str) -> IResult<&str, AliasConstraints> {
+            let (s, _) = tag("assign")(s)?;
+            let (s, (l1, l2)) = delimited(
+                char('('),
+                sequence::separated_pair(label, ws(char(',')), label),
+                char(')'),
+            )(s)?;
+            Ok((s, AliasConstraints::Alias(l1, l2)))
+        }
+
+        alt((
+            ref_,
+            alias,
+            assign,
+        ))(s)
+    }
+
+    fn collect<'a>((map, fun): &utils::annotation::Annotated<'a, &'a syn::ItemFn>) -> Vec<Self> {
+        use utils::labelling::ASTKey;
+
+        struct Traverse<'a> {
+            ast: &'a Annotations<'a>,
+            constraints: &'a mut Vec<AliasConstraints>,
+        }
+
+        fn lookup_ast<'a>(ast: &Annotations<'a>, ident: &dyn ASTKey) -> Option<Label> {
+            ast.get(&ident).map(|v| *v)
+        }
+        fn add_constraint(constraints : &mut Vec<AliasConstraints>, constraint: AliasConstraints) {
+            constraints.push(constraint)
+        }
+
+
+        struct ExprHelper<'a>{
+            lhs: &'a Label,
+            ast: &'a Annotations<'a>,
+            constraints: &'a mut Vec<AliasConstraints>,
+        }
+
+        impl VisitMut for ExprHelper<'_> {
+            fn visit_expr_mut(&mut self, i: &mut Expr) {
+                match i {
+                    Expr::Reference(e) => {
+                        struct IdentHelper<'a> {
+                            lhs: &'a Label,
+                            ast: &'a Annotations<'a>,
+                            constraints: &'a mut Vec<AliasConstraints>,
+                        }
+
+                        impl VisitMut for  IdentHelper<'_> {
+                            fn visit_ident_mut(&mut self, i: &mut Ident) {
+                                let rhs = lookup_ast(self.ast, i).unwrap();
+                                add_constraint(self.constraints, AliasConstraints::Assign(self.lhs.clone(), rhs));
+                                syn::visit_mut::visit_ident_mut(self, i)
+                            }
+                        }
+
+                        let mut id_helper = IdentHelper { lhs: self.lhs, ast: self.ast, constraints: self.constraints };
+                        id_helper.visit_expr_mut(e.expr.as_mut());
+                    }
+                    _ => (),
+                }
+                syn::visit_mut::visit_expr_mut(self, i)
+            }
+
+            fn visit_stmt_mut(&mut self, i: &mut Stmt) {
+                match i {
+                    Stmt::Expr(e) => self.visit_expr_mut(e),
+                    _ => (),
+                }
+            }
+            
+        }
+
+        impl VisitMut for Traverse<'_> {
+            fn visit_item_fn_mut(&mut self, f: &mut syn::ItemFn) {
+                self.visit_block_mut(f.block.as_mut());
+            }
+
+            fn visit_local_mut(&mut self, i: &mut syn::Local) {
+                let pat = &i.pat;
+                match &*pat {
+                    // Case of the form `let lhs : T = rhs`
+                    syn::Pat::Type(syn::PatType {
+                                       pat: box syn::Pat::Ident(p),
+                                       ty: box ty,
+                                       ..
+                                   }) => {
+                        match ty {
+                            Type::Reference(_) => {
+                                match i.init.clone() {
+                                    None => (),
+                                    Some((_, mut init)) => {
+                                        let ident = &p.ident;
+                                        let label = lookup_ast(self.ast, ident).unwrap();
+                                        let lhs = &label;
+                                        let mut expr_helper = ExprHelper { lhs, ast: self.ast, constraints: self.constraints };
+                                        expr_helper.visit_expr_mut(init.as_mut())
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                        syn::visit_mut::visit_local_mut(self, i);
+                    }
+                    _ => syn::visit_mut::visit_local_mut(self, i),
+                }
+            }
+        }
+
+        let mut constraints = vec![];
+        let mut collector = Traverse { ast: map, constraints: &mut constraints };
+
+        collector.visit_item_fn_mut(&mut fun.clone().clone());
+
+        constraints
     }
 }
 
