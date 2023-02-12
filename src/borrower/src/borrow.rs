@@ -1,12 +1,10 @@
 use quote::ToTokens;
 
 use std::fs;
+use proc_macro2::Ident;
 
 use syn::punctuated::Punctuated;
-use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn,
-    Local, Macro, Pat, Token, Type, TypeReference,
-};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, FnArg, ItemFn, Local, Macro, Pat, Token, Type, TypeReference, ExprReturn, Stmt};
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -98,9 +96,71 @@ impl VisitMut for CalleeBorrowAssigner<'_> {
     }
 }
 
+struct IdentHelper<'a> {
+    idents: &'a mut Vec<String>,
+}
+
+impl VisitMut for IdentHelper<'_>{
+    fn visit_ident_mut(&mut self, i: &mut Ident) {
+        self.idents.push(i.to_string());
+        syn::visit_mut::visit_ident_mut(self, i)
+    }
+}
+
+struct CalleeExprHelper<'a> {
+    inputs: &'a Vec<String>,
+    make_ref: &'a mut Vec<String>,
+}
+
+impl VisitMut for CalleeExprHelper<'_>{
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
+        match i {
+            Expr::Reference(r)=> {
+                let mut idents = vec![];
+                let mut ident_helper = IdentHelper{ idents: &mut idents };
+                ident_helper.visit_expr_mut(r.expr.as_mut());
+                for id in idents {
+                    if self.inputs.contains(&id) {
+                        self.make_ref.push(id);
+                    }
+                }
+            }
+            _ => syn::visit_mut::visit_expr_mut(self, i),
+        }
+    }
+}
+
+struct CalleeReturnsHelper<'a> {
+    inputs: &'a Vec<String>,
+    make_ref: &'a mut Vec<String>,
+}
+
+impl VisitMut for CalleeReturnsHelper<'_>{
+    fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
+        match &mut i.expr {
+            None => {}
+            Some(e) => {
+                let mut expr_helper = CalleeExprHelper { inputs: self.inputs, make_ref: self.make_ref };
+                expr_helper.visit_expr_mut(e)
+            }
+        }
+    }
+
+    fn visit_stmt_mut(&mut self, i: &mut Stmt) {
+        match i {
+            Stmt::Expr(e) => {
+                let mut expr_helper = CalleeExprHelper { inputs: self.inputs, make_ref: self.make_ref };
+                expr_helper.visit_expr_mut(e)
+            }
+            _ => syn::visit_mut::visit_stmt_mut(self, i),
+        }
+    }
+}
+
 struct CalleeInputs<'a> {
     fn_name: &'a str,
     inputs: &'a mut Vec<String>,
+    make_ref: &'a mut Vec<String>,
 }
 
 impl VisitMut for CalleeInputs<'_> {
@@ -122,6 +182,8 @@ impl VisitMut for CalleeInputs<'_> {
             }
             false => (),
         }
+        let mut ret_helper = CalleeReturnsHelper { inputs: self.inputs, make_ref: self.make_ref };
+        ret_helper.visit_item_fn_mut(i)
     }
 }
 
@@ -433,7 +495,6 @@ pub fn make_borrows(
     callee_fn_name: &str,
     caller_fn_name: &str,
 ) {
-    println!("{}", mut_method_call_expr_file);
     let mut_methods_content: String = fs::read_to_string(&mut_method_call_expr_file)
         .unwrap()
         .parse()
@@ -451,12 +512,13 @@ pub fn make_borrows(
         .map_err(|e| format!("{:?}", e))
         .unwrap();
     let mut callee_inputs = vec![];
+    let mut make_ref = vec![];
     let mut callee_input_helper = CalleeInputs {
         fn_name: callee_fn_name,
         inputs: &mut callee_inputs,
+        make_ref: &mut make_ref,
     };
     callee_input_helper.visit_file_mut(&mut file);
-    let mut make_ref = vec![];
     let mut decl_mut = vec![];
     let mut caller_helper = CallerHelper {
         caller_fn_name,
