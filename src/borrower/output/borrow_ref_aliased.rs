@@ -6,14 +6,14 @@ fn new_foo() {
     println!("{}{}", x, y);
     a.push(4);
     let z = &x;
-    bar(&mut a, x);
+    bar(&mut a, &x);
     let _ = a.get(0);
     b[0] = a[0];
     println!("{}{}", a[0], b[0]);
     println!("x={}", z);
 }
-fn bar(a: &mut Vec<i32>, x: i32) {
-    a.push(x);
+fn bar(a: &mut Vec<i32>, x: &i32) {
+    a.push(*x);
 }
 fn main() {
     new_foo()

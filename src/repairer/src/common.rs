@@ -435,7 +435,7 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CargoError {
-    pub message: RustcError,
+    pub message: Option<RustcError>,
 }
 
 pub fn repair_iteration_project(
@@ -460,21 +460,30 @@ pub fn repair_iteration_project(
         count += 1;
 
         let mut help = false;
-        println!("binding: {}", binding.as_str());
         for item in stream {
+            println!("parsed cargo error in stream: {:?}", item);
             match &item {
                 Ok(item) => {
-                    let spans = &item.message.spans;
-                    for span in spans {
-                        if src_path.contains(&span.file_name) {
-                            if process_errors(&item.message) {
-                                help = true;
+                    match &item.message {
+                        None => {}
+                        Some(message) => {
+                            let spans = &message.spans;
+                            for span in spans {
+                                println!("src path: {}\n other span: {}", src_path, &span.file_name);
+                                if src_path.contains(&span.file_name) {
+                                    println!("processing error!");
+                                    if process_errors(&message) {
+                                        help = true;
+                                        break;
+                                    }
+                                }
                             }
-                            break;
                         }
                     }
                 }
-                Err(_) => {}
+                Err(e) => {
+                    println!("error parsing cargo error:\n{}", e);
+                }
             }
         }
 

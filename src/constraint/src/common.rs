@@ -1,5 +1,3 @@
-
-
 use itertools::Itertools;
 
 use nom::{
@@ -13,8 +11,8 @@ use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 
 use syn::{visit_mut::VisitMut, Expr, ExprAssign, FnArg, Stmt, Type};
-use utils::{annotation::Annotations};
-use utils::{labelling::Label};
+use utils::annotation::Annotations;
+use utils::labelling::Label;
 
 /// Aliasing Constraints
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

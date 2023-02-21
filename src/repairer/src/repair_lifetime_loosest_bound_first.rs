@@ -1,7 +1,7 @@
 use proc_macro2::Span;
 use quote::ToTokens;
 use std::fs;
-use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
+use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, ReturnType, Type, TypeParamBound};
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
@@ -69,9 +69,35 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                     Span::call_site(),
                 ));
                 self.lt_num += 1;
-                self.visit_type_mut(r.elem.as_mut());
+                syn::visit_mut::visit_type_mut(self, r.elem.as_mut());
             }
-            _ => (),
+            Type::TraitObject(t) => {
+                println!(
+                    "annotating trait obj: {}...",
+                    t.clone().into_token_stream().to_string()
+                );
+                t.bounds.iter_mut().for_each(|x| match x {
+                    TypeParamBound::Trait(_) => (),
+                    TypeParamBound::Lifetime(lt) => {
+                        *lt = Lifetime::new(
+                            format!("'lt{}", self.lt_num).as_str(),
+                            Span::call_site(),
+                        );
+                        self.lt_num += 1;
+                    }
+                });
+                syn::visit_mut::visit_type_mut(self, i);
+            }
+            Type::Verbatim(v) => {
+                let mut v_str = v.clone().to_string();
+                println!("verbatim type: {}", v);
+                while v_str.contains("'_") {
+                    v_str = v_str.replacen("'_", format!("'lt{}", self.lt_num).as_str(), 1);
+                    *v = syn::parse_str(v_str.as_str()).unwrap();
+                    self.lt_num += 1;
+                }
+            }
+            _ => syn::visit_mut::visit_type_mut(self, i),
         }
     }
 }
@@ -134,17 +160,14 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
                         self.lt_num = fn_arg_helper.lt_num
                     });
                     match out {
-                        syn::ReturnType::Type(_, ty) => match ty.as_mut() {
-                            Type::Reference(r) => {
-                                r.lifetime = Some(Lifetime::new(
-                                    format!("'lt{}", self.lt_num).as_str(),
-                                    Span::call_site(),
-                                ));
-                                self.lt_num += 1;
-                            }
-                            _ => (),
-                        },
-                        _ => (),
+                        ReturnType::Type(_, ty) => {
+                            let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
+                                lt_num: self.lt_num,
+                            };
+                            type_helper.visit_type_mut(ty.as_mut());
+                            self.lt_num = type_helper.lt_num
+                        }
+                        ReturnType::Default => {}
                     };
                     for lt in 0..self.lt_num {
                         let lifetime =

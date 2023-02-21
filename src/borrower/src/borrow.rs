@@ -51,40 +51,36 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
             FnArg::Typed(t) => {
                 let id = t.pat.as_ref().into_token_stream().to_string();
                 match self.make_mut.contains(&id) {
-                    true => {
-                        match t.ty.as_ref().clone() {
+                    true => match t.ty.as_ref().clone() {
+                        Type::Reference(mut ty) => {
+                            ty.mutability = Some(syn::parse_quote! {mut});
+                            t.ty = Box::from(Type::Reference(ty.clone()));
+                        }
+                        ty => {
+                            t.ty = Box::from(Type::Reference(TypeReference {
+                                and_token: Default::default(),
+                                lifetime: None,
+                                mutability: Some(syn::parse_quote! {mut}),
+                                elem: Box::new(ty.clone()),
+                            }))
+                        }
+                    },
+                    false => match self.make_ref.contains(&id) || self.ref_inputs.contains(&id) {
+                        false => syn::visit_mut::visit_fn_arg_mut(self, i),
+                        true => match t.ty.as_ref().clone() {
                             Type::Reference(mut ty) => {
-                                ty.mutability = Some(syn::parse_quote! {mut});
+                                ty.mutability = None;
                                 t.ty = Box::from(Type::Reference(ty.clone()));
-                            },
+                            }
                             ty => {
                                 t.ty = Box::from(Type::Reference(TypeReference {
                                     and_token: Default::default(),
                                     lifetime: None,
-                                    mutability: Some(syn::parse_quote! {mut}),
+                                    mutability: None,
                                     elem: Box::new(ty.clone()),
                                 }))
                             }
-                        }
-                    }
-                    false => match self.make_ref.contains(&id) || self.ref_inputs.contains(&id){
-                        false => syn::visit_mut::visit_fn_arg_mut(self, i),
-                        true => {
-                            match t.ty.as_ref().clone() {
-                                Type::Reference(mut ty) => {
-                                    ty.mutability = None;
-                                    t.ty = Box::from(Type::Reference(ty.clone()));
-                                },
-                                ty => {
-                                    t.ty = Box::from(Type::Reference(TypeReference {
-                                        and_token: Default::default(),
-                                        lifetime: None,
-                                        mutability: None,
-                                        elem: Box::new(ty.clone()),
-                                    }))
-                                }
-                            }
-                        }
+                        },
                     },
                 }
             }
@@ -303,7 +299,7 @@ impl VisitMut for CallerCheckInput<'_> {
             false => {
                 self.use_after.push(id);
                 syn::visit_mut::visit_expr_mut(self, i)
-            },
+            }
         }
     }
 
@@ -382,7 +378,13 @@ impl VisitMut for CallerHelper<'_> {
                 });
 
                 temp.into_iter().for_each(|x| self.make_ref.push(x));
-                temp_use_after.into_iter().for_each(|x| self.use_after.push(x))
+                temp_use_after
+                    .into_iter()
+                    .for_each(|x| self.use_after.push(x));
+                self.make_ref
+                    .iter()
+                    .for_each(|x| self.use_after.push(x.clone()));
+                // if in ref then also in use after
             }
         }
     }
@@ -590,28 +592,37 @@ impl VisitMut for PreExtracter<'_> {
                 });
 
                 for constraint in constraints {
-                    println!("{}", constraint);
                     match constraint {
                         AliasConstraints::Alias(l, r) => {
-                            match lookup.get(l.to_string().as_str()) {
+                            println!(
+                                "{}, {:?} -> {:?}",
+                                constraint,
+                                lookup.get(l.to_string().as_str()),
+                                lookup.get(r.to_string().as_str())
+                            );
+                            match lookup.get(r.to_string().as_str()) {
                                 None => {}
-                                Some(expr) => {
-                                    if self.inputs.contains(&expr.trim().to_string())
-                                        || self.ref_inputs.contains(&expr.trim().to_string())
+                                Some(expr_r) => {
+                                    if self.inputs.contains(&expr_r.trim().to_string())
+                                        || self.ref_inputs.contains(&expr_r.trim().to_string())
                                     {
-                                        match lookup.get(r.to_string().as_str()) {
+                                        println!("r is in input");
+                                        match lookup.get(l.to_string().as_str()) {
                                             None => {}
-                                            Some(expr) => {
-                                                let id = expr.trim().to_string();
-                                                if self.inputs.contains(&id) || self.use_after.contains(&id) {
-                                                    self.make_ref.push(expr.clone());
+                                            Some(expr_l) => {
+                                                let id = expr_l.trim().to_string();
+                                                if self.use_after.contains(&id) {
+                                                    println!("l is in use after");
+                                                    self.make_ref.push(expr_r.clone());
+                                                    self.make_ref.push(expr_l.clone());
+                                                    // why not
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                        },
+                        }
                         _ => (),
                     }
                 }
@@ -667,15 +678,6 @@ pub fn make_borrows(
 
     let mut use_after = vec![];
 
-    let mut constraint_visitor = PreExtracter {
-        caller_fn_name,
-        inputs: &callee_inputs,
-        ref_inputs: &callee_ref_inputs,
-        make_ref: &mut make_ref,
-        use_after: &mut use_after,
-    };
-    constraint_visitor.visit_file_mut(&mut pre_extract_file);
-
     let mut decl_mut = vec![];
     let mut caller_helper = CallerHelper {
         caller_fn_name,
@@ -686,6 +688,15 @@ pub fn make_borrows(
         use_after: &mut use_after,
     };
     caller_helper.visit_file_mut(&mut file);
+
+    let mut constraint_visitor = PreExtracter {
+        caller_fn_name,
+        inputs: &callee_inputs,
+        ref_inputs: &callee_ref_inputs,
+        make_ref: &mut make_ref,
+        use_after: &use_after,
+    };
+    constraint_visitor.visit_file_mut(&mut pre_extract_file);
 
     for s in &decl_mut {
         println!("decl {} mut", s);
