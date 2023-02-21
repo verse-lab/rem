@@ -169,10 +169,12 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 self.annotations.insert(&i.pat, label);
             }
             lb => {
-                panic!(
+                /*panic!(
                     "use of unsupported syntactic form {:#?}",
                     lb.into_token_stream().to_string()
-                )
+                )*/
+                let label = self.new_label();
+                self.annotations.insert(i, label);
             }
         }
     }

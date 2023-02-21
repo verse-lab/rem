@@ -18,6 +18,7 @@ use utils::format_source;
 struct RefBorrowAssignerHelper<'a> {
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
+    ref_inputs: &'a Vec<String>,
 }
 
 impl VisitMut for RefBorrowAssignerHelper<'_> {
@@ -51,22 +52,38 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
                 let id = t.pat.as_ref().into_token_stream().to_string();
                 match self.make_mut.contains(&id) {
                     true => {
-                        t.ty = Box::from(Type::Reference(TypeReference {
-                            and_token: Default::default(),
-                            lifetime: None,
-                            mutability: (Some(syn::parse_quote! {mut})),
-                            elem: t.ty.clone(),
-                        }))
+                        match t.ty.as_ref().clone() {
+                            Type::Reference(mut ty) => {
+                                ty.mutability = Some(syn::parse_quote! {mut});
+                                t.ty = Box::from(Type::Reference(ty.clone()));
+                            },
+                            ty => {
+                                t.ty = Box::from(Type::Reference(TypeReference {
+                                    and_token: Default::default(),
+                                    lifetime: None,
+                                    mutability: Some(syn::parse_quote! {mut}),
+                                    elem: Box::new(ty.clone()),
+                                }))
+                            }
+                        }
                     }
-                    false => match self.make_ref.contains(&id) {
+                    false => match (self.make_ref.contains(&id) || self.ref_inputs.contains(&id)){
                         false => syn::visit_mut::visit_fn_arg_mut(self, i),
                         true => {
-                            t.ty = Box::from(Type::Reference(TypeReference {
-                                and_token: Default::default(),
-                                lifetime: None,
-                                mutability: None,
-                                elem: t.ty.clone(),
-                            }))
+                            match t.ty.as_ref().clone() {
+                                Type::Reference(mut ty) => {
+                                    ty.mutability = None;
+                                    t.ty = Box::from(Type::Reference(ty.clone()));
+                                },
+                                ty => {
+                                    t.ty = Box::from(Type::Reference(TypeReference {
+                                        and_token: Default::default(),
+                                        lifetime: None,
+                                        mutability: None,
+                                        elem: Box::new(ty.clone()),
+                                    }))
+                                }
+                            }
                         }
                     },
                 }
@@ -79,6 +96,7 @@ struct CalleeBorrowAssigner<'a> {
     fn_name: &'a str,
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
+    ref_inputs: &'a Vec<String>,
 }
 
 impl VisitMut for CalleeBorrowAssigner<'_> {
@@ -90,6 +108,7 @@ impl VisitMut for CalleeBorrowAssigner<'_> {
                 let mut borrow_assigner = RefBorrowAssignerHelper {
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
+                    ref_inputs: self.ref_inputs,
                 };
                 i.sig
                     .inputs
@@ -272,6 +291,7 @@ impl VisitMut for CallerCheckCallee<'_> {
 struct CallerCheckInput<'a> {
     input: &'a Vec<String>,
     make_ref: &'a mut Vec<String>,
+    use_after: &'a mut Vec<String>, // for constraints uses
 }
 
 impl VisitMut for CallerCheckInput<'_> {
@@ -280,7 +300,10 @@ impl VisitMut for CallerCheckInput<'_> {
         println!("id: {}, in inputs: {}", &id, self.input.contains(&id));
         match self.input.contains(&id) {
             true => self.make_ref.push(id),
-            false => syn::visit_mut::visit_expr_mut(self, i),
+            false => {
+                self.use_after.push(id);
+                syn::visit_mut::visit_expr_mut(self, i)
+            },
         }
     }
 
@@ -308,6 +331,7 @@ struct CallerHelper<'a> {
     callee_inputs: &'a Vec<String>,
     decl_mut: &'a mut Vec<String>,
     make_ref: &'a mut Vec<String>, // must be ref (not deciding whether immutable/mut yet
+    use_after: &'a mut Vec<String>,
 }
 
 impl VisitMut for CallerHelper<'_> {
@@ -332,12 +356,15 @@ impl VisitMut for CallerHelper<'_> {
                 let mut check_input = CallerCheckInput {
                     input: &self.callee_inputs,
                     make_ref: &mut self.make_ref,
+                    use_after: self.use_after,
                 };
 
                 let mut temp = vec![];
+                let mut temp_use_after = vec![];
                 let mut check_input_temp = CallerCheckInput {
                     input: &self.callee_inputs,
                     make_ref: &mut temp,
+                    use_after: &mut temp_use_after,
                 };
                 let mut check_callee = CallerCheckCallee {
                     callee_fn_name: self.callee_fn_name,
@@ -354,7 +381,8 @@ impl VisitMut for CallerHelper<'_> {
                     }
                 });
 
-                temp.into_iter().for_each(|x| self.make_ref.push(x))
+                temp.into_iter().for_each(|x| self.make_ref.push(x));
+                temp_use_after.into_iter().for_each(|x| self.use_after.push(x))
             }
         }
     }
@@ -363,12 +391,13 @@ impl VisitMut for CallerHelper<'_> {
 struct MutBorrowLHSChecker<'a> {
     make_mut: &'a mut Vec<String>,
     make_ref: &'a mut Vec<String>,
+    ref_inputs: &'a Vec<String>,
 }
 
 impl VisitMut for MutBorrowLHSChecker<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         let id = i.clone().into_token_stream().to_string();
-        match self.make_ref.contains(&id) {
+        match self.make_ref.contains(&id) || self.ref_inputs.contains(&id) {
             true => self.make_mut.push(id),
             false => syn::visit_mut::visit_expr_mut(self, i),
         }
@@ -378,6 +407,7 @@ impl VisitMut for MutBorrowLHSChecker<'_> {
 struct MutableBorrowerHelper<'a> {
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
+    ref_inputs: &'a Vec<String>,
     decl_mut: &'a mut Vec<String>,
     mut_methods: &'a Vec<ExprMethodCall>,
 }
@@ -391,6 +421,7 @@ impl VisitMut for MutableBorrowerHelper<'_> {
                 let mut lhs_checker = MutBorrowLHSChecker {
                     make_mut: self.make_mut,
                     make_ref: self.make_ref,
+                    ref_inputs: self.ref_inputs,
                 };
                 lhs_checker.visit_expr_mut(&mut i.left.clone());
             }
@@ -405,13 +436,13 @@ impl VisitMut for MutableBorrowerHelper<'_> {
                 let mut lhs_checker = MutBorrowLHSChecker {
                     make_mut: self.make_mut,
                     make_ref: self.make_ref,
+                    ref_inputs: self.ref_inputs,
                 };
                 lhs_checker.visit_expr_mut(&mut i.left.clone());
             }
         }
     }
 
-    // treating all declared mut with method call as mut (cannot look up fn decl)
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let id = i.receiver.as_ref().into_token_stream().to_string();
         println!(
@@ -419,7 +450,7 @@ impl VisitMut for MutableBorrowerHelper<'_> {
             id,
             i.clone().into_token_stream().to_string()
         );
-        match self.decl_mut.contains(&id) {
+        match self.decl_mut.contains(&id) || self.ref_inputs.contains(&id) {
             true => self.mut_methods.clone().iter().for_each(|mut_call| {
                 let mut_call_id = mut_call.receiver.as_ref().into_token_stream().to_string();
                 if i.clone().method == mut_call.method && id == mut_call_id {
@@ -436,6 +467,7 @@ struct MutableBorrower<'a> {
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
     decl_mut: &'a mut Vec<String>,
+    ref_inputs: &'a Vec<String>,
     mut_methods: &'a Vec<ExprMethodCall>,
 }
 
@@ -448,6 +480,7 @@ impl VisitMut for MutableBorrower<'_> {
                 let mut mut_borrower_helper = MutableBorrowerHelper {
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
+                    ref_inputs: self.ref_inputs,
                     decl_mut: self.decl_mut,
                     mut_methods: self.mut_methods,
                 };
@@ -521,6 +554,7 @@ struct PreExtracter<'a> {
     inputs: &'a Vec<String>,
     ref_inputs: &'a Vec<String>,
     make_ref: &'a mut Vec<String>,
+    use_after: &'a Vec<String>,
 }
 
 impl VisitMut for PreExtracter<'_> {
@@ -558,17 +592,20 @@ impl VisitMut for PreExtracter<'_> {
                 for constraint in constraints {
                     println!("{}", constraint);
                     match constraint {
-                        AliasConstraints::Alias(l, r) => match lookup.get(l.to_string().as_str()) {
-                            None => {}
-                            Some(expr) => {
-                                if self.inputs.contains(&expr.trim().to_string())
-                                    || self.ref_inputs.contains(&expr.trim().to_string())
-                                {
-                                    match lookup.get(r.to_string().as_str()) {
-                                        None => {}
-                                        Some(expr) => {
-                                            if self.inputs.contains(&expr.trim().to_string()) {
-                                                self.make_ref.push(expr.clone());
+                        AliasConstraints::Alias(l, r) => {
+                            match lookup.get(l.to_string().as_str()) {
+                                None => {}
+                                Some(expr) => {
+                                    if self.inputs.contains(&expr.trim().to_string())
+                                        || self.ref_inputs.contains(&expr.trim().to_string())
+                                    {
+                                        match lookup.get(r.to_string().as_str()) {
+                                            None => {}
+                                            Some(expr) => {
+                                                let id = expr.trim().to_string();
+                                                if self.inputs.contains(&id) || self.use_after.contains(&id) {
+                                                    self.make_ref.push(expr.clone());
+                                                }
                                             }
                                         }
                                     }
@@ -628,11 +665,14 @@ pub fn make_borrows(
     };
     callee_input_helper.visit_file_mut(&mut file);
 
+    let mut use_after = vec![];
+
     let mut constraint_visitor = PreExtracter {
         caller_fn_name,
         inputs: &callee_inputs,
         ref_inputs: &callee_ref_inputs,
         make_ref: &mut make_ref,
+        use_after: &mut use_after,
     };
     constraint_visitor.visit_file_mut(&mut pre_extract_file);
 
@@ -643,6 +683,7 @@ pub fn make_borrows(
         callee_inputs: &callee_inputs,
         make_ref: &mut make_ref,
         decl_mut: &mut decl_mut,
+        use_after: &mut use_after,
     };
     caller_helper.visit_file_mut(&mut file);
 
@@ -656,6 +697,7 @@ pub fn make_borrows(
         make_ref: &mut make_ref,
         make_mut: &mut make_mut,
         decl_mut: &mut decl_mut,
+        ref_inputs: &callee_ref_inputs,
         mut_methods: &mut_methods,
     };
     mut_borrower.visit_file_mut(&mut file);
@@ -663,6 +705,7 @@ pub fn make_borrows(
         fn_name: callee_fn_name,
         make_ref: &make_ref,
         make_mut: &make_mut,
+        ref_inputs: &callee_ref_inputs,
     };
     for s in &make_ref {
         println!("make {} ref", s);
