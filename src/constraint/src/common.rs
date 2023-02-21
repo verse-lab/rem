@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+
 
 use itertools::Itertools;
 
@@ -12,9 +12,9 @@ use nom::{
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 
-use syn::{visit::Visit, visit_mut::VisitMut, Expr, ExprAssign, FnArg, Stmt, Type};
-use utils::{annotation::Annotations, typ::RustType};
-use utils::{labelling::Label, wrappers::IndexWrapper};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, FnArg, Stmt, Type};
+use utils::{annotation::Annotations};
+use utils::{labelling::Label};
 
 /// Aliasing Constraints
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

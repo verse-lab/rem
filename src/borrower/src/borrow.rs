@@ -67,7 +67,7 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
                             }
                         }
                     }
-                    false => match (self.make_ref.contains(&id) || self.ref_inputs.contains(&id)){
+                    false => match self.make_ref.contains(&id) || self.ref_inputs.contains(&id){
                         false => syn::visit_mut::visit_fn_arg_mut(self, i),
                         true => {
                             match t.ty.as_ref().clone() {

@@ -168,7 +168,7 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 writeln!(file, "{} -> {}", label, ident).unwrap();
                 self.annotations.insert(&i.pat, label);
             }
-            lb => {
+            _lb => {
                 /*panic!(
                     "use of unsupported syntactic form {:#?}",
                     lb.into_token_stream().to_string()
