@@ -342,7 +342,9 @@ impl VisitMut for FnLifetimeElider<'_> {
                             .filter(|g| match g {
                                 GenericParam::Lifetime(lt) => {
                                     let id = lt.lifetime.to_string();
-                                    *map.get(&id).unwrap() > 1 || cannot_elide.contains(&id)
+                                    !map.contains_key(&id) // must be within a trait--cannot elide
+                                        || *map.get(&id).unwrap() > 1
+                                        || cannot_elide.contains(&id)
                                 }
                                 _ => false,
                             })
@@ -461,26 +463,22 @@ pub fn repair_iteration_project(
 
         let mut help = false;
         for item in stream {
-            println!("parsed cargo error in stream: {:?}", item);
             match &item {
-                Ok(item) => {
-                    match &item.message {
-                        None => {}
-                        Some(message) => {
-                            let spans = &message.spans;
-                            for span in spans {
-                                println!("src path: {}\n other span: {}", src_path, &span.file_name);
-                                if src_path.contains(&span.file_name) {
-                                    println!("processing error!");
-                                    if process_errors(&message) {
-                                        help = true;
-                                        break;
-                                    }
+                Ok(item) => match &item.message {
+                    None => {}
+                    Some(message) => {
+                        let spans = &message.spans;
+                        for span in spans {
+                            if src_path.contains(&span.file_name) {
+                                println!("processing error: {}", &message.rendered);
+                                if process_errors(&message) {
+                                    help = true;
+                                    break;
                                 }
                             }
                         }
                     }
-                }
+                },
                 Err(e) => {
                     println!("error parsing cargo error:\n{}", e);
                 }

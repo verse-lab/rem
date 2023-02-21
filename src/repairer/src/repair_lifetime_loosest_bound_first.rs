@@ -1,7 +1,11 @@
 use proc_macro2::Span;
 use quote::ToTokens;
+use std::borrow::BorrowMut;
 use std::fs;
-use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, ReturnType, Type, TypeParamBound};
+use syn::{
+    visit_mut::VisitMut, FnArg, GenericArgument, Lifetime, LifetimeDef, PathArguments, ReturnType,
+    Type, TypeParamBound,
+};
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
@@ -39,7 +43,7 @@ impl RepairSystem for Repairer {
     fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool {
         fs::copy(file_name, &new_file_name).unwrap();
         annotate_loose_named_lifetime(&new_file_name, fn_name);
-        //println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
+        println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
         let args: Vec<&str> = vec!["--error-format=json"];
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
@@ -62,6 +66,11 @@ struct LooseLifetimeAnnotatorTypeHelper {
 
 impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
     fn visit_type_mut(&mut self, i: &mut Type) {
+        println!(
+            "visiting type: {} {:?}",
+            i.clone().into_token_stream().to_string(),
+            i.clone()
+        );
         match i {
             Type::Reference(r) => {
                 r.lifetime = Some(Lifetime::new(
@@ -87,6 +96,26 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                     }
                 });
                 syn::visit_mut::visit_type_mut(self, i);
+            }
+            Type::Path(p) => {
+                p.path
+                    .segments
+                    .iter_mut()
+                    .for_each(|ps| match ps.arguments.borrow_mut() {
+                        PathArguments::AngleBracketed(tf) => tf.args.iter_mut().for_each(|arg| {
+                            match arg {
+                                GenericArgument::Lifetime(lt) => {
+                                    *lt = Lifetime::new(
+                                        format!("'lt{}", self.lt_num).as_str(),
+                                        Span::call_site(),
+                                    );
+                                    self.lt_num += 1;
+                                }
+                                _ => syn::visit_mut::visit_generic_argument_mut(self, arg),
+                            };
+                        }),
+                        ps_arg => syn::visit_mut::visit_path_arguments_mut(self, ps_arg),
+                    });
             }
             Type::Verbatim(v) => {
                 let mut v_str = v.clone().to_string();
