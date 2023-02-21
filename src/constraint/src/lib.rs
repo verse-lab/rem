@@ -1,5 +1,4 @@
 #![feature(box_patterns)]
-#![feature(associated_consts)]
 #![feature(box_into_inner)]
 
 mod chr;

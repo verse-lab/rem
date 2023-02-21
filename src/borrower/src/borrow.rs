@@ -10,9 +10,10 @@ use itertools::Itertools;
 use regex::Regex;
 use syn::punctuated::Punctuated;
 use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReturn,
-    FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference,
+    visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference,
+    ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference,
 };
+
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -24,11 +25,15 @@ struct RefBorrowAssignerHelper<'a> {
 impl VisitMut for RefBorrowAssignerHelper<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         let id = i.into_token_stream().to_string();
-        println!("id expr: {}", &id);
+        println!("id expr: {}, {:?}", &id, i);
         match i {
             //no need to star method call left side but need to for args
             Expr::MethodCall(e) => {
                 e.args.iter_mut().for_each(|el| self.visit_expr_mut(el));
+                match e.receiver.as_mut() {
+                    Expr::Path(_) => (), //most likely just actual ident so should not star
+                    _ => self.visit_expr_mut( e.receiver.as_mut()),
+                }
             }
             //no starring index lhs but need to star its index
             Expr::Index(e) => {
@@ -394,6 +399,7 @@ struct MutBorrowLHSChecker<'a> {
     make_mut: &'a mut Vec<String>,
     make_ref: &'a mut Vec<String>,
     ref_inputs: &'a Vec<String>,
+    callee_inputs: &'a Vec<String>,
 }
 
 impl VisitMut for MutBorrowLHSChecker<'_> {
@@ -401,7 +407,12 @@ impl VisitMut for MutBorrowLHSChecker<'_> {
         let id = i.clone().into_token_stream().to_string();
         match self.make_ref.contains(&id) || self.ref_inputs.contains(&id) {
             true => self.make_mut.push(id),
-            false => syn::visit_mut::visit_expr_mut(self, i),
+            false => {
+                if self.callee_inputs.contains(&id) {
+                    self.make_mut.push(id);
+                };
+                syn::visit_mut::visit_expr_mut(self, i);
+            }
         }
     }
 }
@@ -411,6 +422,7 @@ struct MutableBorrowerHelper<'a> {
     make_mut: &'a mut Vec<String>,
     ref_inputs: &'a Vec<String>,
     decl_mut: &'a mut Vec<String>,
+    callee_inputs: &'a Vec<String>,
     mut_methods: &'a Vec<ExprMethodCall>,
 }
 
@@ -424,6 +436,7 @@ impl VisitMut for MutableBorrowerHelper<'_> {
                     make_mut: self.make_mut,
                     make_ref: self.make_ref,
                     ref_inputs: self.ref_inputs,
+                    callee_inputs: self.callee_inputs,
                 };
                 lhs_checker.visit_expr_mut(&mut i.left.clone());
             }
@@ -439,6 +452,7 @@ impl VisitMut for MutableBorrowerHelper<'_> {
                     make_mut: self.make_mut,
                     make_ref: self.make_ref,
                     ref_inputs: self.ref_inputs,
+                    callee_inputs: self.callee_inputs,
                 };
                 lhs_checker.visit_expr_mut(&mut i.left.clone());
             }
@@ -462,6 +476,27 @@ impl VisitMut for MutableBorrowerHelper<'_> {
             false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
     }
+
+    fn visit_expr_reference_mut(&mut self, i: &mut ExprReference) {
+        match &mut i.mutability {
+            None => {}
+            Some(_) => {
+                let id = i.expr.clone().into_token_stream().to_string();
+                match self.make_ref.contains(&id) {
+                    true => self.make_mut.push(id),
+                    false => {
+                        let mut lhs_checker = MutBorrowLHSChecker {
+                            make_mut: self.make_mut,
+                            make_ref: self.make_ref,
+                            ref_inputs: self.ref_inputs,
+                            callee_inputs: self.callee_inputs,
+                        };
+                        lhs_checker.visit_expr_mut(i.expr.as_mut());
+                    }
+                }
+            }
+        }
+    }
 }
 
 struct MutableBorrower<'a> {
@@ -470,6 +505,7 @@ struct MutableBorrower<'a> {
     make_mut: &'a mut Vec<String>,
     decl_mut: &'a mut Vec<String>,
     ref_inputs: &'a Vec<String>,
+    callee_inputs: &'a Vec<String>,
     mut_methods: &'a Vec<ExprMethodCall>,
 }
 
@@ -484,6 +520,7 @@ impl VisitMut for MutableBorrower<'_> {
                     make_mut: self.make_mut,
                     ref_inputs: self.ref_inputs,
                     decl_mut: self.decl_mut,
+                    callee_inputs: self.callee_inputs,
                     mut_methods: self.mut_methods,
                 };
                 i.block
@@ -709,6 +746,7 @@ pub fn make_borrows(
         make_mut: &mut make_mut,
         decl_mut: &mut decl_mut,
         ref_inputs: &callee_ref_inputs,
+        callee_inputs: &callee_inputs,
         mut_methods: &mut_methods,
     };
     mut_borrower.visit_file_mut(&mut file);
