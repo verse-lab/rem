@@ -13,3 +13,10 @@ syn = {version="1.0.86", features=["printing", "parsing", "full", "visit-mut", "
 proc-macro2 = { version = "1.0", features = ["span-locations"]}
 quote = "1.0"
 utils = { path = "../utils" }
+constraint = { path = "../constraint" }
+itertools = "0.10.5"
+regex = "1.6.0"
+
+
+[package.metadata.rust-analyzer]
+rustc_private=true

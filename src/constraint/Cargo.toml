@@ -1,15 +1,22 @@
 [package]
-name = "utils"
+name = "constraint"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nom = {version="7.1.0"}
-ena = {version="0.14"}
 syn = {version="1.0.80", features=["extra-traits", "full", "visit", "fold", "visit-mut", "printing", "parsing"]}
-log = "0.4"
-proc-macro2 = { version = "1.0", features = ["span-locations"]}
-string_cache = "0.8"
+proc-macro2 = "1.0"
 quote = "1.0"
+nom = {version="7.1.0"}
+mktemp = {version="0.4.1"}
+utils = { path = "../utils" }
+itertools = "0.10.5"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[package.metadata.rust-analyzer]
+rustc_private=true

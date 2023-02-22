@@ -7,7 +7,6 @@ pub fn new_foo() {
         let y = 2;
         z = &y;
         z = bar(x_ref, &z, &y);
-        println!("{}", y);
         println!("{}", *z);
     }
 }

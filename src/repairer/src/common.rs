@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use proc_macro2::Span;
 use quote::ToTokens;
 use regex::Regex;
@@ -6,10 +7,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{
-    visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
-    Type, WhereClause, WherePredicate,
-};
+use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, PathArguments, GenericArgument};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -261,24 +259,52 @@ fn get_lt(i: &Type, v: &mut Vec<String>) {
     }
 }
 
-fn change_lt(i: &mut Type, map: &HashMap<String, String>) {
-    match i {
-        Type::Reference(r) => {
-            match &r.lifetime {
-                Some(lt) => {
-                    let id = lt.to_string();
-                    match map.get(&id) {
-                        Some(new_lt) => {
-                            r.lifetime = Some(Lifetime::new(new_lt.as_str(), Span::call_site()))
+struct ChangeLtHelperElider<'a> {
+    map: &'a HashMap<String, String>
+}
+
+impl VisitMut for ChangeLtHelperElider<'_> {
+    fn visit_type_mut(&mut self, i: &mut Type) {
+        match i {
+            Type::Reference(r) => {
+                match &r.lifetime {
+                    Some(lt) => {
+                        let id = lt.to_string();
+                        match self.map.get(&id) {
+                            Some(new_lt) => {
+                                r.lifetime = Some(Lifetime::new(new_lt.as_str(), Span::call_site()))
+                            }
+                            None => (),
                         }
-                        None => (),
                     }
-                }
-                None => (),
-            };
-            change_lt(r.elem.as_mut(), map)
+                    None => (),
+                };
+                syn::visit_mut::visit_type_mut(self, r.elem.as_mut())
+            }
+            Type::Path(p) => {
+                p.path
+                    .segments
+                    .iter_mut()
+                    .for_each(|ps| match ps.arguments.borrow_mut() {
+                        PathArguments::AngleBracketed(tf) => tf.args.iter_mut().for_each(|arg| {
+                            match arg {
+                                GenericArgument::Lifetime(lt) => {
+                                    let id = lt.to_string();
+                                    match self.map.get(&id) {
+                                        Some(new_lt) => {
+                                            *lt = Lifetime::new(new_lt.as_str(), Span::call_site())
+                                        }
+                                        None => (),
+                                    }
+                                }
+                                _ => syn::visit_mut::visit_generic_argument_mut(self, arg),
+                            };
+                        }),
+                        ps_arg => syn::visit_mut::visit_path_arguments_mut(self, ps_arg),
+                    });
+            }
+            _ => (),
         }
-        _ => (),
     }
 }
 
@@ -342,7 +368,9 @@ impl VisitMut for FnLifetimeElider<'_> {
                             .filter(|g| match g {
                                 GenericParam::Lifetime(lt) => {
                                     let id = lt.lifetime.to_string();
-                                    *map.get(&id).unwrap() > 1 || cannot_elide.contains(&id)
+                                    !map.contains_key(&id) // must be within a trait--cannot elide
+                                        || *map.get(&id).unwrap() > 1
+                                        || cannot_elide.contains(&id)
                                 }
                                 _ => false,
                             })
@@ -397,12 +425,20 @@ impl VisitMut for FnLifetimeElider<'_> {
                                 inputs.iter_mut().for_each(|fn_arg| match fn_arg {
                                     FnArg::Receiver(_) => (),
                                     FnArg::Typed(t) => {
-                                        change_lt(t.ty.as_mut(), &new_lts);
+                                        let mut change_lt = ChangeLtHelperElider {
+                                            map: &new_lts,
+                                        };
+                                        change_lt.visit_pat_type_mut(t);
                                     }
                                 });
-                                match &mut i.sig.output {
+                                match i.sig.output.borrow_mut() {
                                     ReturnType::Default => (),
-                                    ReturnType::Type(_, ty) => change_lt(ty.as_mut(), &new_lts),
+                                    ReturnType::Type(_, ty) => {
+                                        let mut change_lt = ChangeLtHelperElider {
+                                            map: &new_lts,
+                                        };
+                                        change_lt.visit_type_mut(ty.as_mut());
+                                    }
                                 }
                             }
                         }
@@ -435,7 +471,7 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CargoError {
-    pub message: RustcError,
+    pub message: Option<RustcError>,
 }
 
 pub fn repair_iteration_project(
@@ -460,21 +496,26 @@ pub fn repair_iteration_project(
         count += 1;
 
         let mut help = false;
-        println!("binding: {}", binding.as_str());
         for item in stream {
             match &item {
-                Ok(item) => {
-                    let spans = &item.message.spans;
-                    for span in spans {
-                        if src_path.contains(&span.file_name) {
-                            if process_errors(&item.message) {
-                                help = true;
+                Ok(item) => match &item.message {
+                    None => {}
+                    Some(message) => {
+                        let spans = &message.spans;
+                        for span in spans {
+                            if src_path.contains(&span.file_name) {
+                                println!("processing error: {}", &message.rendered);
+                                if process_errors(&message) {
+                                    help = true;
+                                    break;
+                                }
                             }
-                            break;
                         }
                     }
+                },
+                Err(e) => {
+                    println!("error parsing cargo error:\n{}", e);
                 }
-                Err(_) => {}
             }
         }
 
