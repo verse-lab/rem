@@ -53,7 +53,7 @@ pub fn chr_solve<C: constraint::LocalConstraint>(constraints: &Vec<C>) -> Vec<C>
         .unwrap()
         .read_to_string(&mut output)
         .expect("failed");
-    println!("output is:\n{}", output);
+    // println!("output is:\n{}", output);
     drop(tmp);
 
     parse_constraints(&output)

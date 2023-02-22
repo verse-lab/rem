@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 use proc_macro2::{Ident, Span};
-use quote::ToTokens;
+
 
 use syn::{visit_mut::VisitMut, Expr, ExprAssign, FnArg, Stmt, Type};
 use utils::annotation::Annotations;
@@ -87,7 +87,7 @@ impl crate::LocalConstraint for AliasConstraints {
 
         impl VisitMut for IdentHelper<'_> {
             fn visit_ident_mut(&mut self, i: &mut Ident) {
-                println!("in ident: {}", i.clone().to_string());
+                // println!("in ident: {}", i.clone().to_string());
                 lookup_ast(self.ast, i).and_then(|rhs| {
                     add_constraint(
                         self.constraints,
@@ -268,7 +268,7 @@ impl crate::LocalConstraint for AliasConstraints {
 
             fn visit_local_mut(&mut self, i: &mut syn::Local) {
                 let pat = &i.pat;
-                println!("local: {}", i.clone().into_token_stream().to_string());
+                // println!("local: {}", i.clone().into_token_stream().to_string());
                 match &*pat {
                     // Case of the form `let lhs : T = rhs`
                     syn::Pat::Type(syn::PatType {

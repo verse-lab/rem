@@ -43,7 +43,7 @@ impl RepairSystem for Repairer {
     fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool {
         fs::copy(file_name, &new_file_name).unwrap();
         annotate_loose_named_lifetime(&new_file_name, fn_name);
-        println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
+        // println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
         let args: Vec<&str> = vec!["--error-format=json"];
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
@@ -66,11 +66,11 @@ struct LooseLifetimeAnnotatorTypeHelper {
 
 impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
     fn visit_type_mut(&mut self, i: &mut Type) {
-        println!(
-            "visiting type: {} {:?}",
-            i.clone().into_token_stream().to_string(),
-            i.clone()
-        );
+        // println!(
+        //     "visiting type: {} {:?}",
+        //     i.clone().into_token_stream().to_string(),
+        //     i.clone()
+        // );
         match i {
             Type::Reference(r) => {
                 r.lifetime = Some(Lifetime::new(
@@ -78,13 +78,13 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                     Span::call_site(),
                 ));
                 self.lt_num += 1;
-                syn::visit_mut::visit_type_mut(self, r.elem.as_mut());
+                syn::visit_mut::visit_type_mut(self, i);
             }
             Type::TraitObject(t) => {
-                println!(
-                    "annotating trait obj: {}...",
-                    t.clone().into_token_stream().to_string()
-                );
+                //  println!(
+                //     "annotating trait obj: {}...",
+                //     t.clone().into_token_stream().to_string()
+                // );
                 t.bounds.iter_mut().for_each(|x| match x {
                     TypeParamBound::Trait(_) => (),
                     TypeParamBound::Lifetime(lt) => {
@@ -116,10 +116,11 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                         }),
                         ps_arg => syn::visit_mut::visit_path_arguments_mut(self, ps_arg),
                     });
+                syn::visit_mut::visit_type_mut(self, i);
             }
             Type::Verbatim(v) => {
                 let mut v_str = v.clone().to_string();
-                println!("verbatim type: {}", v);
+                // println!("verbatim type: {}", v);
                 while v_str.contains("'_") {
                     v_str = v_str.replacen("'_", format!("'lt{}", self.lt_num).as_str(), 1);
                     *v = syn::parse_str(v_str.as_str()).unwrap();

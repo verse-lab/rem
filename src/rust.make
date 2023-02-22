@@ -8,7 +8,7 @@ build:
 	cargo build --relase
 
 test:
-	cargo run -- test
+	cargo run -- test && make test_clean
 
 fix:
 	cargo fix --allow-dirty

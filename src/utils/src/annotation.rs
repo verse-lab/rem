@@ -100,7 +100,7 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 }) => {
                     let value = self.new_label();
                     self.annotations.insert(ident, value);
-                    println!("{} -> {}", value, ident);
+                    // println!("{} -> {}", value, ident);
                     let mut file = OpenOptions::new()
                         .write(true)
                         .append(true)
@@ -141,7 +141,7 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                 // bind LHS identifier with new label
                 self.add_binding(ident, label);
                 self.annotations.insert(ident, label);
-                println!("{} -> {}", label, ident);
+                // println!("{} -> {}", label, ident);
                 let mut file = OpenOptions::new()
                     .write(true)
                     .append(true)
@@ -159,7 +159,7 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
             }) => {
                 self.add_binding(ident, label);
                 self.annotations.insert(ident, label);
-                println!("{} -> {}", label, ident);
+                // println!("{} -> {}", label, ident);
                 let mut file = OpenOptions::new()
                     .write(true)
                     .append(true)

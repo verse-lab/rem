@@ -36,10 +36,10 @@ impl<C: LocalConstraint> Default for ConstraintSystem<C> {
 impl<C: LocalConstraint + 'static> LocalConstraintSystem for ConstraintSystem<C> {
     fn analyze<'a>(&mut self, fun: &Annotated<'a, &'a syn::ItemFn>) {
         self.constraints = C::collect(fun);
-        println!("collected");
-        for x in &self.constraints {
-            println!("collected constraints: {}", x);
-        }
+        // println!("collected");
+        // for x in &self.constraints {
+        //     println!("collected constraints: {}", x);
+        // }
         self.constraints = crate::chr::chr_solve(&self.constraints);
     }
 

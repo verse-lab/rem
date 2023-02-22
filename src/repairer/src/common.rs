@@ -58,10 +58,12 @@ pub fn repair_standard_help(stderr: &str, new_file_name: &str) -> bool {
         let out_file = fs::File::create(&new_file_name).unwrap();
         let mut writer = BufWriter::new(out_file);
         for captured in help_lines {
+            /*
             println!(
                 "line: {:?}, fn: {:?} {}",
                 &captured["line_number"], &captured["replacement"], current_line,
             );
+             */
 
             let line_number = match captured["line_number"].parse::<usize>() {
                 Ok(n) => n,
@@ -188,6 +190,7 @@ pub fn repair_iteration(
 
     if print_stats {
         println!("repair count: {}", count);
+        println!("status: {}", result);
     }
 
     result
@@ -502,9 +505,10 @@ pub fn repair_iteration_project(
                     None => {}
                     Some(message) => {
                         let spans = &message.spans;
+                        //println!("message: {:?}", &message);
                         for span in spans {
                             if src_path.contains(&span.file_name) {
-                                println!("processing error: {}", &message.rendered);
+                                // println!("processing error: {}", &message.rendered);
                                 if process_errors(&message) {
                                     help = true;
                                     break;
@@ -513,8 +517,8 @@ pub fn repair_iteration_project(
                         }
                     }
                 },
-                Err(e) => {
-                    println!("error parsing cargo error:\n{}", e);
+                Err(_e) => {
+                    // println!("error parsing cargo error:\n{}", e);
                 }
             }
         }

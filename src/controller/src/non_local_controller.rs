@@ -189,10 +189,10 @@ struct MakeBrkAndContVisitor<'a> {
 
 impl VisitMut for MakeBrkAndContVisitor<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
-        println!(
-            "expr make brk: {}",
-            i.clone().into_token_stream().to_string()
-        );
+        // println!(
+        //     "expr make brk: {}",
+        //     i.clone().into_token_stream().to_string()
+        // );
         match i {
             Expr::Break(e) => {
                 match &e.expr {
@@ -295,7 +295,7 @@ impl VisitMut for MakeReturn<'_> {
                 match i.block.stmts.last_mut() {
                     None => {}
                     Some(s) => {
-                        println!("last stmt: {}", s.into_token_stream().to_string());
+                        // println!("last stmt: {}", s.into_token_stream().to_string());
                         match s {
                             Stmt::Expr(_) => {
                                 let mut helper = MakeLastReturnBlkVisitor {};
@@ -366,7 +366,7 @@ struct MatchCallSiteHelper<'a> {
 
 impl VisitMut for MatchCallSiteHelper<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
-        println!("visit expr: {}", i.into_token_stream().to_string());
+        // println!("visit expr: {}", i.into_token_stream().to_string());
         match i {
             Expr::Call(c) => {
                 let id = c.func.clone().as_ref().into_token_stream().to_string();
@@ -478,10 +478,10 @@ pub fn make_controls(
         }
 
         if callee_visitor.has_break || callee_visitor.has_continue {
-            println!(
-                "has break {} or cont {}",
-                callee_visitor.has_break, callee_visitor.has_continue
-            );
+            // println!(
+            //     "has break {} or cont {}",
+            //     callee_visitor.has_break, callee_visitor.has_continue
+            // );
             let mut make_brk_and_cont = MakeBrkAndCont {
                 callee_fn_name,
                 success,

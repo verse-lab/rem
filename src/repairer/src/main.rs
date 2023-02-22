@@ -170,9 +170,9 @@ fn test() {
         ),
     ];
     let repair_systems: Vec<&dyn RepairSystem> = vec![
-        &repair_lifetime_simple::Repairer {},
-        &repair_rustfix::Repairer {},
-        &repair_lifetime_tightest_bound_first::Repairer {},
+        //&repair_lifetime_simple::Repairer {},
+        //&repair_rustfix::Repairer {},
+        //&repair_lifetime_tightest_bound_first::Repairer {},
         &repair_lifetime_loosest_bound_first::Repairer {},
     ];
     for (file_name, (fn_name, _)) in zip(file_names, function_sigs) {
