@@ -43,7 +43,7 @@ impl RepairSystem for Repairer {
     fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool {
         fs::copy(file_name, &new_file_name).unwrap();
         annotate_loose_named_lifetime(&new_file_name, fn_name);
-        // println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
+        println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
         let args: Vec<&str> = vec!["--error-format=json"];
 
         let mut compile_cmd = compile_file(&new_file_name, &args);
@@ -52,7 +52,7 @@ impl RepairSystem for Repairer {
 
         match repair_iteration(&mut compile_cmd, &process_errors, true, Some(50)) {
             true => {
-                // println!("repaired: {}", fs::read_to_string(&new_file_name).unwrap());
+                println!("repaired: {}", fs::read_to_string(&new_file_name).unwrap());
                 elide_lifetimes_annotations(new_file_name, fn_name);
                 true
             }

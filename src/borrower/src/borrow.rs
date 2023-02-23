@@ -13,6 +13,7 @@ use syn::{
     visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference,
     ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference,
 };
+use syn::token::Mut;
 
 use utils::format_source;
 
@@ -197,6 +198,7 @@ struct CalleeInputs<'a> {
     fn_name: &'a str,
     inputs: &'a mut Vec<String>,
     refs_inputs: &'a mut Vec<String>,
+    mut_refs_inputs: &'a mut Vec<String>,
     make_ref: &'a mut Vec<String>,
 }
 
@@ -209,9 +211,20 @@ impl VisitMut for CalleeInputs<'_> {
                     FnArg::Receiver(_) => (),
                     FnArg::Typed(t) => {
                         match t.ty.as_ref() {
-                            Type::Reference(_) => self
-                                .refs_inputs
-                                .push(t.pat.as_ref().into_token_stream().to_string()), // don't add reference no need to make it a ref
+                            Type::Reference(r) => {
+                                match r.mutability {
+                                    None => {
+                                        self
+                                            .refs_inputs
+                                            .push(t.pat.as_ref().into_token_stream().to_string()) // don't add reference no need to make it a ref
+                                    }
+                                    Some(_) => {
+                                        self
+                                            .mut_refs_inputs
+                                            .push(t.pat.as_ref().into_token_stream().to_string()) // don't add reference no need to make it a ref
+                                    }
+                                }
+                            }
                             _ => self
                                 .inputs
                                 .push(t.pat.as_ref().into_token_stream().to_string()),
@@ -534,6 +547,8 @@ impl VisitMut for MutableBorrower<'_> {
 
 struct CallerFnArgHelper<'a> {
     callee_fn_name: &'a str,
+    mut_ref_inputs: &'a Vec<String>,
+    decl_mut:  &'a Vec<String>,
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
 }
@@ -545,7 +560,7 @@ impl VisitMut for CallerFnArgHelper<'_> {
             false => syn::visit_mut::visit_expr_call_mut(self, i),
             true => i.args.iter_mut().for_each(|arg| {
                 let id = arg.into_token_stream().to_string();
-                match self.make_mut.contains(&id) {
+                match self.make_mut.contains(&id) && (!self.mut_ref_inputs.contains(&id) && self.decl_mut.contains(&id)) {
                     true => {
                         *arg = syn::parse_quote! {&mut #arg};
                     }
@@ -564,6 +579,8 @@ impl VisitMut for CallerFnArgHelper<'_> {
 struct CallerFnArg<'a> {
     caller_fn_name: &'a str,
     callee_fn_name: &'a str,
+    decl_mut: &'a Vec<String>,
+    mut_ref_inputs: &'a Vec<String>,
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
 }
@@ -576,6 +593,8 @@ impl VisitMut for CallerFnArg<'_> {
             true => {
                 let mut helper = CallerFnArgHelper {
                     callee_fn_name: self.callee_fn_name,
+                    mut_ref_inputs: self.mut_ref_inputs,
+                    decl_mut: self.decl_mut,
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
                 };
@@ -704,11 +723,13 @@ pub fn make_borrows(
         .unwrap();
     let mut callee_inputs = vec![];
     let mut callee_ref_inputs = vec![];
+    let mut callee_mut_ref_inputs = vec![];
     let mut make_ref = vec![];
     let mut callee_input_helper = CalleeInputs {
         fn_name: callee_fn_name,
         inputs: &mut callee_inputs,
         refs_inputs: &mut callee_ref_inputs,
+        mut_refs_inputs: &mut callee_mut_ref_inputs,
         make_ref: &mut make_ref,
     };
     callee_input_helper.visit_file_mut(&mut file);
@@ -768,6 +789,8 @@ pub fn make_borrows(
     let mut caller_assigner = CallerFnArg {
         caller_fn_name,
         callee_fn_name,
+        decl_mut: &decl_mut,
+        mut_ref_inputs: &callee_mut_ref_inputs,
         make_ref: &make_ref,
         make_mut: &make_mut,
     };
