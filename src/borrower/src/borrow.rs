@@ -21,6 +21,7 @@ struct RefBorrowAssignerHelper<'a> {
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
     ref_inputs: &'a Vec<String>,
+    mut_ref_inputs: &'a Vec<String>,
 }
 
 impl VisitMut for RefBorrowAssignerHelper<'_> {
@@ -44,7 +45,7 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
             Expr::Let(e) => {
                 self.visit_expr_mut(e.expr.as_mut());
             }
-            _ => match (self.make_mut.contains(&id) || self.make_ref.contains(&id)) && !self.ref_inputs.contains(&id) {
+            _ => match (self.make_mut.contains(&id) || self.make_ref.contains(&id)) && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id) ) {
                 true => *i = syn::parse_quote! {*#i},
                 false => syn::visit_mut::visit_expr_mut(self, i),
             },
@@ -99,6 +100,7 @@ struct CalleeBorrowAssigner<'a> {
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
     ref_inputs: &'a Vec<String>,
+    mut_ref_inputs: &'a Vec<String>,
 }
 
 impl VisitMut for CalleeBorrowAssigner<'_> {
@@ -111,6 +113,7 @@ impl VisitMut for CalleeBorrowAssigner<'_> {
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
                     ref_inputs: self.ref_inputs,
+                    mut_ref_inputs: self.mut_ref_inputs,
                 };
                 i.sig
                     .inputs
@@ -548,6 +551,7 @@ impl VisitMut for MutableBorrower<'_> {
 struct CallerFnArgHelper<'a> {
     callee_fn_name: &'a str,
     mut_ref_inputs: &'a Vec<String>,
+    ref_inputs: &'a Vec<String>,
     decl_mut:  &'a Vec<String>,
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
@@ -564,7 +568,7 @@ impl VisitMut for CallerFnArgHelper<'_> {
                     true => {
                         *arg = syn::parse_quote! {&mut #arg};
                     }
-                    false => match self.make_ref.contains(&id) {
+                    false => match self.make_ref.contains(&id) && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id)) {
                         false => (),
                         true => {
                             *arg = syn::parse_quote! {&#arg};
@@ -580,6 +584,7 @@ struct CallerFnArg<'a> {
     caller_fn_name: &'a str,
     callee_fn_name: &'a str,
     decl_mut: &'a Vec<String>,
+    ref_inputs: &'a Vec<String>,
     mut_ref_inputs: &'a Vec<String>,
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
@@ -594,6 +599,7 @@ impl VisitMut for CallerFnArg<'_> {
                 let mut helper = CallerFnArgHelper {
                     callee_fn_name: self.callee_fn_name,
                     mut_ref_inputs: self.mut_ref_inputs,
+                    ref_inputs: self.ref_inputs,
                     decl_mut: self.decl_mut,
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
@@ -776,6 +782,7 @@ pub fn make_borrows(
         make_ref: &make_ref,
         make_mut: &make_mut,
         ref_inputs: &callee_ref_inputs,
+        mut_ref_inputs: &callee_mut_ref_inputs,
     };
     for s in &make_ref {
         println!("make {} ref", s);
@@ -790,6 +797,7 @@ pub fn make_borrows(
         caller_fn_name,
         callee_fn_name,
         decl_mut: &decl_mut,
+        ref_inputs: &callee_ref_inputs,
         mut_ref_inputs: &callee_mut_ref_inputs,
         make_ref: &make_ref,
         make_mut: &make_mut,
