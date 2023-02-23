@@ -52,6 +52,7 @@ impl RepairSystem for Repairer {
 
         match repair_iteration(&mut compile_cmd, &process_errors, true, Some(50)) {
             true => {
+                // println!("repaired: {}", fs::read_to_string(&new_file_name).unwrap());
                 elide_lifetimes_annotations(new_file_name, fn_name);
                 true
             }

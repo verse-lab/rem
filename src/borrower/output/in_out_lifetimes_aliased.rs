@@ -11,7 +11,7 @@ pub fn new_foo() {
     }
 }
 fn bar(x_ref: &i32, z: &i32, y: &i32) -> &i32 {
-    if **z < *x_ref {
+    if *z < *x_ref {
         &*y
     } else {
         &W

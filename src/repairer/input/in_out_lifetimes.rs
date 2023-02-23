@@ -1,35 +1,12 @@
-const W: i32 = 5;
-
-pub fn original_foo() {
-    let x = 1;
-    let mut z: &i32;
-    {
-        let y = 2;
-        z = &y;
-        z = if *z < x { &y } else { &W };
-        println!("{}", *z);
-    }
-}
-
 pub fn new_foo() {
-    let x = 1;
-    let mut z: &i32;
-    {
-        let y = 2;
-        z = &y;
-        z = bar_extracted(x, z, &y);
-        println!("{}", *z);
-    }
-    z = x_ref;
-    println!("{}", *z);
+    let mut z: &i32 = &0;
+    let mut y = 2;
+    z = bar_extracted(z, &mut y);
+}
+fn bar_extracted(z: &i32, y: &mut i32) -> &i32 {
+    *y = *z + 1;
+    &*y
 }
 
-fn bar_extracted(x: i32, z: &i32, y: &i32) -> &i32 {
-    if *z < x {
-        &y
-    } else {
-        &W
-    }
-}
 
 fn main() {}

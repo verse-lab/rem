@@ -55,6 +55,7 @@ pub fn compile_project(manifest_path: &str, cargo_args: &Vec<&str>) -> Command {
 pub fn format_source(src: &str) -> String {
     let rustfmt = {
         let mut proc = Command::new(&"rustfmt")
+            .arg("--edition=2021")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()

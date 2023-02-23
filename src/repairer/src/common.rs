@@ -139,6 +139,9 @@ pub fn repair_bounds_help(stderr: &str, new_file_name: &str, fn_name: &str) -> b
             &caps["constraint_rhs"],
         */
         for captured in help_lines {
+            // println!("found helps: {}, {}",
+            //          &captured["constraint_lhs"],
+            //          &captured["constraint_rhs"]);
             let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
             let mut file = syn::parse_str::<syn::File>(file_content.as_str())
                 .map_err(|e| format!("{:?}", e))
@@ -524,10 +527,12 @@ pub fn repair_iteration_project(
         }
 
         if !help {
+            println!("last failure:\n{}", stdout);
             break false;
         }
 
         if max_iterations == count {
+            println!("last failure:\n{}", stdout);
             break false;
         }
     };

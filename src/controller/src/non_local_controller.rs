@@ -439,9 +439,15 @@ pub fn make_controls(
 ) -> bool {
     let mut success = true;
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
+
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| {
+            let s = format!("THERE IS AN ERROR HERE NOT PARSED: {:?}", e);
+            println!("errored: {}", &s);
+            s
+        })
         .unwrap();
+
     let mut caller_rety = ReturnType::Default;
     let mut caller_visitor = CallerVisitor {
         caller_fn_name,
@@ -523,7 +529,6 @@ pub fn make_controls(
         };
         caller_matcher.visit_file_mut(&mut file);
     }
-
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
     success

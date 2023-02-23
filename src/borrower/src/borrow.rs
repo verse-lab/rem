@@ -43,7 +43,7 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
             Expr::Let(e) => {
                 self.visit_expr_mut(e.expr.as_mut());
             }
-            _ => match self.make_mut.contains(&id) || self.make_ref.contains(&id) {
+            _ => match (self.make_mut.contains(&id) || self.make_ref.contains(&id)) && !self.ref_inputs.contains(&id) {
                 true => *i = syn::parse_quote! {*#i},
                 false => syn::visit_mut::visit_expr_mut(self, i),
             },
@@ -756,13 +756,13 @@ pub fn make_borrows(
         make_mut: &make_mut,
         ref_inputs: &callee_ref_inputs,
     };
-    // for s in &make_ref {
-    //     // println!("make {} ref", s);
-    // }
-    //
-    // for s in &make_mut {
-    //     // println!("make {} mut", s);
-    // }
+    for s in &make_ref {
+        println!("make {} ref", s);
+    }
+
+    for s in &make_mut {
+        println!("make {} mut", s);
+    }
     callee_assigner.visit_file_mut(&mut file);
 
     let mut caller_assigner = CallerFnArg {
