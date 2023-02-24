@@ -1,13 +1,16 @@
-use std::borrow::BorrowMut;
 use proc_macro2::Span;
 use quote::ToTokens;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, PathArguments, GenericArgument};
+use syn::{
+    visit_mut::VisitMut, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PathArguments,
+    PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate,
+};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -266,7 +269,7 @@ fn get_lt(i: &Type, v: &mut Vec<String>) {
 }
 
 struct ChangeLtHelperElider<'a> {
-    map: &'a HashMap<String, String>
+    map: &'a HashMap<String, String>,
 }
 
 impl VisitMut for ChangeLtHelperElider<'_> {
@@ -431,18 +434,14 @@ impl VisitMut for FnLifetimeElider<'_> {
                                 inputs.iter_mut().for_each(|fn_arg| match fn_arg {
                                     FnArg::Receiver(_) => (),
                                     FnArg::Typed(t) => {
-                                        let mut change_lt = ChangeLtHelperElider {
-                                            map: &new_lts,
-                                        };
+                                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
                                         change_lt.visit_pat_type_mut(t);
                                     }
                                 });
                                 match i.sig.output.borrow_mut() {
                                     ReturnType::Default => (),
                                     ReturnType::Type(_, ty) => {
-                                        let mut change_lt = ChangeLtHelperElider {
-                                            map: &new_lts,
-                                        };
+                                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
                                         change_lt.visit_type_mut(ty.as_mut());
                                     }
                                 }
@@ -502,6 +501,7 @@ pub fn repair_iteration_project(
         count += 1;
 
         let mut help = false;
+        let mut last_failure = format!("");
         for item in stream {
             match &item {
                 Ok(item) => match &item.message {
@@ -512,6 +512,7 @@ pub fn repair_iteration_project(
                         for span in spans {
                             if src_path.contains(&span.file_name) {
                                 // println!("processing error: {}", &message.rendered);
+                                last_failure = message.rendered.clone();
                                 if process_errors(&message) {
                                     help = true;
                                     break;
@@ -527,12 +528,12 @@ pub fn repair_iteration_project(
         }
 
         if !help {
-            println!("last failure:\n{}", stdout);
+            println!("last failure:\n{}", last_failure);
             break false;
         }
 
         if max_iterations == count {
-            println!("last failure:\n{}", stdout);
+            println!("last failure:\n{}", last_failure);
             break false;
         }
     };

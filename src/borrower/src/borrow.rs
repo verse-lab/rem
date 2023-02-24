@@ -14,7 +14,6 @@ use syn::{
     ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference,
 };
 
-
 use utils::format_source;
 
 struct RefBorrowAssignerHelper<'a> {
@@ -34,7 +33,7 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
                 e.args.iter_mut().for_each(|el| self.visit_expr_mut(el));
                 match e.receiver.as_mut() {
                     Expr::Path(_) => (), //most likely just actual ident so should not star
-                    _ => self.visit_expr_mut( e.receiver.as_mut()),
+                    _ => self.visit_expr_mut(e.receiver.as_mut()),
                 }
             }
             //no starring index lhs but need to star its index
@@ -45,7 +44,9 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
             Expr::Let(e) => {
                 self.visit_expr_mut(e.expr.as_mut());
             }
-            _ => match (self.make_mut.contains(&id) || self.make_ref.contains(&id)) && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id) ) {
+            _ => match (self.make_mut.contains(&id) || self.make_ref.contains(&id))
+                && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id))
+            {
                 true => *i = syn::parse_quote! {*#i},
                 false => syn::visit_mut::visit_expr_mut(self, i),
             },
@@ -217,14 +218,14 @@ impl VisitMut for CalleeInputs<'_> {
                             Type::Reference(r) => {
                                 match r.mutability {
                                     None => {
-                                        self
-                                            .refs_inputs
-                                            .push(t.pat.as_ref().into_token_stream().to_string()) // don't add reference no need to make it a ref
+                                        self.refs_inputs
+                                            .push(t.pat.as_ref().into_token_stream().to_string())
+                                        // don't add reference no need to make it a ref
                                     }
                                     Some(_) => {
-                                        self
-                                            .mut_refs_inputs
-                                            .push(t.pat.as_ref().into_token_stream().to_string()) // don't add reference no need to make it a ref
+                                        self.mut_refs_inputs
+                                            .push(t.pat.as_ref().into_token_stream().to_string())
+                                        // don't add reference no need to make it a ref
                                     }
                                 }
                             }
@@ -552,7 +553,7 @@ struct CallerFnArgHelper<'a> {
     callee_fn_name: &'a str,
     mut_ref_inputs: &'a Vec<String>,
     ref_inputs: &'a Vec<String>,
-    decl_mut:  &'a Vec<String>,
+    decl_mut: &'a Vec<String>,
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
 }
@@ -564,11 +565,15 @@ impl VisitMut for CallerFnArgHelper<'_> {
             false => syn::visit_mut::visit_expr_call_mut(self, i),
             true => i.args.iter_mut().for_each(|arg| {
                 let id = arg.into_token_stream().to_string();
-                match self.make_mut.contains(&id) && (!self.mut_ref_inputs.contains(&id) && self.decl_mut.contains(&id)) {
+                match self.make_mut.contains(&id)
+                    && (!self.mut_ref_inputs.contains(&id) && self.decl_mut.contains(&id))
+                {
                     true => {
                         *arg = syn::parse_quote! {&mut #arg};
                     }
-                    false => match self.make_ref.contains(&id) && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id)) {
+                    false => match self.make_ref.contains(&id)
+                        && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id))
+                    {
                         false => (),
                         true => {
                             *arg = syn::parse_quote! {&#arg};
