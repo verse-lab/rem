@@ -7,10 +7,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{
-    visit_mut::VisitMut, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PathArguments,
-    PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate,
-};
+use syn::{visit_mut::VisitMut, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PathArguments, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, BoundLifetimes};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -226,7 +223,7 @@ impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
                 };
                 self.visit_type_mut(r.elem.as_mut());
             }
-            _ => (),
+            _ => syn::visit_mut::visit_type_mut(self, i),
         }
     }
 }
@@ -273,47 +270,15 @@ struct ChangeLtHelperElider<'a> {
 }
 
 impl VisitMut for ChangeLtHelperElider<'_> {
-    fn visit_type_mut(&mut self, i: &mut Type) {
-        match i {
-            Type::Reference(r) => {
-                match &r.lifetime {
-                    Some(lt) => {
-                        let id = lt.to_string();
-                        match self.map.get(&id) {
-                            Some(new_lt) => {
-                                r.lifetime = Some(Lifetime::new(new_lt.as_str(), Span::call_site()))
-                            }
-                            None => (),
-                        }
-                    }
-                    None => (),
-                };
-                syn::visit_mut::visit_type_mut(self, r.elem.as_mut())
+    fn visit_lifetime_mut(&mut self, i: &mut Lifetime) {
+        let id = i.to_string();
+        match self.map.get(&id) {
+            Some(new_lt) => {
+                *i = Lifetime::new(new_lt.as_str(), Span::call_site())
             }
-            Type::Path(p) => {
-                p.path
-                    .segments
-                    .iter_mut()
-                    .for_each(|ps| match ps.arguments.borrow_mut() {
-                        PathArguments::AngleBracketed(tf) => tf.args.iter_mut().for_each(|arg| {
-                            match arg {
-                                GenericArgument::Lifetime(lt) => {
-                                    let id = lt.to_string();
-                                    match self.map.get(&id) {
-                                        Some(new_lt) => {
-                                            *lt = Lifetime::new(new_lt.as_str(), Span::call_site())
-                                        }
-                                        None => (),
-                                    }
-                                }
-                                _ => syn::visit_mut::visit_generic_argument_mut(self, arg),
-                            };
-                        }),
-                        ps_arg => syn::visit_mut::visit_path_arguments_mut(self, ps_arg),
-                    });
-            }
-            _ => (),
+            None => (),
         }
+        syn::visit_mut::visit_lifetime_mut(self, i)
     }
 }
 
@@ -323,6 +288,7 @@ impl VisitMut for FnLifetimeElider<'_> {
         match id == self.fn_name.to_string() {
             false => (),
             true => {
+                // println!("original : {}", i.sig.clone().into_token_stream().to_string());
                 let gen = &mut i.sig.generics;
                 let mut cannot_elide = vec![];
                 match &gen.where_clause {
@@ -377,11 +343,13 @@ impl VisitMut for FnLifetimeElider<'_> {
                             .filter(|g| match g {
                                 GenericParam::Lifetime(lt) => {
                                     let id = lt.lifetime.to_string();
-                                    !map.contains_key(&id) // must be within a trait--cannot elide
+                                    let result = !map.contains_key(&id) // must be within a trait--cannot elide
                                         || *map.get(&id).unwrap() > 1
-                                        || cannot_elide.contains(&id)
+                                        || cannot_elide.contains(&id);
+                                    // println!("lt: {}, result: {}", id, result);
+                                    result
                                 }
-                                _ => false,
+                                _ => true,
                             })
                             .collect();
                         match gen.params.is_empty() {

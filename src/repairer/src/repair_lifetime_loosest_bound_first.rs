@@ -23,6 +23,7 @@ impl RepairSystem for Repairer {
 
     fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
         annotate_loose_named_lifetime(src_path, fn_name);
+        println!("annotated: {}", fs::read_to_string(&src_path).unwrap());
         let mut compile_cmd = compile_project(manifest_path, &vec![]);
         let process_errors =
             |ce: &RustcError| repair_bounds_help(ce.rendered.as_str(), src_path, fn_name);
@@ -106,11 +107,13 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                         PathArguments::AngleBracketed(tf) => tf.args.iter_mut().for_each(|arg| {
                             match arg {
                                 GenericArgument::Lifetime(lt) => {
-                                    *lt = Lifetime::new(
-                                        format!("'lt{}", self.lt_num).as_str(),
-                                        Span::call_site(),
-                                    );
-                                    self.lt_num += 1;
+                                    if lt.clone().ident.to_string() == "_" {
+                                        *lt = Lifetime::new(
+                                            format!("'lt{}", self.lt_num).as_str(),
+                                            Span::call_site(),
+                                        );
+                                        self.lt_num += 1;
+                                    }
                                 }
                                 _ => syn::visit_mut::visit_generic_argument_mut(self, arg),
                             };
@@ -118,15 +121,6 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                         ps_arg => syn::visit_mut::visit_path_arguments_mut(self, ps_arg),
                     });
                 syn::visit_mut::visit_type_mut(self, i);
-            }
-            Type::Verbatim(v) => {
-                let mut v_str = v.clone().to_string();
-                // println!("verbatim type: {}", v);
-                while v_str.contains("'_") {
-                    v_str = v_str.replacen("'_", format!("'lt{}", self.lt_num).as_str(), 1);
-                    *v = syn::parse_str(v_str.as_str()).unwrap();
-                    self.lt_num += 1;
-                }
             }
             _ => syn::visit_mut::visit_type_mut(self, i),
         }
