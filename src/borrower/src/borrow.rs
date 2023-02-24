@@ -27,7 +27,7 @@ struct RefBorrowAssignerHelper<'a> {
 impl VisitMut for RefBorrowAssignerHelper<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         let id = i.into_token_stream().to_string();
-        // println!("id expr: {}, {:?}", &id, i);
+        // // println!("id expr: {}, {:?}", &id, i);
         match i {
             //no need to star method call left side but need to for args
             Expr::MethodCall(e) => {
@@ -261,11 +261,11 @@ impl VisitMut for CallerCheckCallee<'_> {
     }
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let id = i.func.as_ref().into_token_stream().to_string();
-        // println!(
+        // // println!(
         //     "expression call: {}",
         //     i.clone().into_token_stream().to_string()
         // );
-        // println!("func call: {}", id.as_str());
+        // // println!("func call: {}", id.as_str());
         match id == self.callee_fn_name {
             false => syn::visit_mut::visit_expr_call_mut(self, i),
             true => self.found = true,
@@ -273,12 +273,12 @@ impl VisitMut for CallerCheckCallee<'_> {
     }
 
     fn visit_local_mut(&mut self, i: &mut Local) {
-        // println!("decl mut: {}", i.clone().into_token_stream().to_string());
+        // // println!("decl mut: {}", i.clone().into_token_stream().to_string());
         match &mut i.pat {
             Pat::Ident(id) => match &id.mutability {
                 None => (),
                 Some(_) => {
-                    // println!(
+                    // // println!(
                     //     "decl mut: {}",
                     //     id.ident.clone().into_token_stream().to_string()
                     // );
@@ -290,7 +290,7 @@ impl VisitMut for CallerCheckCallee<'_> {
                 Pat::Ident(id) => match id.mutability {
                     None => (),
                     Some(_) => {
-                        // println!(
+                        // // println!(
                         //     "decl mut: {}",
                         //     id.ident.clone().into_token_stream().to_string()
                         // );
@@ -314,7 +314,7 @@ struct CallerCheckInput<'a> {
 impl VisitMut for CallerCheckInput<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         let id = i.into_token_stream().to_string();
-        // println!("id: {}, in inputs: {}", &id, self.input.contains(&id));
+        // // println!("id: {}, in inputs: {}", &id, self.input.contains(&id));
         match self.input.contains(&id) {
             true => self.make_ref.push(id),
             false => {
@@ -330,7 +330,7 @@ impl VisitMut for CallerCheckInput<'_> {
         match path.contains("print") {
             false => syn::visit_mut::visit_macro_mut(self, i),
             true => {
-                // println!(
+                // // println!(
                 //     "visiting macro:{}",
                 //     i.clone().into_token_stream().to_string()
                 // );
@@ -477,7 +477,7 @@ impl VisitMut for MutableBorrowerHelper<'_> {
 
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let id = i.receiver.as_ref().into_token_stream().to_string();
-        // println!(
+        // // println!(
         //     "call decl id: {}, {}",
         //     id,
         //     i.clone().into_token_stream().to_string()
@@ -645,7 +645,7 @@ impl VisitMut for PreExtracter<'_> {
                 lookup_str.split("\n").for_each(|x| {
                     let lookup_inner = re_lookup.captures_iter(x);
                     for captured in lookup_inner {
-                        // println!(
+                        // // println!(
                         //     "label: {:?} -> expr: {:?}",
                         //     &captured["label"], &captured["expr"]
                         // );
@@ -656,7 +656,7 @@ impl VisitMut for PreExtracter<'_> {
                 for constraint in constraints {
                     match constraint {
                         AliasConstraints::Alias(l, r) => {
-                            // println!(
+                            // // println!(
                             //     "{}, {:?} -> {:?}",
                             //     constraint,
                             //     lookup.get(l.to_string().as_str()),
@@ -668,13 +668,13 @@ impl VisitMut for PreExtracter<'_> {
                                     if self.inputs.contains(&expr_r.trim().to_string())
                                         || self.ref_inputs.contains(&expr_r.trim().to_string())
                                     {
-                                        // println!("r is in input");
+                                        // // println!("r is in input");
                                         match lookup.get(l.to_string().as_str()) {
                                             None => {}
                                             Some(expr_l) => {
                                                 let id = expr_l.trim().to_string();
                                                 if self.use_after.contains(&id) {
-                                                    // println!("l is in use after");
+                                                    // // println!("l is in use after");
                                                     self.make_ref.push(expr_r.clone());
                                                     self.make_ref.push(expr_l.clone());
                                                     // why not
@@ -763,7 +763,7 @@ pub fn make_borrows(
     constraint_visitor.visit_file_mut(&mut pre_extract_file);
 
     for _s in &decl_mut {
-        // println!("decl {} mut", s);
+        // // println!("decl {} mut", s);
     }
 
     let mut make_mut = vec![];
@@ -784,13 +784,13 @@ pub fn make_borrows(
         ref_inputs: &callee_ref_inputs,
         mut_ref_inputs: &callee_mut_ref_inputs,
     };
-    for s in &make_ref {
-        println!("make {} ref", s);
-    }
-
-    for s in &make_mut {
-        println!("make {} mut", s);
-    }
+    // for s in &make_ref {
+    //     // println!("make {} ref", s);
+    // }
+    //
+    // for s in &make_mut {
+    //     // println!("make {} mut", s);
+    // }
     callee_assigner.visit_file_mut(&mut file);
 
     let mut caller_assigner = CallerFnArg {
