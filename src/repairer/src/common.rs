@@ -7,7 +7,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PathArguments, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, BoundLifetimes};
+use syn::{
+    visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
+    Type, WhereClause, WherePredicate,
+};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,9 +276,7 @@ impl VisitMut for ChangeLtHelperElider<'_> {
     fn visit_lifetime_mut(&mut self, i: &mut Lifetime) {
         let id = i.to_string();
         match self.map.get(&id) {
-            Some(new_lt) => {
-                *i = Lifetime::new(new_lt.as_str(), Span::call_site())
-            }
+            Some(new_lt) => *i = Lifetime::new(new_lt.as_str(), Span::call_site()),
             None => (),
         }
         syn::visit_mut::visit_lifetime_mut(self, i)
