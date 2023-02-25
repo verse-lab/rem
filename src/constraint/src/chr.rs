@@ -31,7 +31,7 @@ pub fn chr_solve<C: constraint::LocalConstraint>(constraints: &Vec<C>) -> Vec<C>
         write!(query, "{},", constraint).unwrap();
     }
     // remove last char and add closing parenthesis
-    // println!("query for chr: {})).", &query);
+    println!("query for chr: {})).", &query);
     query.pop();
     write!(query, ")).").unwrap();
     let process = Command::new("swipl")

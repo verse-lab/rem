@@ -9,7 +9,7 @@ pub fn new_foo() {
     bar_extracted(p, &x);
     println!("{}", **p);
 }
-fn bar_extracted<'lt0, 'lt1>(p: &mut &'lt1 i32, x: &'lt1 i32)
+fn bar_extracted<'lt0, 'lt1>(p: &mut &'lt0 i32, x: &'lt1 i32)
 where
     'lt1: 'lt0,
 {
