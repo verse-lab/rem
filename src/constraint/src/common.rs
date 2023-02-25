@@ -88,10 +88,12 @@ impl crate::LocalConstraint for AliasConstraints {
             fn visit_ident_mut(&mut self, i: &mut Ident) {
                 // println!("in ident: {}", i.clone().to_string());
                 lookup_ast(self.ast, i).and_then(|rhs| {
-                    add_constraint(
-                        self.constraints,
-                        AliasConstraints::Assign(self.lhs.clone(), rhs),
-                    );
+                    if *self.lhs.clone().to_string() != rhs.clone().to_string() {
+                        add_constraint(
+                            self.constraints,
+                            AliasConstraints::Assign(self.lhs.clone(), rhs),
+                        );
+                    }
                     Some(())
                 });
                 syn::visit_mut::visit_ident_mut(self, i)
@@ -137,18 +139,22 @@ impl crate::LocalConstraint for AliasConstraints {
                         rhs_helper.visit_expr_mut(e);
                         if ident.to_string() != "__IDENT__" {
                             lookup_ast(self.ast, &ident).and_then(|rhs| {
-                                add_constraint(
-                                    self.constraints,
-                                    AliasConstraints::Assign(*self.lhs, rhs),
-                                );
+                                if *self.lhs.clone().to_string() != rhs.clone().to_string() {
+                                    add_constraint(
+                                        self.constraints,
+                                        AliasConstraints::Assign(*self.lhs, rhs),
+                                    );
+                                }
                                 Some(())
                             });
                         } else {
                             lookup_ast(self.ast, e).and_then(|rhs| {
-                                add_constraint(
-                                    self.constraints,
-                                    AliasConstraints::Assign(*self.lhs, rhs),
-                                );
+                                if *self.lhs.clone().to_string() != rhs.clone().to_string() {
+                                    add_constraint(
+                                        self.constraints,
+                                        AliasConstraints::Assign(*self.lhs, rhs),
+                                    );
+                                }
                                 Some(())
                             });
                         }

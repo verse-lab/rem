@@ -218,7 +218,7 @@ impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
                     None => (),
                     Some(lt) => {
                         let id = lt.to_string();
-                        if *self.lt_count.get(&id).unwrap() == 1 && !self.cannot_elide.contains(&id)
+                        if *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id)
                         {
                             r.lifetime = None
                         }
@@ -289,7 +289,7 @@ impl VisitMut for FnLifetimeElider<'_> {
         match id == self.fn_name.to_string() {
             false => (),
             true => {
-                // println!("original : {}", i.sig.clone().into_token_stream().to_string());
+                println!("original : {}", i.sig.clone().into_token_stream().to_string());
                 let gen = &mut i.sig.generics;
                 let mut cannot_elide = vec![];
                 match &gen.where_clause {
@@ -347,7 +347,7 @@ impl VisitMut for FnLifetimeElider<'_> {
                                     let result = !map.contains_key(&id) // must be within a trait--cannot elide
                                         || *map.get(&id).unwrap() > 1
                                         || cannot_elide.contains(&id);
-                                    // println!("lt: {}, result: {}", id, result);
+                                    println!("lt: {}, result: {}", id, result);
                                     result
                                 }
                                 _ => true,
