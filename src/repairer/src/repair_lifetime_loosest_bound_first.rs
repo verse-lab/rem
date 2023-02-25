@@ -23,7 +23,7 @@ impl RepairSystem for Repairer {
 
     fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
         annotate_loose_named_lifetime(src_path, fn_name);
-        println!("annotated: {}", fs::read_to_string(&src_path).unwrap());
+        // println!("annotated: {}", fs::read_to_string(&src_path).unwrap());
         let mut compile_cmd = compile_project(manifest_path, &vec![]);
         let process_errors =
             |ce: &RustcError| repair_bounds_help(ce.rendered.as_str(), src_path, fn_name);
