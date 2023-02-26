@@ -30,7 +30,6 @@ impl RepairSystem for Repairer {
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
             true => {
-                println!("before elision: {}", fs::read_to_string(&src_path).unwrap());
                 elide_lifetimes_annotations(src_path, fn_name);
                 true
             }

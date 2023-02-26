@@ -255,22 +255,24 @@ struct CallerCheckCallee<'a> {
 
 impl VisitMut for CallerCheckCallee<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
-        match self.found {
-            true => self.check_input_visitor.visit_expr_mut(i),
-            false => syn::visit_mut::visit_expr_mut(self, i),
-        }
+        self.check_input_visitor.visit_expr_mut(i);
+        syn::visit_mut::visit_expr_mut(self, i)
     }
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let id = i.func.as_ref().into_token_stream().to_string();
-        // // println!(
+        // println!(
         //     "expression call: {}",
         //     i.clone().into_token_stream().to_string()
         // );
-        // // println!("func call: {}", id.as_str());
+        // println!("func call: {}", id.as_str());
         match id == self.callee_fn_name {
-            false => syn::visit_mut::visit_expr_call_mut(self, i),
-            true => self.found = true,
+            false => (),
+            true => {
+                self.found = true;
+                *self.check_input_visitor.found = true;
+            },
         }
+        syn::visit_mut::visit_expr_call_mut(self, i)
     }
 
     fn visit_local_mut(&mut self, i: &mut Local) {
@@ -299,33 +301,40 @@ impl VisitMut for CallerCheckCallee<'_> {
                             .push(id.ident.clone().into_token_stream().to_string());
                     }
                 },
-                _ => syn::visit_mut::visit_local_mut(self, i),
+                _ => (),
             },
-            _ => syn::visit_mut::visit_local_mut(self, i),
+            _ => (),
         };
+        syn::visit_mut::visit_local_mut(self, i)
     }
 }
 
 struct CallerCheckInput<'a> {
     input: &'a Vec<String>,
+    found: &'a mut bool,
     make_ref: &'a mut Vec<String>,
     use_after: &'a mut Vec<String>, // for constraints uses
 }
 
 impl VisitMut for CallerCheckInput<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
+        // println!("visiting expr found {}: {:?} ", self.found, i.into_token_stream().to_string());
+        if ! *self.found{
+            return;
+        }
         let id = i.into_token_stream().to_string();
         // // println!("id: {}, in inputs: {}", &id, self.input.contains(&id));
         match self.input.contains(&id) {
             true => self.make_ref.push(id),
-            false => {
-                self.use_after.push(id);
-                syn::visit_mut::visit_expr_mut(self, i)
-            }
+            false => self.use_after.push(id),
         }
+        syn::visit_mut::visit_expr_mut(self, i)
     }
 
     fn visit_macro_mut(&mut self, i: &mut Macro) {
+        if ! *self.found {
+            return;
+        }
         // only support *print*! macros as it is most common
         let path = i.path.clone().into_token_stream().to_string();
         match path.contains("print") {
@@ -340,6 +349,7 @@ impl VisitMut for CallerCheckInput<'_> {
                 expr_punc.iter_mut().for_each(|e| self.visit_expr_mut(e));
             }
         }
+        syn::visit_mut::visit_macro_mut(self, i);
     }
 }
 
@@ -355,9 +365,11 @@ struct CallerHelper<'a> {
 impl VisitMut for CallerHelper<'_> {
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
         match id == self.caller_fn_name {
             false => (),
             true => {
+                //println!("found the caller");
                 i.sig.inputs.clone().iter().for_each(|input| match input {
                     FnArg::Receiver(_) => (),
                     FnArg::Typed(t) => match t.ty.as_ref() {
@@ -373,6 +385,7 @@ impl VisitMut for CallerHelper<'_> {
 
                 let mut check_input = CallerCheckInput {
                     input: &self.callee_inputs,
+                    found: &mut true,
                     make_ref: &mut self.make_ref,
                     use_after: self.use_after,
                 };
@@ -381,6 +394,7 @@ impl VisitMut for CallerHelper<'_> {
                 let mut temp_use_after = vec![];
                 let mut check_input_temp = CallerCheckInput {
                     input: &self.callee_inputs,
+                    found: &mut false,
                     make_ref: &mut temp,
                     use_after: &mut temp_use_after,
                 };
@@ -393,8 +407,10 @@ impl VisitMut for CallerHelper<'_> {
 
                 i.block.stmts.iter_mut().for_each(|stmt| {
                     if check_callee.found {
+                        // println!("found callee");
                         check_input.visit_stmt_mut(stmt);
                     } else {
+                        // println!("not found callee yet");
                         check_callee.visit_stmt_mut(stmt);
                     }
                 });

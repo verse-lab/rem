@@ -218,7 +218,7 @@ impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
                     None => (),
                     Some(lt) => {
                         let id = lt.to_string();
-                        if *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id)
+                        if self.lt_count.contains_key(&id) && *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id)
                         {
                             r.lifetime = None
                         }
@@ -436,7 +436,6 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
         .unwrap();
     let mut visit = FnLifetimeElider { fn_name };
     visit.visit_file_mut(&mut file);
-    println!("elision ends");
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap()
 }
@@ -461,6 +460,7 @@ pub fn repair_iteration_project(
     let result = loop {
         let out = compile_cmd.output().unwrap();
         if out.status.success() {
+            println!("repair succeeded");
             break true;
         }
         // cargo give rustc error to stdout not stderr
