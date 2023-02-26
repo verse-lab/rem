@@ -266,13 +266,12 @@ impl VisitMut for CallerCheckCallee<'_> {
         // );
         // println!("func call: {}", id.as_str());
         match id == self.callee_fn_name {
-            false => (),
+            false => syn::visit_mut::visit_expr_call_mut(self, i),
             true => {
                 self.found = true;
                 *self.check_input_visitor.found = true;
             },
         }
-        syn::visit_mut::visit_expr_call_mut(self, i)
     }
 
     fn visit_local_mut(&mut self, i: &mut Local) {

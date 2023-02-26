@@ -109,10 +109,7 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                     writeln!(file, "{} -> {}", value, ident).unwrap();
                     self.add_binding(ident, value)
                 }
-                _ => panic!(
-                    "use of unsupported syntactic form {:#?}",
-                    f.into_token_stream().to_string()
-                ),
+                _ =>(),
             }
         }
         self.visit_block(&f.block);
