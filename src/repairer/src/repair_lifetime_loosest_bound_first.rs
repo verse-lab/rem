@@ -30,6 +30,7 @@ impl RepairSystem for Repairer {
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
             true => {
+                println!("before elision: {}", fs::read_to_string(&src_path).unwrap());
                 elide_lifetimes_annotations(src_path, fn_name);
                 true
             }
@@ -107,7 +108,7 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                         PathArguments::AngleBracketed(tf) => tf.args.iter_mut().for_each(|arg| {
                             match arg {
                                 GenericArgument::Lifetime(lt) => {
-                                    if lt.clone().ident.to_string() == "_" {
+                                    if !lt.clone().ident.to_string().starts_with("lt") {
                                         *lt = Lifetime::new(
                                             format!("'lt{}", self.lt_num).as_str(),
                                             Span::call_site(),

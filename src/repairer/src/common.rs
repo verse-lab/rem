@@ -436,6 +436,7 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
         .unwrap();
     let mut visit = FnLifetimeElider { fn_name };
     visit.visit_file_mut(&mut file);
+    println!("elision ends");
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap()
 }
