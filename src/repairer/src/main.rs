@@ -154,6 +154,7 @@ fn test() {
         "in_out_lifetimes_original_extract",
         "lifetime_bounds_not_enough_annotations",
         "in_out_lifetimes_wide_bounds",
+        "bounds_elider",
     ];
     let function_sigs = vec![
         ("", ""),
@@ -168,6 +169,7 @@ fn test() {
             "bar_extracted",
             "fn bar_extracted<'a, 'b, 'c>(x_ref: &'a i32, z: &'b i32, y: &'c i32) -> &'a i32 {",
         ),
+        ("bar", "")
     ];
     let repair_systems: Vec<&dyn RepairSystem> = vec![
         //&repair_lifetime_simple::Repairer {},

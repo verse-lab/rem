@@ -7,10 +7,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{
-    visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType,
-    Type, WhereClause, WherePredicate,
-};
+use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, LifetimeDef, ExprReference, TypeReference, AngleBracketedGenericArguments, GenericArgument};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -212,22 +209,36 @@ struct FnLifetimeEliderTypeHelper<'a> {
 
 impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
     fn visit_type_mut(&mut self, i: &mut Type) {
-        match i {
-            Type::Reference(r) => {
-                match &mut r.lifetime {
-                    None => (),
-                    Some(lt) => {
-                        let id = lt.to_string();
-                        if self.lt_count.contains_key(&id) && *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id)
-                        {
-                            r.lifetime = None
-                        }
-                    }
-                };
-                self.visit_type_mut(r.elem.as_mut());
+        println!("i: {:?}", i);
+        syn::visit_mut::visit_type_mut(self, i);
+    }
+
+    fn visit_angle_bracketed_generic_arguments_mut(&mut self, i: &mut AngleBracketedGenericArguments) {
+        i.args = i.args.clone().into_iter().filter(|arg| {
+            match arg {
+                GenericArgument::Lifetime(lt) => {
+                    let id = lt.to_string();
+                    let result = !(self.lt_count.contains_key(&id) && *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id));
+                    result
+                }
+                _ => true,
             }
-            _ => syn::visit_mut::visit_type_mut(self, i),
-        }
+        }).collect();
+        syn::visit_mut::visit_angle_bracketed_generic_arguments_mut(self, i);
+    }
+
+    fn visit_type_reference_mut(&mut self, i: &mut TypeReference) {
+        match &mut i.lifetime {
+            None => (),
+            Some(lt) => {
+                let id = lt.to_string();
+                if self.lt_count.contains_key(&id) && *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id)
+                {
+                    i.lifetime = None
+                }
+            }
+        };
+        syn::visit_mut::visit_type_reference_mut(self, i);
     }
 }
 
@@ -255,16 +266,14 @@ struct FnLifetimeElider<'a> {
     fn_name: &'a str,
 }
 
-fn get_lt(i: &Type, v: &mut Vec<String>) {
-    match i {
-        Type::Reference(r) => {
-            match &r.lifetime {
-                Some(lt) => v.push(lt.to_string()),
-                None => (),
-            };
-            get_lt(r.elem.as_ref(), v)
-        }
-        _ => (),
+struct LtGetterElider<'a> {
+    v: &'a mut Vec<String>,
+}
+impl VisitMut for LtGetterElider<'_> {
+    fn visit_lifetime_mut(&mut self, i: &mut Lifetime) {
+        let id = i.to_string();
+        self.v.push(id.to_string());
+        syn::visit_mut::visit_lifetime_mut(self, i)
     }
 }
 
@@ -306,22 +315,23 @@ impl VisitMut for FnLifetimeElider<'_> {
                 let mut has_receiver = false;
                 let mut map = HashMap::new();
                 let mut v = vec![];
-                inputs.iter().for_each(|fn_arg| {
+                inputs.iter_mut().for_each(|fn_arg| {
                     match fn_arg {
                         FnArg::Receiver(_) => has_receiver = true,
-                        FnArg::Typed(t) => {
-                            get_lt(t.ty.as_ref(), &mut v);
+                        FnArg::Typed(_) => {
+                            let mut get_lt = LtGetterElider { v: &mut v };
+                            get_lt.visit_fn_arg_mut(fn_arg)
                         }
                     };
                 });
                 match has_receiver {
                     true => (),
                     false => {
-                        match &i.sig.output {
+                        match i.sig.output.borrow_mut() {
                             ReturnType::Default => (),
                             ReturnType::Type(_, ty) => {
-                                get_lt(ty, &mut cannot_elide);
-                                get_lt(ty, &mut v);
+                                let mut get_lt = LtGetterElider { v: &mut v };
+                                get_lt.visit_type_mut(ty.clone().as_mut());
                             }
                         };
                         v.iter().for_each(|lt| {
