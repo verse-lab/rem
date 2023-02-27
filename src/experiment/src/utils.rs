@@ -1,10 +1,13 @@
+use log::info;
+use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 
+use crate::projects::Extraction;
+use repairer::common::RepairSystem;
 use borrower::borrow::make_borrows;
 use controller::non_local_controller::make_controls;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
-use crate::projects::Extraction;
 /******************************* GIT RELATED  ***************************************************/
 pub fn checkout(dir: &String, branch: &String) -> bool {
     let mut cmd = Command::new("git");
@@ -64,25 +67,62 @@ pub fn reset_to_base_branch(dir: &String, base_branch: &String, active_branch: &
 }
 
 /*************************************** Extraction Related ************************************/
-pub fn time_exec(f: &dyn Fn() -> bool) -> (bool, Duration) {
+pub fn time_exec(name: &str, f: &dyn Fn() -> bool) -> (bool, Duration) {
     let now = SystemTime::now();
     let success = f();
     let time_elapsed = now.elapsed().unwrap();
+    info!(
+        "{} {} in {}s",
+        name,
+        if success { "succeeded" } else { "failed" },
+        time_elapsed.as_secs()
+    );
     (success, time_elapsed)
 }
 
-pub fn run_controller(extraction : Extraction) -> (bool, Duration) {
-    let f = || make_controls(extraction.src_path.as_str(), extraction.src_path.as_str(), "bar", extraction.caller.as_str());
-    time_exec(&f)
+pub fn run_controller(extraction: &Extraction) -> (bool, Duration) {
+    let f = || {
+        make_controls(
+            extraction.src_path.as_str(),
+            extraction.src_path.as_str(),
+            "bar",
+            extraction.caller.as_str(),
+        )
+    };
+    time_exec("controller", &f)
 }
 
-pub fn run_borrower(extraction: Extraction) -> (bool, Duration) {
-    let f = || make_borrows(extraction.src_path.as_str(), extraction.src_path.as_str(), extraction.mut_methods_path.as_str(), "bar", extraction.caller.as_str(), extraction.original_path.as_str());
-    time_exec(&f)
+pub fn run_borrower(extraction: &Extraction) -> (bool, Duration) {
+    let f = || {
+        make_borrows(
+            extraction.src_path.as_str(),
+            extraction.src_path.as_str(),
+            extraction.mut_methods_path.as_str(),
+            "bar",
+            extraction.caller.as_str(),
+            extraction.original_path.as_str(),
+        )
+    };
+    time_exec("borrower", &f)
 }
 
-pub fn run_repairer(extraction: Extraction)-> (bool, Duration) {
-    let mut repairer = repairer::repair_lifetime_loosest_bound_first::Repairer {};
-    let f = || repairer.repair_project(extraction.src_path.as_str(), extraction.cargo_path, "bar");
-    time_exec(&f)
+pub fn run_repairer(extraction: &Extraction) -> (bool, Duration) {
+    let mut repairer = Repairer {};
+    let f = || repairer.repair_project(extraction.src_path.as_str(), extraction.cargo_path.as_str(), "bar");
+    time_exec("cargo", &f)
+}
+
+pub fn run_extraction(extraction: &Extraction) -> (bool, Duration) {
+    let mut actions : Vec<&dyn Fn(&Extraction) -> (bool, Duration)> = vec![&run_controller, &run_borrower, &run_repairer];
+    actions.iter().fold(
+        (true, Duration::from_secs(0)),
+        |(success, duration), &action| {
+            if success {
+                let (action_success, action_duration) = action(extraction);
+                (action_success && success, duration.add(action_duration))
+            } else {
+                (success, duration)
+            }
+        },
+    )
 }

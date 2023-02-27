@@ -720,7 +720,7 @@ pub fn make_borrows(
     callee_fn_name: &str,
     caller_fn_name: &str,
     pre_extract_file_name: &str,
-) {
+) -> bool {
     let pre_extract: String = fs::read_to_string(&pre_extract_file_name)
         .unwrap()
         .parse()
@@ -823,5 +823,6 @@ pub fn make_borrows(
     };
     caller_assigner.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
-    fs::write(new_file_name.to_string(), format_source(&file)).unwrap()
+    fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
+    true
 }

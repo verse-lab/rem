@@ -1,10 +1,10 @@
-pub(crate) struct Extraction {
-    pub(crate) src_name: String,
-    pub(crate) src_path: String,
-    pub(crate) caller: String,
-    pub(crate) cargo_path: String,
-    pub(crate) original_path: String,
-    pub(crate) mut_methods_path: String,
+pub struct Extraction {
+    pub src_name: String,
+    pub src_path: String,
+    pub caller: String,
+    pub cargo_path: String,
+    pub original_path: String,
+    pub mut_methods_path: String,
 }
 
 impl Extraction {
@@ -32,14 +32,13 @@ impl Extraction {
     }
 }
 
-pub(crate) struct Experiment {
-    pub(crate) expr_type: String,
-    pub(crate) count: i32,
-    pub(crate) extractions: Vec<Extraction>,
+pub struct Experiment {
+    pub expr_type: String,
+    pub extractions: Vec<Extraction>,
 }
-pub(crate) struct ExperimentProject {
-    pub(crate) project: String,
-    pub(crate) experiments: Vec<Experiment>,
+pub struct ExperimentProject {
+    pub project: String,
+    pub experiments: Vec<Experiment>,
 }
 
 // ORIGINAL PATH is <SRC NAME>_ORIGINAL
@@ -57,7 +56,6 @@ pub fn gitoxide() -> ExperimentProject {
         experiments: vec![
             Experiment {
                 expr_type: "ext".to_string(),
-                count: 2,
                 extractions: vec![
                     Extraction::new(
                         "gix-pack/src/verify.rs",
@@ -73,7 +71,6 @@ pub fn gitoxide() -> ExperimentProject {
             },
             Experiment {
                 expr_type: "ext-com".to_string(),
-                count: 2,
                 extractions: vec![
                     Extraction::new(
                         "git-protocol/src/packet_line/decode.rs",
@@ -89,7 +86,6 @@ pub fn gitoxide() -> ExperimentProject {
             },
             Experiment {
                 expr_type: "inline-ext".to_string(),
-                count: 7,
                 extractions: vec![
                     Extraction::new(
                         "gix-validate/src/reference.rs",
