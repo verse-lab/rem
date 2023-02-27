@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, LifetimeDef, ExprReference, TypeReference, AngleBracketedGenericArguments, GenericArgument};
+use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, TypeReference, AngleBracketedGenericArguments, GenericArgument};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -218,8 +218,12 @@ impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
             match arg {
                 GenericArgument::Lifetime(lt) => {
                     let id = lt.to_string();
-                    let result = !(self.lt_count.contains_key(&id) && *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id));
-                    result
+                    if !self.lt_count.contains_key(&id) {
+                        false
+                    } else {
+                        let result = self.cannot_elide.contains(&id) || *self.lt_count.get(&id).unwrap() > 1;
+                        result
+                    }
                 }
                 _ => true,
             }
@@ -232,7 +236,7 @@ impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
             None => (),
             Some(lt) => {
                 let id = lt.to_string();
-                if self.lt_count.contains_key(&id) && *self.lt_count.get(&id).unwrap() <= 1 && !self.cannot_elide.contains(&id)
+                if !self.cannot_elide.contains(&id) && (!self.lt_count.contains_key(&id) || *self.lt_count.get(&id).unwrap() <= 1)
                 {
                     i.lifetime = None
                 }
@@ -365,11 +369,14 @@ impl VisitMut for FnLifetimeElider<'_> {
                             .filter(|g| match g {
                                 GenericParam::Lifetime(lt) => {
                                     let id = lt.lifetime.to_string();
-                                    let result = !map.contains_key(&id) // must be within a trait--cannot elide
-                                        || *map.get(&id).unwrap() > 1
-                                        || cannot_elide.contains(&id);
-                                    // println!("lt: {}, result: {}", id, result);
-                                    result
+                                    if !map.contains_key(&id) {
+                                        false
+                                    } else {
+                                        let result = *map.get(&id).unwrap() > 1
+                                            || cannot_elide.contains(&id);
+                                        // println!("lt: {}, result: {}", id, result);
+                                        result
+                                    }
                                 }
                                 _ => true,
                             })
