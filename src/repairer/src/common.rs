@@ -333,6 +333,13 @@ impl VisitMut for FnLifetimeElider<'_> {
                                 get_lt.visit_type_mut(ty.clone().as_mut());
                             }
                         };
+                        gen.params.iter_mut().for_each(|gp| match gp {
+                            GenericParam::Lifetime(_) => (),
+                            gp => {
+                                let mut get_lt = LtGetterElider { v: &mut v };
+                                get_lt.visit_generic_param_mut(gp);
+                            }
+                        });
                         v.iter().for_each(|lt| {
                             match map.contains_key(lt) {
                                 true => map.insert(lt, *map.get(lt).unwrap() + 1),
@@ -357,6 +364,16 @@ impl VisitMut for FnLifetimeElider<'_> {
                                 type_helper.visit_type_mut(ty.as_mut());
                             }
                         };
+                        gen.params.iter_mut().for_each(|gp| match gp {
+                            GenericParam::Lifetime(_) => (),
+                            gp => {
+                                let mut type_helper = FnLifetimeEliderTypeHelper {
+                                    cannot_elide: &cannot_elide,
+                                    lt_count: &map,
+                                };
+                                type_helper.visit_generic_param_mut(gp);
+                            }
+                        });
                         gen.params = gen
                             .params
                             .iter()
@@ -369,7 +386,7 @@ impl VisitMut for FnLifetimeElider<'_> {
                                     } else {
                                         let result = *map.get(&id).unwrap() > 1
                                             || cannot_elide.contains(&id);
-                                        // println!("lt: {}, result: {}", id, result);
+                                        println!("lt: {}, result: {}", id, result);
                                         result
                                     }
                                 }
