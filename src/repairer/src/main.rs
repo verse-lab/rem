@@ -170,7 +170,7 @@ fn test() {
             "bar_extracted",
             "fn bar_extracted<'a, 'b, 'c>(x_ref: &'a i32, z: &'b i32, y: &'c i32) -> &'a i32 {",
         ),
-        ("bar", "")
+        ("bar", ""),
     ];
     let repair_systems: Vec<&dyn RepairSystem> = vec![
         //&repair_lifetime_simple::Repairer {},

@@ -1,3 +1,4 @@
+use log::{debug, info};
 use proc_macro2::Span;
 use quote::ToTokens;
 use regex::Regex;
@@ -7,9 +8,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, WhereClause, WherePredicate, TypeReference, AngleBracketedGenericArguments, GenericArgument};
+use syn::{
+    visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam,
+    ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate,
+};
 use utils::format_source;
-use log::{info, debug};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////
@@ -209,21 +212,28 @@ struct FnLifetimeEliderTypeHelper<'a> {
 }
 
 impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
-    fn visit_angle_bracketed_generic_arguments_mut(&mut self, i: &mut AngleBracketedGenericArguments) {
-        i.args = i.args.clone().into_iter().filter(|arg| {
-            match arg {
+    fn visit_angle_bracketed_generic_arguments_mut(
+        &mut self,
+        i: &mut AngleBracketedGenericArguments,
+    ) {
+        i.args = i
+            .args
+            .clone()
+            .into_iter()
+            .filter(|arg| match arg {
                 GenericArgument::Lifetime(lt) => {
                     let id = lt.to_string();
                     if !self.lt_count.contains_key(&id) {
                         false
                     } else {
-                        let result = self.cannot_elide.contains(&id) || *self.lt_count.get(&id).unwrap() > 1;
+                        let result =
+                            self.cannot_elide.contains(&id) || *self.lt_count.get(&id).unwrap() > 1;
                         result
                     }
                 }
                 _ => true,
-            }
-        }).collect();
+            })
+            .collect();
         syn::visit_mut::visit_angle_bracketed_generic_arguments_mut(self, i);
     }
 
@@ -232,7 +242,8 @@ impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
             None => (),
             Some(lt) => {
                 let id = lt.to_string();
-                if !self.cannot_elide.contains(&id) && (!self.lt_count.contains_key(&id) || *self.lt_count.get(&id).unwrap() <= 1)
+                if !self.cannot_elide.contains(&id)
+                    && (!self.lt_count.contains_key(&id) || *self.lt_count.get(&id).unwrap() <= 1)
                 {
                     i.lifetime = None
                 }

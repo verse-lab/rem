@@ -2,7 +2,10 @@ use proc_macro2::Span;
 use quote::ToTokens;
 use std::borrow::BorrowMut;
 use std::fs;
-use syn::{visit_mut::VisitMut, FnArg, GenericArgument, Lifetime, LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound, AngleBracketedGenericArguments};
+use syn::{
+    visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, Lifetime,
+    LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound,
+};
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
@@ -149,26 +152,24 @@ impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
         match i {
             FnArg::Receiver(r) => match &mut r.reference {
                 None => {}
-                Some((_, rlt)) => {
-                    match rlt{
-                        None => {
-                            *rlt = Some(Lifetime::new(
+                Some((_, rlt)) => match rlt {
+                    None => {
+                        *rlt = Some(Lifetime::new(
+                            format!("'lt{}", self.lt_num).as_str(),
+                            Span::call_site(),
+                        ));
+                        self.lt_num += 1;
+                    }
+                    Some(lt) => {
+                        if !lt.clone().ident.to_string().starts_with("lt") {
+                            *lt = Lifetime::new(
                                 format!("'lt{}", self.lt_num).as_str(),
                                 Span::call_site(),
-                            ));
+                            );
                             self.lt_num += 1;
                         }
-                        Some(lt) => {
-                            if !lt.clone().ident.to_string().starts_with("lt") {
-                                *lt = Lifetime::new(
-                                    format!("'lt{}", self.lt_num).as_str(),
-                                    Span::call_site(),
-                                );
-                                self.lt_num += 1;
-                            }
-                        }
                     }
-                }
+                },
             },
             FnArg::Typed(t) => {
                 let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
@@ -180,25 +181,23 @@ impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
         }
     }
 
-    fn visit_angle_bracketed_generic_arguments_mut(&mut self, i: &mut AngleBracketedGenericArguments) {
-        i.args.iter_mut().for_each(|arg| {
-            match arg {
-                GenericArgument::Lifetime(lt) => {
-                    if !lt.clone().ident.to_string().starts_with("lt") {
-                        *lt = Lifetime::new(
-                            format!("'lt{}", self.lt_num).as_str(),
-                            Span::call_site(),
-                        );
-                        self.lt_num += 1;
-                    }
+    fn visit_angle_bracketed_generic_arguments_mut(
+        &mut self,
+        i: &mut AngleBracketedGenericArguments,
+    ) {
+        i.args.iter_mut().for_each(|arg| match arg {
+            GenericArgument::Lifetime(lt) => {
+                if !lt.clone().ident.to_string().starts_with("lt") {
+                    *lt = Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site());
+                    self.lt_num += 1;
                 }
-                gen => {
-                    let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
-                        lt_num: self.lt_num,
-                    };
-                    type_helper.visit_generic_argument_mut(gen);
-                    self.lt_num = type_helper.lt_num
-                }
+            }
+            gen => {
+                let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
+                    lt_num: self.lt_num,
+                };
+                type_helper.visit_generic_argument_mut(gen);
+                self.lt_num = type_helper.lt_num
             }
         });
         syn::visit_mut::visit_angle_bracketed_generic_arguments_mut(self, i);

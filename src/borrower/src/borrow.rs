@@ -270,7 +270,7 @@ impl VisitMut for CallerCheckCallee<'_> {
             true => {
                 self.found = true;
                 *self.check_input_visitor.found = true;
-            },
+            }
         }
     }
 
@@ -318,7 +318,7 @@ struct CallerCheckInput<'a> {
 impl VisitMut for CallerCheckInput<'_> {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         // println!("visiting expr found {}: {:?} ", self.found, i.into_token_stream().to_string());
-        if ! *self.found{
+        if !*self.found {
             return;
         }
         let id = i.into_token_stream().to_string();
@@ -331,7 +331,7 @@ impl VisitMut for CallerCheckInput<'_> {
     }
 
     fn visit_macro_mut(&mut self, i: &mut Macro) {
-        if ! *self.found {
+        if !*self.found {
             return;
         }
         // only support *print*! macros as it is most common
@@ -581,9 +581,7 @@ impl VisitMut for CallerFnArgHelper<'_> {
             false => syn::visit_mut::visit_expr_call_mut(self, i),
             true => i.args.iter_mut().for_each(|arg| {
                 let id = arg.into_token_stream().to_string();
-                match self.make_mut.contains(&id)
-                    && (!self.mut_ref_inputs.contains(&id))
-                {
+                match self.make_mut.contains(&id) && (!self.mut_ref_inputs.contains(&id)) {
                     true => {
                         *arg = syn::parse_quote! {&mut #arg};
                     }

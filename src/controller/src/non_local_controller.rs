@@ -239,7 +239,8 @@ impl VisitMut for MakeBrkAndCont<'_> {
                 helper.visit_block_mut(i.block.as_mut());
                 self.success = helper.success;
                 if !self.already_did_return {
-                    let ident_str = format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
+                    let ident_str =
+                        format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
                     let ident = Ident::new(ident_str.as_str(), Span::call_site());
                     let callee_rety = match i.sig.output.clone() {
                         ReturnType::Default => Type::Verbatim(quote! {()}),

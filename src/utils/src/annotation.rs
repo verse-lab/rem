@@ -109,7 +109,7 @@ impl<'a> syn::visit::Visit<'a> for ASTAnnotator<'a> {
                     writeln!(file, "{} -> {}", value, ident).unwrap();
                     self.add_binding(ident, value)
                 }
-                _ =>(),
+                _ => (),
             }
         }
         self.visit_block(&f.block);
