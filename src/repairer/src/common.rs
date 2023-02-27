@@ -347,6 +347,17 @@ impl VisitMut for FnLifetimeElider<'_> {
                         inputs
                             .iter_mut()
                             .for_each(|fn_arg| fn_arg_helper.visit_fn_arg_mut(fn_arg));
+
+                        match i.sig.output.borrow_mut() {
+                            ReturnType::Default => (),
+                            ReturnType::Type(_, ty) => {
+                                let mut type_helper = FnLifetimeEliderTypeHelper {
+                                    cannot_elide: &cannot_elide,
+                                    lt_count: &map,
+                                };
+                                type_helper.visit_type_mut(ty.as_mut());
+                            }
+                        };
                         gen.params = gen
                             .params
                             .iter()
