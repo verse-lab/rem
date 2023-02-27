@@ -2,10 +2,13 @@ default:
 	cargo build --release
 
 all:
-	cargo build --relase
+	cargo build --release
 
 build:
-	cargo build --relase
+	cargo build --release
+
+dev:
+	RUST_LOG=debug cargo run
 
 test:
 	cargo run -- test
