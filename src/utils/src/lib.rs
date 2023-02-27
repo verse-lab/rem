@@ -38,7 +38,7 @@ pub fn compile_file(file_name: &str, args: &Vec<&str>) -> Command {
 
 pub fn compile_project(manifest_path: &str, cargo_args: &Vec<&str>) -> Command {
     let mut compile = Command::new("cargo");
-    compile.arg("build");
+    compile.arg("check");
     for arg in cargo_args {
         compile.arg(arg);
     }

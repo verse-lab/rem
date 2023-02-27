@@ -7,8 +7,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, Type, WhereClause, WherePredicate, TypeReference, AngleBracketedGenericArguments, GenericArgument};
+use syn::{visit_mut::VisitMut, FnArg, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, WhereClause, WherePredicate, TypeReference, AngleBracketedGenericArguments, GenericArgument};
 use utils::format_source;
+use log::{info, debug};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////
@@ -192,8 +193,8 @@ pub fn repair_iteration(
     };
 
     if print_stats {
-        println!("repair count: {}", count);
-        println!("status: {}", result);
+        info!("repair count: {}", count);
+        info!("status: {}", result);
     }
 
     result
@@ -386,7 +387,7 @@ impl VisitMut for FnLifetimeElider<'_> {
                                     } else {
                                         let result = *map.get(&id).unwrap() > 1
                                             || cannot_elide.contains(&id);
-                                        println!("lt: {}, result: {}", id, result);
+                                        debug!("lt: {}, result: {}", id, result);
                                         result
                                     }
                                 }
@@ -507,7 +508,7 @@ pub fn repair_iteration_project(
     let result = loop {
         let out = compile_cmd.output().unwrap();
         if out.status.success() {
-            println!("repair succeeded");
+            info!("repair succeeded");
             break true;
         }
         // cargo give rustc error to stdout not stderr
@@ -545,19 +546,19 @@ pub fn repair_iteration_project(
         }
 
         if !help {
-            println!("last failure:\n{}", last_failure);
+            debug!("last failure:\n{}", last_failure);
             break false;
         }
 
         if max_iterations == count {
-            println!("last failure:\n{}", last_failure);
+            debug!("last failure:\n{}", last_failure);
             break false;
         }
     };
 
     if print_stats {
-        println!("repair count: {}", count);
-        println!("status: {}", result);
+        info!("repair count: {}", count);
+        info!("status: {}", result);
     }
 
     result
