@@ -493,20 +493,21 @@ impl VisitMut for MutableBorrowerHelper<'_> {
 
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let id = i.receiver.as_ref().into_token_stream().to_string();
-        // // println!(
+        // println!(
         //     "call decl id: {}, {}",
         //     id,
         //     i.clone().into_token_stream().to_string()
         // );
-        match self.decl_mut.contains(&id) || self.ref_inputs.contains(&id) {
+        match self.decl_mut.contains(&id) || self.callee_inputs.contains(&id) {
             true => self.mut_methods.clone().iter().for_each(|mut_call| {
                 let mut_call_id = mut_call.receiver.as_ref().into_token_stream().to_string();
                 if i.clone().method == mut_call.method && id == mut_call_id {
                     self.make_mut.push(id.clone())
                 }
             }),
-            false => syn::visit_mut::visit_expr_method_call_mut(self, i),
+            false => (),
         }
+        syn::visit_mut::visit_expr_method_call_mut(self, i)
     }
 
     fn visit_expr_reference_mut(&mut self, i: &mut ExprReference) {
@@ -581,7 +582,7 @@ impl VisitMut for CallerFnArgHelper<'_> {
             true => i.args.iter_mut().for_each(|arg| {
                 let id = arg.into_token_stream().to_string();
                 match self.make_mut.contains(&id)
-                    && (!self.mut_ref_inputs.contains(&id) && self.decl_mut.contains(&id))
+                    && (!self.mut_ref_inputs.contains(&id))
                 {
                     true => {
                         *arg = syn::parse_quote! {&mut #arg};
