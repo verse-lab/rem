@@ -52,3 +52,7 @@ pub fn get_latest_commit(dir: &String) -> String {
         panic!()
     }
 }
+
+pub fn reset_to_base_branch(dir: &String, base_branch: &String, active_branch: &String) -> bool {
+    del_branch(dir, active_branch) && checkout(dir, base_branch) && checkout_b(dir, active_branch)
+}
