@@ -398,6 +398,13 @@ impl VisitMut for FnLifetimeElider<'_> {
                                     }
                                     _ => (),
                                 });
+                                gen.params.iter_mut().for_each(|gp| match gp {
+                                    GenericParam::Lifetime(_) => (),
+                                    gp => {
+                                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                                        change_lt.visit_generic_param_mut(gp);
+                                    }
+                                });
                                 match &mut gen.where_clause {
                                     None => (),
                                     Some(wc) => wc.predicates.iter_mut().for_each(|wp| match wp {

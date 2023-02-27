@@ -2,10 +2,7 @@ use proc_macro2::Span;
 use quote::ToTokens;
 use std::borrow::BorrowMut;
 use std::fs;
-use syn::{
-    visit_mut::VisitMut, FnArg, GenericArgument, Lifetime, LifetimeDef, PathArguments, ReturnType,
-    Type, TypeParamBound,
-};
+use syn::{visit_mut::VisitMut, FnArg, GenericArgument, Lifetime, LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound, AngleBracketedGenericArguments};
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
@@ -153,6 +150,28 @@ impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
             }
         }
     }
+
+    fn visit_angle_bracketed_generic_arguments_mut(&mut self, i: &mut AngleBracketedGenericArguments) {
+        i.args.iter_mut().for_each(|arg| {
+            match arg {
+                GenericArgument::Lifetime(lt) => {
+                    *lt = Lifetime::new(
+                        format!("'lt{}", self.lt_num).as_str(),
+                        Span::call_site(),
+                    );
+                    self.lt_num += 1;
+                }
+                gen => {
+                    let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
+                        lt_num: self.lt_num,
+                    };
+                    type_helper.visit_generic_argument_mut(gen);
+                    self.lt_num = type_helper.lt_num
+                }
+            }
+        });
+        syn::visit_mut::visit_angle_bracketed_generic_arguments_mut(self, i);
+    }
 }
 
 struct LooseLifetimeAnnotator<'a> {
@@ -168,20 +187,19 @@ impl VisitMut for LooseLifetimeAnnotator<'_> {
             false => (),
             true => match (&mut i.sig.inputs, &mut i.sig.generics, &mut i.sig.output) {
                 (inputs, _, _) if inputs.len() == 0 => self.success = true,
-                (_, gen, _)
-                    if gen.params.iter().any(|x| match x {
-                        syn::GenericParam::Lifetime(_) => true,
-                        _ => false,
-                    }) =>
-                {
-                    self.success = false
-                }
                 (inputs, gen, out) => {
                     inputs.iter_mut().for_each(|arg| {
                         let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
                             lt_num: self.lt_num,
                         };
                         fn_arg_helper.visit_fn_arg_mut(arg);
+                        self.lt_num = fn_arg_helper.lt_num
+                    });
+                    gen.params.iter_mut().for_each(|param| {
+                        let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
+                            lt_num: self.lt_num,
+                        };
+                        fn_arg_helper.visit_generic_param_mut(param);
                         self.lt_num = fn_arg_helper.lt_num
                     });
                     match out {
