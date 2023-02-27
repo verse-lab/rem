@@ -23,10 +23,10 @@ pub fn new_foo() {
     z = x_ref;
     println!("{}", *z);
 }
-fn bar_extracted<'lt0, 'lt1, 'lt2>(x_ref: &'lt0 i32, z: &'lt1 i32, y: &'lt2 i32) -> &'lt0 i32
+fn bar_extracted<'lt0, 'lt1, 'lt2>(x_ref: &i32, z: &'lt0 i32, y: &'lt1 i32) -> &'lt2 i32
 where
-    'lt2: 'lt0,
-    'lt1: 'lt0,
+    'lt1: 'lt2,
+    'lt0: 'lt2,
 {
     if *z < *x_ref {
         &y

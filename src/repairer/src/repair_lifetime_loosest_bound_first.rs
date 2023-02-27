@@ -27,6 +27,7 @@ impl RepairSystem for Repairer {
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
             true => {
+                println!("pre elision: {}", fs::read_to_string(&src_path).unwrap());
                 elide_lifetimes_annotations(src_path, fn_name);
                 true
             }
@@ -72,11 +73,24 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
         // );
         match i {
             Type::Reference(r) => {
-                r.lifetime = Some(Lifetime::new(
-                    format!("'lt{}", self.lt_num).as_str(),
-                    Span::call_site(),
-                ));
-                self.lt_num += 1;
+                match &mut r.lifetime {
+                    None => {
+                        r.lifetime = Some(Lifetime::new(
+                            format!("'lt{}", self.lt_num).as_str(),
+                            Span::call_site(),
+                        ));
+                        self.lt_num += 1;
+                    }
+                    Some(lt) => {
+                        if !lt.clone().ident.to_string().starts_with("lt") {
+                            r.lifetime = Some(Lifetime::new(
+                                format!("'lt{}", self.lt_num).as_str(),
+                                Span::call_site(),
+                            ));
+                            self.lt_num += 1;
+                        }
+                    }
+                }
                 syn::visit_mut::visit_type_mut(self, i);
             }
             Type::TraitObject(t) => {
@@ -87,11 +101,13 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                 t.bounds.iter_mut().for_each(|x| match x {
                     TypeParamBound::Trait(_) => (),
                     TypeParamBound::Lifetime(lt) => {
-                        *lt = Lifetime::new(
-                            format!("'lt{}", self.lt_num).as_str(),
-                            Span::call_site(),
-                        );
-                        self.lt_num += 1;
+                        if !lt.clone().ident.to_string().starts_with("lt") {
+                            *lt = Lifetime::new(
+                                format!("'lt{}", self.lt_num).as_str(),
+                                Span::call_site(),
+                            );
+                            self.lt_num += 1;
+                        }
                     }
                 });
                 syn::visit_mut::visit_type_mut(self, i);
@@ -133,12 +149,25 @@ impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
         match i {
             FnArg::Receiver(r) => match &mut r.reference {
                 None => {}
-                Some((_, lt)) => {
-                    *lt = Some(Lifetime::new(
-                        format!("'lt{}", self.lt_num).as_str(),
-                        Span::call_site(),
-                    ));
-                    self.lt_num += 1;
+                Some((_, rlt)) => {
+                    match rlt{
+                        None => {
+                            *rlt = Some(Lifetime::new(
+                                format!("'lt{}", self.lt_num).as_str(),
+                                Span::call_site(),
+                            ));
+                            self.lt_num += 1;
+                        }
+                        Some(lt) => {
+                            if !lt.clone().ident.to_string().starts_with("lt") {
+                                *lt = Lifetime::new(
+                                    format!("'lt{}", self.lt_num).as_str(),
+                                    Span::call_site(),
+                                );
+                                self.lt_num += 1;
+                            }
+                        }
+                    }
                 }
             },
             FnArg::Typed(t) => {
@@ -155,11 +184,13 @@ impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
         i.args.iter_mut().for_each(|arg| {
             match arg {
                 GenericArgument::Lifetime(lt) => {
-                    *lt = Lifetime::new(
-                        format!("'lt{}", self.lt_num).as_str(),
-                        Span::call_site(),
-                    );
-                    self.lt_num += 1;
+                    if !lt.clone().ident.to_string().starts_with("lt") {
+                        *lt = Lifetime::new(
+                            format!("'lt{}", self.lt_num).as_str(),
+                            Span::call_site(),
+                        );
+                        self.lt_num += 1;
+                    }
                 }
                 gen => {
                     let mut type_helper = LooseLifetimeAnnotatorTypeHelper {

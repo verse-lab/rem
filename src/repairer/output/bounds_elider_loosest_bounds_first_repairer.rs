@@ -6,9 +6,9 @@ fn new_foo() {
     let a = A { x: &x };
     let _ = bar(&x, &a);
 }
-fn bar<'lt0, 'lt1, 'lt2>(x: &'lt0 String, a: &A) -> Result<A<'lt2>, String>
+fn bar<'lt0, 'lt1>(x: &'lt0 String, a: &A) -> Result<A<'lt1>, String>
 where
-    'lt0: 'lt2,
+    'lt0: 'lt1,
 {
     println!("{}, {}", &*x, a.x);
     Ok(A { x })

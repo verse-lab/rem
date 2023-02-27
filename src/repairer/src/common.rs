@@ -208,11 +208,6 @@ struct FnLifetimeEliderTypeHelper<'a> {
 }
 
 impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
-    fn visit_type_mut(&mut self, i: &mut Type) {
-        println!("i: {:?}", i);
-        syn::visit_mut::visit_type_mut(self, i);
-    }
-
     fn visit_angle_bracketed_generic_arguments_mut(&mut self, i: &mut AngleBracketedGenericArguments) {
         i.args = i.args.clone().into_iter().filter(|arg| {
             match arg {
