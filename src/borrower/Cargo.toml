@@ -16,7 +16,7 @@ utils = { path = "../utils" }
 constraint = { path = "../constraint" }
 itertools = "0.10.5"
 regex = "1.6.0"
-
+env_logger = "0.10.0"
 
 [package.metadata.rust-analyzer]
 rustc_private=true
