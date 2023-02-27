@@ -9,7 +9,7 @@ const PATH_TO_EXPERIMENT_PROJECTS: &str = "/home/sewen/class/Capstone/sample_pro
 
 fn main() {
     env_logger::init();
-    for expr_project in projects::ALL {
+    for expr_project in projects::all() {
         for experiment in expr_project.experiments {
             for i in 1..(experiment.count + 1) {
                 let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, expr_project.project);

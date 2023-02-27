@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 log = "0.4.17"
 env_logger = "0.10.0"
+controller = { path = "../controller" }
+borrower = { path = "../borrower" }
+repairer = { path = "../repairer" }

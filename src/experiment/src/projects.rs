@@ -46,80 +46,76 @@ pub(crate) struct ExperimentProject {
 // MUTABLE METHOD CALL is <SRC NAME>_MUTABLE_METHOD_CALLS
 // CALLEE is always "bar"
 
-pub const ALL: Vec<ExperimentProject> = vec![GITOXIDE];
+pub fn all() -> Vec<ExperimentProject> {
+    vec![gitoxide()]
+}
 
 /// gitoxide experiment
-pub const GITOXIDE: ExperimentProject = ExperimentProject {
-    project: "gitoxide".to_string(),
-    experiments: vec![
-        Experiment {
-            expr_type: "ext".to_string(),
-            count: 2,
-            extractions: vec![
-                Extraction::new("gix-pack/src/verify.rs", "checksum_on_disk_or_mmap", "gix-pack/Cargo.toml"),
-                Extraction::new(
-                    "gix-mailmap/src/parse.rs",
-                    "parse_line",
-                    "gix-mailmap/Cargo.toml",
-                ),
-            ],
-        },
-        Experiment {
-            expr_type: "ext-com".to_string(),
-            count: 2,
-            extractions: vec![
-                Extraction::new(
-                    "git-protocol/src/packet_line/decode.rs",
-                    "streaming",
-                    "git-protocol/Cargo.toml",
-                ),
-                Extraction::new(
-                    "git-config/src/file/resolve_includes.rs",
-                    "resolve_includes_recursive",
-                    "git-config/Cargo.toml",
-                ),
-            ],
-        },
-        Experiment {
-            expr_type: "inline-ext".to_string(),
-            count: 7,
-            extractions: vec![
-                Extraction::new(
-                    "gix-validate/src/reference.rs",
-                    "name",
-                    "gix-validate/Cargo.toml",
-                ),
-                Extraction::new(
-                    "gix-object/src/parse.rs",
-                    "signature",
-                    "gix-object/Cargo.toml",
-                ),
-                Extraction::new(
-                    "gix/src/create.rs",
-                    "into",
-                    "gix/Cargo.toml",
-                ),
-                Extraction::new(
-                    "gix-lock/src/acquire.rs",
-                    "lock_with_mode",
-                    "gix-lock/Cargo.toml",
-                ), // diff from above (different function extracted)
-                Extraction::new(
-                    "gix-lock/src/acquire.rs",
-                    "lock_with_mode",
-                    "gix-lock/Cargo.toml",
-                ),
-                Extraction::new(
-                    "gix-discover/src/is.rs",
-                    "git",
-                    "gix-discover/Cargo.toml",
-                ),
-                Extraction::new(
-                    "gix-glob/src/parse.rs",
-                    "pattern",
-                    "gix-glob/Cargo.toml",
-                ),
-            ],
-        },
-    ],
-};
+pub fn gitoxide() -> ExperimentProject {
+    ExperimentProject {
+        project: "gitoxide".to_string(),
+        experiments: vec![
+            Experiment {
+                expr_type: "ext".to_string(),
+                count: 2,
+                extractions: vec![
+                    Extraction::new(
+                        "gix-pack/src/verify.rs",
+                        "checksum_on_disk_or_mmap",
+                        "gix-pack/Cargo.toml",
+                    ),
+                    Extraction::new(
+                        "gix-mailmap/src/parse.rs",
+                        "parse_line",
+                        "gix-mailmap/Cargo.toml",
+                    ),
+                ],
+            },
+            Experiment {
+                expr_type: "ext-com".to_string(),
+                count: 2,
+                extractions: vec![
+                    Extraction::new(
+                        "git-protocol/src/packet_line/decode.rs",
+                        "streaming",
+                        "git-protocol/Cargo.toml",
+                    ),
+                    Extraction::new(
+                        "git-config/src/file/resolve_includes.rs",
+                        "resolve_includes_recursive",
+                        "git-config/Cargo.toml",
+                    ),
+                ],
+            },
+            Experiment {
+                expr_type: "inline-ext".to_string(),
+                count: 7,
+                extractions: vec![
+                    Extraction::new(
+                        "gix-validate/src/reference.rs",
+                        "name",
+                        "gix-validate/Cargo.toml",
+                    ),
+                    Extraction::new(
+                        "gix-object/src/parse.rs",
+                        "signature",
+                        "gix-object/Cargo.toml",
+                    ),
+                    Extraction::new("gix/src/create.rs", "into", "gix/Cargo.toml"),
+                    Extraction::new(
+                        "gix-lock/src/acquire.rs",
+                        "lock_with_mode",
+                        "gix-lock/Cargo.toml",
+                    ), // diff from above (different function extracted)
+                    Extraction::new(
+                        "gix-lock/src/acquire.rs",
+                        "lock_with_mode",
+                        "gix-lock/Cargo.toml",
+                    ),
+                    Extraction::new("gix-discover/src/is.rs", "git", "gix-discover/Cargo.toml"),
+                    Extraction::new("gix-glob/src/parse.rs", "pattern", "gix-glob/Cargo.toml"),
+                ],
+            },
+        ],
+    }
+}
