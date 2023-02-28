@@ -10,15 +10,15 @@ impl RepairSystem for Repairer {
         "_simple_repairer"
     }
 
-    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> bool {
-        false
+    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> (bool, i32) {
+        (false, 0)
     }
 
-    fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
+    fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32) {
         self.repair_function(file_name, new_file_name, "")
     }
 
-    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool {
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> (bool, i32) {
         let args: Vec<&str> = vec!["--error-format=json"];
         fs::copy(file_name, &new_file_name).unwrap();
 

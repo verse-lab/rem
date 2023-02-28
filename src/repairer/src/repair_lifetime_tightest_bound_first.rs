@@ -19,7 +19,7 @@ impl RepairSystem for Repairer {
         "_tightest_bounds_first_repairer"
     }
 
-    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool {
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> (bool, i32) {
         annotate_tight_named_lifetime(src_path, fn_name);
         let mut compile_cmd = compile_project(manifest_path, &vec![]);
         let process_errors = |ce: &RustcError| {
@@ -31,19 +31,19 @@ impl RepairSystem for Repairer {
         };
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
-            true => {
+            (true, count) => {
                 elide_lifetimes_annotations(src_path, fn_name);
-                true
+                (true, count)
             }
-            false => false,
+            (false, count) => (false, count),
         }
     }
 
-    fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool {
+    fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32) {
         repair_lifetime_simple::Repairer {}.repair_file(file_name, new_file_name)
     }
 
-    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool {
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> (bool, i32) {
         fs::copy(file_name, &new_file_name).unwrap();
         annotate_tight_named_lifetime(&new_file_name, fn_name);
         //println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
@@ -60,11 +60,11 @@ impl RepairSystem for Repairer {
         };
 
         match repair_iteration(&mut compile_cmd, &process_errors, true, Some(10)) {
-            true => {
+            (true, c) => {
                 elide_lifetimes_annotations(new_file_name, fn_name);
-                true
+                (true, c)
             }
-            false => false,
+            (false, c) => (false, c),
         }
     }
 }

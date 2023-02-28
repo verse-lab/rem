@@ -20,9 +20,9 @@ use utils::format_source;
 
 pub trait RepairSystem {
     fn name(&self) -> &str;
-    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> bool;
-    fn repair_file(&self, file_name: &str, new_file_name: &str) -> bool;
-    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> bool;
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> (bool, i32);
+    fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32);
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> (bool, i32);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -175,7 +175,7 @@ pub fn repair_iteration(
     process_errors: &dyn Fn(&str) -> bool,
     print_stats: bool,
     max_iterations: Option<i32>,
-) -> bool {
+) -> (bool, i32) {
     let mut count = 0;
     let max_iterations = max_iterations.unwrap_or(25);
     let result = loop {
@@ -200,7 +200,7 @@ pub fn repair_iteration(
         info!("status: {}", result);
     }
 
-    result
+    (result, count)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -513,7 +513,7 @@ pub fn repair_iteration_project(
     process_errors: &dyn Fn(&RustcError) -> bool,
     print_stats: bool,
     max_iterations: Option<i32>,
-) -> bool {
+) -> (bool, i32) {
     let mut count = 0;
     let max_iterations = max_iterations.unwrap_or(25);
     let result = loop {
@@ -572,5 +572,5 @@ pub fn repair_iteration_project(
         info!("status: {}", result);
     }
 
-    result
+    (result, count)
 }
