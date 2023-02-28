@@ -162,3 +162,84 @@ pub fn gitoxide() -> ExperimentProject {
         ],
     }
 }
+
+/// sniffnet experiment
+pub fn sniffnet() -> ExperimentProject {
+    let project = "sniffnet".to_string();
+    let project_url = "https://github.com/sewenthy/sniffnet".to_string();
+    let project_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, project);
+
+    ExperimentProject {
+        project,
+        project_url,
+        experiments: vec![
+            Experiment {
+                expr_type: "inline-ext".to_string(),
+                extractions: vec![
+                    Extraction::new(
+                        &project_path,
+                        "src/utility/manage_packets.rs",
+                        "modify_or_insert_in_map",
+                        "Cargo.toml",
+                    ),
+                    Extraction::new(
+                        &project_path,
+                        "src/thread_parse_packets.rs",
+                        "parse_packets_loop",
+                        "Cargo.toml",
+                    ),
+                ],
+            },
+        ],
+    }
+}
+
+/// kickoff experiment
+pub fn kickoff() -> ExperimentProject {
+    let project = "kickoff".to_string();
+    let project_url = "https://github.com/sewenthy/kickoff".to_string();
+    let project_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, project);
+
+    ExperimentProject {
+        project,
+        project_url,
+        experiments: vec![
+            Experiment {
+                expr_type: "inline-ext".to_string(),
+                extractions: vec![
+                    Extraction::new(
+                        &project_path,
+                        "src/gui.rs",
+                        "register_inputs",
+                        "Cargo.toml",
+                    ),
+                ],
+            },
+        ],
+    }
+}
+
+/// gitoxide experiment
+pub fn gitoxide() -> ExperimentProject {
+    let project = "gitoxide".to_string();
+    let project_url = "https://github.com/sewenthy/gitoxide".to_string();
+    let project_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, project);
+
+    ExperimentProject {
+        project,
+        project_url,
+        experiments: vec![
+            Experiment {
+                expr_type: "ext-com".to_string(),
+                extractions: vec![
+                    Extraction::new(
+                        &project_path,
+                        "beerus_rest_api/src/main.rs",
+                        "rocket",
+                        "beerus_rest_api/Cargo.toml",
+                    ),
+                ],
+            },
+        ],
+    }
+}
