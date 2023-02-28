@@ -61,6 +61,7 @@ pub struct Experiment {
 }
 pub struct ExperimentProject {
     pub project: String,
+    pub project_url: String,
     pub experiments: Vec<Experiment>,
 }
 
@@ -75,10 +76,12 @@ pub fn all() -> Vec<ExperimentProject> {
 /// gitoxide experiment
 pub fn gitoxide() -> ExperimentProject {
     let project = "gitoxide".to_string();
+    let project_url = "https://github.com/sewenthy/gitoxide".to_string();
     let project_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, project);
 
     ExperimentProject {
         project,
+        project_url,
         experiments: vec![
             Experiment {
                 expr_type: "ext".to_string(),

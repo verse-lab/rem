@@ -10,7 +10,7 @@ use crate::common::{
     RepairSystem, RustcError,
 };
 use crate::repair_lifetime_simple;
-use utils::{compile_file, compile_project, format_source};
+use utils::{compile_file, check_project, format_source};
 
 pub struct Repairer {}
 
@@ -21,7 +21,7 @@ impl RepairSystem for Repairer {
 
     fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> (bool, i32) {
         annotate_tight_named_lifetime(src_path, fn_name);
-        let mut compile_cmd = compile_project(manifest_path, &vec![]);
+        let mut compile_cmd = check_project(manifest_path, &vec![]);
         let process_errors = |ce: &RustcError| {
             if repair_bounds_help(ce.rendered.as_str(), src_path, fn_name) {
                 true

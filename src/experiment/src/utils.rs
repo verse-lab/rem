@@ -8,6 +8,7 @@ use borrower::borrow::make_borrows;
 use controller::non_local_controller::make_controls;
 use repairer::common::RepairSystem;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
+use utils::check_project;
 
 /*********************************    MISC    ***************************************************/
 #[macro_export]
@@ -106,7 +107,22 @@ pub fn reset_to_base_branch(dir: &String, base_branch: &String, active_branch: &
 }
 
 /*************************************** Extraction Related ************************************/
-pub fn time_exec(name: &str, f: &dyn Fn() -> bool) -> (bool, Duration) {
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct ExtractionResult {
+    pub success: bool,
+    pub fix_nlcf_duration_ms: u128,
+    pub fix_borrow_duration_ms: u128,
+    pub fix_lifetime_cargo_ms: u128,
+    pub cargo_cycles: i32,
+    pub total_duration_ms: u128,
+    pub total_duration_s: u64,
+    pub commit: String,
+    pub commit_url: String,
+    pub failed_at: Option<String>,
+}
+
+pub fn time_exec(name: &str, f: &mut dyn FnMut() -> bool) -> (bool, Duration) {
     let now = SystemTime::now();
     let success = f();
     let time_elapsed = now.elapsed().unwrap();
@@ -119,8 +135,11 @@ pub fn time_exec(name: &str, f: &dyn Fn() -> bool) -> (bool, Duration) {
     (success, time_elapsed)
 }
 
-pub fn run_controller(extraction: &Extraction) -> (bool, Duration) {
-    let f = || {
+pub fn run_controller(
+    extraction: &Extraction,
+    extraction_result: &mut ExtractionResult,
+) -> (bool, Duration) {
+    let mut f = || {
         make_controls(
             extraction.src_path.as_str(),
             extraction.src_path.as_str(),
@@ -128,11 +147,20 @@ pub fn run_controller(extraction: &Extraction) -> (bool, Duration) {
             extraction.caller.as_str(),
         )
     };
-    time_exec("controller", &f)
+    let (success, duration) = time_exec("controller", &mut f);
+    either!(
+        success,
+        extraction_result.failed_at = Some("controller".to_string())
+    );
+    extraction_result.fix_nlcf_duration_ms = duration.as_millis();
+    (success, duration)
 }
 
-pub fn run_borrower(extraction: &Extraction) -> (bool, Duration) {
-    let f = || {
+pub fn run_borrower(
+    extraction: &Extraction,
+    extraction_result: &mut ExtractionResult,
+) -> (bool, Duration) {
+    let mut f = || {
         make_borrows(
             extraction.src_path.as_str(),
             extraction.src_path.as_str(),
@@ -142,39 +170,71 @@ pub fn run_borrower(extraction: &Extraction) -> (bool, Duration) {
             extraction.original_path.as_str(),
         )
     };
-    time_exec("borrower", &f)
+    let (success, duration) = time_exec("borrower", &mut f);
+    either!(
+        success,
+        extraction_result.failed_at = Some("borrower".to_string())
+    );
+    extraction_result.fix_borrow_duration_ms = duration.as_millis();
+    (success, duration)
 }
 
-pub fn run_repairer(extraction: &Extraction) -> (bool, Duration) {
-    let mut repairer = Repairer {};
-    let f = || {
+pub fn run_repairer(
+    extraction: &Extraction,
+    extraction_result: &mut ExtractionResult,
+) -> (bool, Duration) {
+    let repairer = Repairer {};
+    let mut f = || {
         let (success, count) = repairer.repair_project(
             extraction.src_path.as_str(),
             extraction.cargo_path.as_str(),
             "bar",
         );
         debug!("cargo repair counted: {}", count);
+        extraction_result.cargo_cycles = count;
         success
     };
-    time_exec("cargo", &f)
+    let (success, duration) = time_exec("cargo", &mut f);
+    either!(
+        success,
+        extraction_result.failed_at = Some("cargo".to_string())
+    );
+    extraction_result.fix_borrow_duration_ms = duration.as_millis();
+    (success, duration)
 }
 
-pub fn run_extraction(extraction: &Extraction) -> (bool, Duration) {
+pub fn run_extraction(
+    extraction: &Extraction,
+    extraction_result: &mut ExtractionResult,
+) -> (bool, Duration) {
     extraction.validate_paths();
 
-    let mut actions: Vec<&dyn Fn(&Extraction) -> (bool, Duration)> =
+    let mut first_check = || {
+        check_project(&extraction.cargo_path, &vec![])
+            .output()
+            .unwrap()
+            .status
+            .success()
+    };
+    time_exec("first_check", &mut first_check);
+
+    let actions: Vec<&dyn Fn(&Extraction, &mut ExtractionResult) -> (bool, Duration)> =
         vec![&run_controller, &run_borrower, &run_repairer];
-    actions.iter().fold(
+    let (success, duration) = actions.iter().fold(
         (true, Duration::from_secs(0)),
         |(success, duration), &action| {
             if success {
-                let (action_success, action_duration) = action(extraction);
+                let (action_success, action_duration) = action(extraction, extraction_result);
                 (action_success && success, duration.add(action_duration))
             } else {
                 (success, duration)
             }
         },
-    )
+    );
+    extraction_result.success = success;
+    extraction_result.total_duration_ms = duration.as_millis();
+    extraction_result.total_duration_s = duration.as_secs();
+    (success, duration)
 }
 
 pub fn update_expr_branch(dir: &String, active_branch: &String) -> bool {

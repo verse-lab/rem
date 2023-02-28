@@ -36,16 +36,28 @@ pub fn compile_file(file_name: &str, args: &Vec<&str>) -> Command {
     compile
 }
 
-pub fn compile_project(manifest_path: &str, cargo_args: &Vec<&str>) -> Command {
-    let mut compile = Command::new("cargo");
-    compile.arg("check");
+pub fn check_project(manifest_path: &str, cargo_args: &Vec<&str>) -> Command {
+    let mut check = Command::new("cargo");
+    check.arg("check");
     for arg in cargo_args {
-        compile.arg(arg);
+        check.arg(arg);
     }
     let toml = format!("--manifest-path={}", manifest_path);
-    compile.arg(toml);
-    compile.arg("--message-format=json");
-    compile
+    check.arg(toml);
+    check.arg("--message-format=json");
+    check
+}
+
+pub fn build_project(manifest_path: &str, cargo_args: &Vec<&str>) -> Command {
+    let mut check = Command::new("cargo");
+    check.arg("build");
+    for arg in cargo_args {
+        check.arg(arg);
+    }
+    let toml = format!("--manifest-path={}", manifest_path);
+    check.arg(toml);
+    check.arg("--message-format=json");
+    check
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

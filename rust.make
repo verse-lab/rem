@@ -10,6 +10,9 @@ build:
 dev:
 	RUST_LOG=debug cargo run
 
+run:
+	RUST_LOG=info cargo run
+
 test:
 	cargo run -- test
 

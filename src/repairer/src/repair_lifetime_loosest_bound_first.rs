@@ -2,6 +2,7 @@ use proc_macro2::Span;
 use quote::ToTokens;
 use std::borrow::BorrowMut;
 use std::fs;
+use log::debug;
 use syn::{
     visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, Lifetime,
     LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound,
@@ -12,7 +13,7 @@ use crate::common::{
     RepairSystem, RustcError,
 };
 use crate::repair_lifetime_simple;
-use utils::{compile_file, compile_project, format_source};
+use utils::{compile_file, check_project, format_source};
 
 pub struct Repairer {}
 
@@ -24,13 +25,13 @@ impl RepairSystem for Repairer {
     fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> (bool, i32) {
         annotate_loose_named_lifetime(src_path, fn_name);
         // println!("annotated: {}", fs::read_to_string(&src_path).unwrap());
-        let mut compile_cmd = compile_project(manifest_path, &vec![]);
+        let mut compile_cmd = check_project(manifest_path, &vec![]);
         let process_errors =
             |ce: &RustcError| repair_bounds_help(ce.rendered.as_str(), src_path, fn_name);
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
             (true, count) => {
-                println!("pre elision: {}", fs::read_to_string(&src_path).unwrap());
+                debug!("pre elision: {}", fs::read_to_string(&src_path).unwrap());
                 elide_lifetimes_annotations(src_path, fn_name);
                 (true, count)
             }
