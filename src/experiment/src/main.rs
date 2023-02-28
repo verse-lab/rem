@@ -1,16 +1,16 @@
 mod projects;
 mod utils;
 
+use std::fs;
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
 use crate::utils::{
     get_latest_commit, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult,
 };
 use log::info;
-use walkdir::WalkDir;
 
 fn main() {
     env_logger::init();
-    let result_n = WalkDir::new("./results").into_iter().count();
+    let result_n = fs::read_dir("./results").unwrap().count();
     let mut wtr = csv::Writer::from_path(format!("./results/result_{}.csv", result_n)).unwrap();
     for expr_project in projects::all() {
         let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, expr_project.project);
@@ -39,10 +39,12 @@ fn main() {
                     fix_lifetime_cargo_ms: Default::default(),
                     cargo_cycles: 0,
                     total_duration_ms: Default::default(),
-                    total_duration_s: 0,
+                    total_duration_s: 0.,
                     commit: "".to_string(),
                     commit_url: "".to_string(),
                     failed_at: None,
+                    project: expr_project.project.clone(),
+                    branch: expr_branch_active.clone(),
                 };
 
                 let (success, duration) = run_extraction(
@@ -55,17 +57,21 @@ fn main() {
                     duration.as_secs()
                 );
 
-                wtr.serialize(extraction_result)
-                    .expect("failed to write experiment results!");
-
                 either!(
                     update_expr_branch(&repo_path, &expr_branch_active),
                     panic!("could not update experiment branch!")
                 );
+
+                extraction_result.commit = get_latest_commit(&repo_path);
+                extraction_result.commit_url = format!("{}/commit/{}", expr_project.project_url, extraction_result.commit);
+
                 info!(
                     "experiment branch HEAD <--- {}",
-                    get_latest_commit(&repo_path)
-                )
+                    extraction_result.commit
+                );
+
+                wtr.serialize(extraction_result)
+                    .expect("failed to write experiment results!");
             }
         }
     }

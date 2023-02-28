@@ -116,10 +116,12 @@ pub struct ExtractionResult {
     pub fix_lifetime_cargo_ms: u128,
     pub cargo_cycles: i32,
     pub total_duration_ms: u128,
-    pub total_duration_s: u64,
+    pub total_duration_s: f64,
     pub commit: String,
     pub commit_url: String,
     pub failed_at: Option<String>,
+    pub project: String,
+    pub branch: String,
 }
 
 pub fn time_exec(name: &str, f: &mut dyn FnMut() -> bool) -> (bool, Duration) {
@@ -199,7 +201,7 @@ pub fn run_repairer(
         success,
         extraction_result.failed_at = Some("cargo".to_string())
     );
-    extraction_result.fix_borrow_duration_ms = duration.as_millis();
+    extraction_result.fix_lifetime_cargo_ms = duration.as_millis();
     (success, duration)
 }
 
@@ -233,7 +235,7 @@ pub fn run_extraction(
     );
     extraction_result.success = success;
     extraction_result.total_duration_ms = duration.as_millis();
-    extraction_result.total_duration_s = duration.as_secs();
+    extraction_result.total_duration_s = duration.as_millis() as f64 * 0.001;
     (success, duration)
 }
 

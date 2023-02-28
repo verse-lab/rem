@@ -13,6 +13,8 @@ nom = {version="7.1.0"}
 mktemp = {version="0.4.1"}
 utils = { path = "../utils" }
 itertools = "0.10.5"
+env_logger = "0.10.0"
+log = "0.4.17"
 
 [[bin]]
 name = "main"
