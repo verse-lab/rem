@@ -70,7 +70,7 @@ pub struct ExperimentProject {
 // CALLEE is always "bar"
 
 pub fn all() -> Vec<ExperimentProject> {
-    vec![gitoxide()]
+    vec![gitoxide(), kickoff(), sniffnet(), beerus()]
 }
 
 /// gitoxide experiment
@@ -219,10 +219,10 @@ pub fn kickoff() -> ExperimentProject {
     }
 }
 
-/// gitoxide experiment
-pub fn gitoxide() -> ExperimentProject {
-    let project = "gitoxide".to_string();
-    let project_url = "https://github.com/sewenthy/gitoxide".to_string();
+/// beerus experiment
+pub fn beerus() -> ExperimentProject {
+    let project = "beerus".to_string();
+    let project_url = "https://github.com/sewenthy/beerus".to_string();
     let project_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, project);
 
     ExperimentProject {
