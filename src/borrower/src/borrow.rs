@@ -9,10 +9,7 @@ use constraint::ConstraintManager;
 use itertools::Itertools;
 use regex::Regex;
 use syn::punctuated::Punctuated;
-use syn::{
-    visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference,
-    ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference,
-};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference, ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference, TraitItemMethod, ItemImpl, TraitItem, ImplItemMethod};
 
 use utils::format_source;
 
@@ -610,6 +607,16 @@ struct CallerFnArg<'a> {
 }
 
 impl VisitMut for CallerFnArg<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        println!("{:?}", i);
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        println!("{:?}", i);
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.caller_fn_name {
