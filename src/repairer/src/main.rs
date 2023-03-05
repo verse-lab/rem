@@ -69,7 +69,8 @@ fn main() {
             let success = if *verbose {
                 print_repair_stat(&repair_system, file_name, new_file_name, fn_name)
             } else {
-                repair_system.repair_function(file_name, new_file_name, fn_name)
+                let (success, _) = repair_system.repair_function(file_name, new_file_name, fn_name);
+                success
             };
             if !success {
                 exit(1)
@@ -90,7 +91,8 @@ fn main() {
             let success = if *verbose {
                 print_repair_stat_project(&repair_system, src_path, manifest_path, fn_name)
             } else {
-                repair_system.repair_project(src_path, manifest_path, fn_name)
+                let (success, _) = repair_system.repair_project(src_path, manifest_path, fn_name);
+                success
             };
             if !success {
                 exit(1)
@@ -107,7 +109,7 @@ fn print_repair_stat_project(
 ) -> bool {
     println!("\n\n{}: {}", src_path, fn_name);
     let now = SystemTime::now();
-    let success = repair_system.repair_project(src_path, manifest_path, fn_name);
+    let (success, _ ) = repair_system.repair_project(src_path, manifest_path, fn_name);
     let time_elapsed = now.elapsed().unwrap();
     println!(
         "{}: {} refactored {} in {:#?}",
@@ -131,7 +133,7 @@ fn print_repair_stat(
 ) -> bool {
     println!("\n\n{}: {}", file_name, fn_name);
     let now = SystemTime::now();
-    let success = repair_system.repair_function(file_name, new_file_name, fn_name);
+    let (success, _) = repair_system.repair_function(file_name, new_file_name, fn_name);
     let time_elapsed = now.elapsed().unwrap();
     println!(
         "{}: {} refactored {} in {:#?}",

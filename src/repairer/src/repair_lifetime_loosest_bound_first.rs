@@ -151,27 +151,7 @@ struct LooseLifetimeAnnotatorFnArgHelper {
 impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
     fn visit_fn_arg_mut(&mut self, i: &mut FnArg) {
         match i {
-            FnArg::Receiver(r) => match &mut r.reference {
-                None => {}
-                Some((_, rlt)) => match rlt {
-                    None => {
-                        *rlt = Some(Lifetime::new(
-                            format!("'lt{}", self.lt_num).as_str(),
-                            Span::call_site(),
-                        ));
-                        self.lt_num += 1;
-                    }
-                    Some(lt) => {
-                        if !lt.clone().ident.to_string().starts_with("lt") {
-                            *lt = Lifetime::new(
-                                format!("'lt{}", self.lt_num).as_str(),
-                                Span::call_site(),
-                            );
-                            self.lt_num += 1;
-                        }
-                    }
-                },
-            },
+            FnArg::Receiver(_) => (), // cannot annotate self
             FnArg::Typed(t) => {
                 let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
                     lt_num: self.lt_num,

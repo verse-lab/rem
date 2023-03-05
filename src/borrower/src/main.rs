@@ -38,14 +38,16 @@ fn main() {
             caller_fn_name,
             callee_fn_name,
             pre_extract_file_name,
-        } => borrow::make_borrows(
-            file_name.as_str(),
-            new_file_name.as_str(),
-            mut_method_call_expr_file.as_str(),
-            callee_fn_name.as_str(),
-            caller_fn_name.as_str(),
-            pre_extract_file_name.as_str(),
-        ),
+        } =>{
+            let _  = borrow::make_borrows(
+                file_name.as_str(),
+                new_file_name.as_str(),
+                mut_method_call_expr_file.as_str(),
+                callee_fn_name.as_str(),
+                caller_fn_name.as_str(),
+                pre_extract_file_name.as_str(),
+            );
+        }
     }
 }
 
