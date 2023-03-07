@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate, TraitItemMethod, ImplItemMethod, ExprCall, Signature};
+use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate, TraitItemMethod, ImplItemMethod, ExprCall, Signature, ExprMethodCall};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -546,7 +546,7 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////     PROJECT HELPERS    ////////////////////////////////////////////
+////////////////////////////////     CALLEE RENAMER    ////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 pub struct RenameFn<'a> {
     pub(crate) callee_name: &'a str,
@@ -554,6 +554,14 @@ pub struct RenameFn<'a> {
 }
 
 impl VisitMut for RenameFn<'_> {
+    fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
+        let callee = i.clone().method.into_token_stream().to_string();
+        match callee == self.callee_name {
+            true => i.method = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap(),
+            false => syn::visit_mut::visit_expr_method_call_mut(self, i),
+        }
+    }
+
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let callee = i.func.as_ref().into_token_stream().to_string();
         match callee == self.callee_name {
@@ -597,6 +605,23 @@ impl VisitMut for RenameFn<'_> {
     }
 }
 
+pub fn callee_renamer(new_file_name: &str, fn_name: &str) {
+    let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
+    let mut file = syn::parse_str::<syn::File>(file_content.as_str())
+        .map_err(|e| format!("{:?}", e))
+        .unwrap();
+    let mut visitor = RenameFn {
+        callee_name: fn_name,
+        callee_postfix: "____EXTRACT_THIS",
+    };
+    visitor.visit_file_mut(&mut file);
+    let file = file.into_token_stream().to_string();
+    fs::write(new_file_name.to_string(), format_source(&file)).unwrap()
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////     PROJECT HELPERS    ////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CargoError {
     pub message: Option<RustcError>,

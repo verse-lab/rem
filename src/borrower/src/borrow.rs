@@ -958,7 +958,6 @@ impl VisitMut for PreExtracter<'_> {
             }
             false => {}
         }
-        debug!("{:?}", i);
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
@@ -984,7 +983,6 @@ impl VisitMut for PreExtracter<'_> {
             }
             false => {}
         }
-        debug!("{:?}", i);
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
 

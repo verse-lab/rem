@@ -5,10 +5,7 @@ use std::fs;
 use log::debug;
 use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, Lifetime, LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound, Signature, ImplItemMethod, TraitItemMethod};
 
-use crate::common::{
-    elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
-    RepairSystem, RustcError, RenameFn
-};
+use crate::common::{elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project, RepairSystem, RustcError, RenameFn, callee_renamer};
 use crate::repair_lifetime_simple;
 use utils::{compile_file, check_project, format_source};
 
@@ -28,14 +25,9 @@ impl RepairSystem for Repairer {
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
             (true, count) => {
-                let file_content: String = fs::read_to_string(&src_path).unwrap().parse().unwrap();
-                let mut file = syn::parse_str::<syn::File>(file_content.as_str())
-                    .map_err(|e| format!("{:?}", e))
-                    .unwrap();
-                let mut rename_fn = RenameFn { callee_name: fn_name, callee_postfix: "____EXTRACT_THIS" };
-                rename_fn.visit_file_mut(&mut file);
                 debug!("pre elision: {}", fs::read_to_string(&src_path).unwrap());
                 elide_lifetimes_annotations(src_path, fn_name);
+                callee_renamer(src_path, fn_name);
                 (true, count)
             }
             (false, count) => (false, count),
