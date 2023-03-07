@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use proc_macro2::Ident;
 use std::fs;
+use colored::Colorize;
 
 use constraint::common::AliasConstraints;
 use constraint::ConstraintManager;
@@ -201,6 +202,7 @@ struct CalleeInputs<'a> {
     refs_inputs: &'a mut Vec<String>,
     mut_refs_inputs: &'a mut Vec<String>,
     make_ref: &'a mut Vec<String>,
+    found: bool,
 }
 
 impl VisitMut for CalleeInputs<'_> {
@@ -208,6 +210,7 @@ impl VisitMut for CalleeInputs<'_> {
         let id = i.sig.ident.to_string();
         match id == self.fn_name {
             true => {
+                self.found = true;
                 i.sig.inputs.iter().for_each(|fn_arg| match fn_arg {
                     FnArg::Receiver(_) => (),
                     FnArg::Typed(t) => {
@@ -356,6 +359,7 @@ struct CallerHelper<'a> {
     decl_mut: &'a mut Vec<String>,
     make_ref: &'a mut Vec<String>, // must be ref (not deciding whether immutable/mut yet
     use_after: &'a mut Vec<String>,
+    found: bool,
 }
 
 impl VisitMut for CallerHelper<'_> {
@@ -365,6 +369,7 @@ impl VisitMut for CallerHelper<'_> {
         match id == self.caller_fn_name {
             false => (),
             true => {
+                self.found = true;
                 //println!("found the caller");
                 i.sig.inputs.clone().iter().for_each(|input| match input {
                     FnArg::Receiver(_) => (),
@@ -647,74 +652,110 @@ struct PreExtracter<'a> {
     use_after: &'a Vec<String>,
 }
 
-impl VisitMut for PreExtracter<'_> {
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        let id = i.sig.ident.to_string();
-        match id == self.caller_fn_name {
-            true => {
-                let mut cs = ConstraintManager::default();
+fn run_alias_analysis(i: &mut ItemFn, inputs: &Vec<String>, ref_inputs: &Vec<String>, make_ref: &mut Vec<String>, use_after: &Vec<String>) {
+    let mut cs = ConstraintManager::default();
 
-                let annot_ast = utils::annotation::annotate_ast(i);
+    let annot_ast = utils::annotation::annotate_ast(i);
 
-                cs.add_constraint::<AliasConstraints>();
+    cs.add_constraint::<AliasConstraints>();
 
-                cs.analyze(&annot_ast);
-                let constraints = cs.get_constraints::<AliasConstraints>();
-                let constraints: Vec<AliasConstraints> = constraints.into_iter().unique().collect();
+    cs.analyze(&annot_ast);
+    let constraints = cs.get_constraints::<AliasConstraints>();
+    let constraints: Vec<AliasConstraints> = constraints.into_iter().unique().collect();
 
-                let mut lookup = HashMap::new();
-                let lookup_str: String = fs::read_to_string(utils::annotation::LOOKUP_FILE)
-                    .unwrap()
-                    .parse()
-                    .unwrap();
-                let re_lookup = Regex::new(r"(?P<label>\S+) -> (?P<expr>\S+)").unwrap();
-                lookup_str.split("\n").for_each(|x| {
-                    let lookup_inner = re_lookup.captures_iter(x);
-                    for captured in lookup_inner {
-                        // // println!(
-                        //     "label: {:?} -> expr: {:?}",
-                        //     &captured["label"], &captured["expr"]
-                        // );
-                        lookup.insert(captured["label"].to_string(), captured["expr"].to_string());
-                    }
-                });
+    let mut lookup = HashMap::new();
+    let lookup_str: String = fs::read_to_string(utils::annotation::LOOKUP_FILE)
+        .unwrap()
+        .parse()
+        .unwrap();
+    let re_lookup = Regex::new(r"(?P<label>\S+) -> (?P<expr>\S+)").unwrap();
+    lookup_str.split("\n").for_each(|x| {
+        let lookup_inner = re_lookup.captures_iter(x);
+        for captured in lookup_inner {
+            // // println!(
+            //     "label: {:?} -> expr: {:?}",
+            //     &captured["label"], &captured["expr"]
+            // );
+            lookup.insert(captured["label"].to_string(), captured["expr"].to_string());
+        }
+    });
 
-                for constraint in constraints {
-                    match constraint {
-                        AliasConstraints::Alias(l, r) => {
-                            // // println!(
-                            //     "{}, {:?} -> {:?}",
-                            //     constraint,
-                            //     lookup.get(l.to_string().as_str()),
-                            //     lookup.get(r.to_string().as_str())
-                            // );
-                            match lookup.get(r.to_string().as_str()) {
+    for constraint in constraints {
+        match constraint {
+            AliasConstraints::Alias(l, r) => {
+                // // println!(
+                //     "{}, {:?} -> {:?}",
+                //     constraint,
+                //     lookup.get(l.to_string().as_str()),
+                //     lookup.get(r.to_string().as_str())
+                // );
+                match lookup.get(r.to_string().as_str()) {
+                    None => {}
+                    Some(expr_r) => {
+                        if inputs.contains(&expr_r.trim().to_string())
+                            || ref_inputs.contains(&expr_r.trim().to_string())
+                        {
+                            // // println!("r is in input");
+                            match lookup.get(l.to_string().as_str()) {
                                 None => {}
-                                Some(expr_r) => {
-                                    if self.inputs.contains(&expr_r.trim().to_string())
-                                        || self.ref_inputs.contains(&expr_r.trim().to_string())
-                                    {
-                                        // // println!("r is in input");
-                                        match lookup.get(l.to_string().as_str()) {
-                                            None => {}
-                                            Some(expr_l) => {
-                                                let id = expr_l.trim().to_string();
-                                                if self.use_after.contains(&id) {
-                                                    // // println!("l is in use after");
-                                                    self.make_ref.push(expr_r.clone());
-                                                    self.make_ref.push(expr_l.clone());
-                                                    // why not
-                                                }
-                                            }
-                                        }
+                                Some(expr_l) => {
+                                    let id = expr_l.trim().to_string();
+                                    if use_after.contains(&id) {
+                                        // // println!("l is in use after");
+                                        make_ref.push(expr_r.clone());
+                                        make_ref.push(expr_l.clone());
+                                        // why not
                                     }
                                 }
                             }
                         }
-                        _ => (),
                     }
                 }
             }
+            _ => (),
+        }
+    }
+}
+
+impl VisitMut for PreExtracter<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+                match syn::parse_str::<ItemFn>(i.into_token_stream().to_string().as_str()) {
+                    Ok(mut item_fn) => run_alias_analysis(&mut item_fn, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
+                    Err(e) => {
+                        debug!("cannot parse implementation as function: {:?}", e);
+                    }
+                }
+            }
+            false => {}
+        }
+        debug!("{:?}", i);
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+                match syn::parse_str::<ItemFn>(i.into_token_stream().to_string().as_str()) {
+                    Ok(mut item_fn) => run_alias_analysis(&mut item_fn, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
+                    Err(e) => {
+                        debug!("cannot parse implementation as function: {:?}", e);
+                    }
+                }
+            }
+            false => {}
+        }
+        debug!("{:?}", i);
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => run_alias_analysis(i, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
             false => (),
         }
     }
@@ -763,8 +804,13 @@ pub fn make_borrows(
         refs_inputs: &mut callee_ref_inputs,
         mut_refs_inputs: &mut callee_mut_ref_inputs,
         make_ref: &mut make_ref,
+        found: false,
     };
     callee_input_helper.visit_file_mut(&mut file);
+
+    if !callee_input_helper.found {
+        false
+    }
 
     let mut use_after = vec![];
 
@@ -776,8 +822,13 @@ pub fn make_borrows(
         make_ref: &mut make_ref,
         decl_mut: &mut decl_mut,
         use_after: &mut use_after,
+        found: false,
     };
     caller_helper.visit_file_mut(&mut file);
+
+    if !caller_helper.found {
+        false
+    }
 
     let mut constraint_visitor = PreExtracter {
         caller_fn_name,

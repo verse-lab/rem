@@ -74,6 +74,7 @@ impl VisitMut for CheckCalleeWithinLoop<'_> {
 }
 
 struct CallerVisitor<'a> {
+    found: bool,
     caller_fn_name: &'a str,
     callee_fn_name: &'a str,
     callee_in_loop: bool,
@@ -88,6 +89,7 @@ impl VisitMut for CallerVisitor<'_> {
         match id == self.caller_fn_name {
             false => (),
             true => {
+                self.found = true;
                 *self.caller_rety = i.sig.output.clone();
                 let mut helper = CheckCalleeWithinLoop {
                     callee_fn_name: self.callee_fn_name,
@@ -132,6 +134,7 @@ impl VisitMut for CalleeCheckLoops {
 }
 
 struct CalleeCheckNCF<'a> {
+    found: bool,
     callee_fn_name: &'a str,
     within_caller_loop: bool,
     has_break: bool,
@@ -145,6 +148,7 @@ impl VisitMut for CalleeCheckNCF<'_> {
         match id == self.callee_fn_name {
             false => (),
             true => {
+                self.found = true;
                 let mut check_return = CalleeCheckReturn {
                     has_return: self.has_return,
                 };
@@ -452,6 +456,7 @@ pub fn make_controls(
 
     let mut caller_rety = ReturnType::Default;
     let mut caller_visitor = CallerVisitor {
+        found: false,
         caller_fn_name,
         callee_fn_name,
         callee_in_loop: false,
@@ -459,7 +464,12 @@ pub fn make_controls(
     };
     caller_visitor.visit_file_mut(&mut file);
 
+    if !caller_visitor.found {
+        false
+    }
+
     let mut callee_visitor = CalleeCheckNCF {
+        found: false,
         callee_fn_name,
         within_caller_loop: caller_visitor.callee_in_loop,
         has_break: false,
@@ -467,6 +477,10 @@ pub fn make_controls(
         has_return: false,
     };
     callee_visitor.visit_file_mut(&mut file);
+
+    if !caller_visitor.found {
+        false
+    }
 
     if callee_visitor.has_return || callee_visitor.has_continue || callee_visitor.has_break {
         let caller_rety = match caller_visitor.caller_rety {
