@@ -114,6 +114,14 @@ impl VisitMut for CalleeBorrowAssigner<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            false => (),
+            true => self.callee_borrow_assigner(&mut i.sig, &mut i.block),
+        }
+    }
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
@@ -125,14 +133,6 @@ impl VisitMut for CalleeBorrowAssigner<'_> {
             }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        let id = i.sig.ident.to_string();
-        match id == self.fn_name {
-            false => (),
-            true => self.callee_borrow_assigner(&mut i.sig, &mut i.block),
-        }
     }
 }
 
@@ -244,6 +244,14 @@ impl VisitMut for CalleeInputs<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            true => self.callee_inputs(&mut i.sig, &mut i.block),
+            false => (),
+        }
+    }
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
@@ -255,14 +263,6 @@ impl VisitMut for CalleeInputs<'_> {
             },
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        let id = i.sig.ident.to_string();
-        match id == self.fn_name {
-            true => self.callee_inputs(&mut i.sig, &mut i.block),
-            false => (),
-        }
     }
 }
 
@@ -428,6 +428,15 @@ impl VisitMut for CallerHelper<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.caller_fn_name {
+            false => (),
+            true => self.caller_checker(&mut i.sig, &mut i.block),
+        }
+    }
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
@@ -436,15 +445,6 @@ impl VisitMut for CallerHelper<'_> {
             true => {let _ = i.default.as_mut().and_then(|block| Some (self.caller_checker(&mut i.sig, block))); },
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        let id = i.sig.ident.to_string();
-        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
-        match id == self.caller_fn_name {
-            false => (),
-            true => self.caller_checker(&mut i.sig, &mut i.block),
-        }
     }
 }
 
@@ -646,6 +646,28 @@ impl VisitMut for MutableBorrower<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            false => (),
+            true => {
+                let mut mut_borrower_helper = MutableBorrowerHelper {
+                    make_ref: self.make_ref,
+                    make_mut: self.make_mut,
+                    ref_inputs: self.ref_inputs,
+                    decl_mut: self.decl_mut,
+                    callee_inputs: self.callee_inputs,
+                    mut_methods: self.mut_methods,
+                };
+                i.block
+                    .stmts
+                    .iter_mut()
+                    .for_each(|stmt| mut_borrower_helper.visit_stmt_mut(stmt))
+            }
+        }
+        syn::visit_mut::visit_item_fn_mut(self, i);
+    }
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name {
@@ -668,28 +690,6 @@ impl VisitMut for MutableBorrower<'_> {
             }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        let id = i.sig.ident.to_string();
-        match id == self.fn_name {
-            false => (),
-            true => {
-                let mut mut_borrower_helper = MutableBorrowerHelper {
-                    make_ref: self.make_ref,
-                    make_mut: self.make_mut,
-                    ref_inputs: self.ref_inputs,
-                    decl_mut: self.decl_mut,
-                    callee_inputs: self.callee_inputs,
-                    mut_methods: self.mut_methods,
-                };
-                i.block
-                    .stmts
-                    .iter_mut()
-                    .for_each(|stmt| mut_borrower_helper.visit_stmt_mut(stmt))
-            }
-        }
-        syn::visit_mut::visit_item_fn_mut(self, i);
     }
 }
 

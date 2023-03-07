@@ -3,10 +3,7 @@ use quote::ToTokens;
 use std::borrow::BorrowMut;
 use std::fs;
 use log::debug;
-use syn::{
-    visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, Lifetime,
-    LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound,
-};
+use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, Lifetime, LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound, Signature, ImplItemMethod, TraitItemMethod};
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
@@ -31,13 +28,18 @@ impl RepairSystem for Repairer {
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
             (true, count) => {
+                let file_content: String = fs::read_to_string(&src_path).unwrap().parse().unwrap();
+                let mut file = syn::parse_str::<syn::File>(file_content.as_str())
+                    .map_err(|e| format!("{:?}", e))
+                    .unwrap();
+                let mut rename_fn = RenameFn { callee_name: fn_name, callee_postfix: "____EXTRACT_THIS" };
+                rename_fn.visit_file_mut(&mut file);
                 debug!("pre elision: {}", fs::read_to_string(&src_path).unwrap());
                 elide_lifetimes_annotations(src_path, fn_name);
                 (true, count)
             }
             (false, count) => (false, count),
         }
-        let mut rename_fn = RenameFn { callee_name: fn_name, callee_postfix: "____EXTRACT_THIS" };
     }
 
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32) {
@@ -193,50 +195,76 @@ struct LooseLifetimeAnnotator<'a> {
 }
 
 impl VisitMut for LooseLifetimeAnnotator<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => self.loose_lifetime_annotator(&mut i.sig),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name.to_string() {
             false => (),
-            true => match (&mut i.sig.inputs, &mut i.sig.generics, &mut i.sig.output) {
-                (inputs, _, _) if inputs.len() == 0 => self.success = true,
-                (inputs, gen, out) => {
-                    inputs.iter_mut().for_each(|arg| {
-                        let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
-                            lt_num: self.lt_num,
-                        };
-                        fn_arg_helper.visit_fn_arg_mut(arg);
-                        self.lt_num = fn_arg_helper.lt_num
-                    });
-                    gen.params.iter_mut().for_each(|param| {
-                        let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
-                            lt_num: self.lt_num,
-                        };
-                        fn_arg_helper.visit_generic_param_mut(param);
-                        self.lt_num = fn_arg_helper.lt_num
-                    });
-                    match out {
-                        ReturnType::Type(_, ty) => {
-                            let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
-                                lt_num: self.lt_num,
-                            };
-                            type_helper.visit_type_mut(ty.as_mut());
-                            self.lt_num = type_helper.lt_num
-                        }
-                        ReturnType::Default => {}
+            true => self.loose_lifetime_annotator(&mut i.sig),
+        }
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => self.loose_lifetime_annotator(&mut i.sig),
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+}
+
+impl LooseLifetimeAnnotator<'_> {
+    fn loose_lifetime_annotator(&mut self, sig: &mut Signature) {
+        match (&mut sig.inputs, &mut sig.generics, &mut sig.output) {
+            (inputs, _, _) if inputs.len() == 0 => self.success = true,
+            (inputs, gen, out) => {
+                inputs.iter_mut().for_each(|arg| {
+                    let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
+                        lt_num: self.lt_num,
                     };
-                    for lt in 0..self.lt_num {
-                        let lifetime =
-                            Lifetime::new(format!("'lt{}", lt).as_str(), Span::call_site());
-                        gen.params.push(syn::GenericParam::Lifetime(LifetimeDef {
-                            attrs: vec![],
-                            lifetime,
-                            colon_token: None,
-                            bounds: Default::default(),
-                        }))
+                    fn_arg_helper.visit_fn_arg_mut(arg);
+                    self.lt_num = fn_arg_helper.lt_num
+                });
+                gen.params.iter_mut().for_each(|param| {
+                    let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
+                        lt_num: self.lt_num,
+                    };
+                    fn_arg_helper.visit_generic_param_mut(param);
+                    self.lt_num = fn_arg_helper.lt_num
+                });
+                match out {
+                    ReturnType::Type(_, ty) => {
+                        let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
+                            lt_num: self.lt_num,
+                        };
+                        type_helper.visit_type_mut(ty.as_mut());
+                        self.lt_num = type_helper.lt_num
                     }
-                    self.success = true
+                    ReturnType::Default => {}
+                };
+                for lt in 0..self.lt_num {
+                    let lifetime =
+                        Lifetime::new(format!("'lt{}", lt).as_str(), Span::call_site());
+                    gen.params.push(syn::GenericParam::Lifetime(LifetimeDef {
+                        attrs: vec![],
+                        lifetime,
+                        colon_token: None,
+                        bounds: Default::default(),
+                    }))
                 }
-            },
+                self.success = true
+            }
         }
     }
 }

@@ -104,6 +104,24 @@ impl VisitMut for CallerVisitor<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.clone().to_string();
+        match id == self.caller_fn_name {
+            false => (),
+            true => {
+                self.callee_finder.visit_item_fn_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.caller_visitor(&mut i.sig, &mut i.block)
+            }
+        }
+    }
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         if self.callee_finder.found {
             return;
@@ -121,24 +139,6 @@ impl VisitMut for CallerVisitor<'_> {
             },
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        if self.callee_finder.found {
-            return;
-        }
-
-        let id = i.sig.ident.clone().to_string();
-        match id == self.caller_fn_name {
-            false => (),
-            true => {
-                self.callee_finder.visit_item_fn_mut(i);
-                if !self.callee_finder.found {
-                    return;
-                }
-                self.caller_visitor(&mut i.sig, &mut i.block)
-            }
-        }
     }
 }
 
@@ -205,6 +205,15 @@ impl VisitMut for CalleeCheckNCF<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.callee_fn_name {
+            false => (),
+            true => self.callee_check_ncf(&mut i.block),
+        }
+    }
+
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
@@ -212,15 +221,6 @@ impl VisitMut for CalleeCheckNCF<'_> {
             true => {let _ = i.default.as_mut().and_then(|block| Some (self.callee_check_ncf(block))); },
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
-            false => (),
-            true => self.callee_check_ncf(&mut i.block),
-        }
     }
 }
 
@@ -316,6 +316,15 @@ impl VisitMut for MakeBrkAndCont<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let id = i.sig.ident.to_string();
+        match id == self.callee_fn_name {
+            false => (),
+            true => self.make_brk_and_cont(&mut i.sig, &mut i.block),
+        }
+    }
+
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
@@ -324,15 +333,6 @@ impl VisitMut for MakeBrkAndCont<'_> {
             true => {let _ = i.default.as_mut().and_then(|block| Some (self.make_brk_and_cont(&mut i.sig, block))); },
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
-            false => (),
-            true => self.make_brk_and_cont(&mut i.sig, &mut i.block),
-        }
     }
 }
 
