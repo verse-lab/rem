@@ -263,6 +263,12 @@ pub fn demo() -> ExperimentProject {
                         "trait_function",
                         "Cargo.toml",
                     ),
+                    Extraction::new(
+                        &project_path,
+                        "src/main.rs",
+                        "test",
+                        "Cargo.toml",
+                    ),
                 ],
             },
         ],
