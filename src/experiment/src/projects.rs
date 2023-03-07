@@ -67,10 +67,9 @@ pub struct ExperimentProject {
 
 // ORIGINAL PATH is <SRC NAME>_ORIGINAL
 // MUTABLE METHOD CALL is <SRC NAME>_MUTABLE_METHOD_CALLS
-// CALLEE is always "bar"
 
 pub fn all() -> Vec<ExperimentProject> {
-    vec![gitoxide(), kickoff(), sniffnet(), beerus()]
+    vec![demo()] //gitoxide(), kickoff(), sniffnet(), beerus()]
 }
 
 /// gitoxide experiment
@@ -237,6 +236,32 @@ pub fn beerus() -> ExperimentProject {
                         "beerus_rest_api/src/main.rs",
                         "rocket",
                         "beerus_rest_api/Cargo.toml",
+                    ),
+                ],
+            },
+        ],
+    }
+}
+
+
+/// demo for testing only
+pub fn demo() -> ExperimentProject {
+    let project = "demo".to_string();
+    let project_url = "https://github.com/sewenthy/capstone-demo".to_string();
+    let project_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, project);
+
+    ExperimentProject {
+        project,
+        project_url,
+        experiments: vec![
+            Experiment {
+                expr_type: "ext".to_string(),
+                extractions: vec![
+                    Extraction::new(
+                        &project_path,
+                        "src/main.rs",
+                        "trait_function",
+                        "Cargo.toml",
                     ),
                 ],
             },

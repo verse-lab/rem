@@ -10,6 +10,8 @@ use repairer::common::RepairSystem;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
 use utils::check_project;
 
+const CALLEE_NAME : &str = "bar____EXTRACT_THIS";
+
 /*********************************    MISC    ***************************************************/
 #[macro_export]
 macro_rules! either {
@@ -145,7 +147,7 @@ pub fn run_controller(
         make_controls(
             extraction.src_path.as_str(),
             extraction.src_path.as_str(),
-            "bar",
+            CALLEE_NAME,
             extraction.caller.as_str(),
         )
     };
@@ -167,7 +169,7 @@ pub fn run_borrower(
             extraction.src_path.as_str(),
             extraction.src_path.as_str(),
             extraction.mut_methods_path.as_str(),
-            "bar",
+            CALLEE_NAME,
             extraction.caller.as_str(),
             extraction.original_path.as_str(),
         )
@@ -190,7 +192,7 @@ pub fn run_repairer(
         let (success, count) = repairer.repair_project(
             extraction.src_path.as_str(),
             extraction.cargo_path.as_str(),
-            "bar",
+            CALLEE_NAME,
         );
         debug!("cargo repair counted: {}", count);
         extraction_result.cargo_cycles = count;

@@ -329,6 +329,17 @@ impl VisitMut for CallerCheckCallee<'_> {
         }
     }
 
+    fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
+        let callee = i.method.clone().into_token_stream().to_string();
+        match callee == self.callee_fn_name {
+            true => {
+                self.found = true;
+                *self.check_input_visitor.found = true;
+            },
+            false => syn::visit_mut::visit_expr_method_call_mut(self, i),
+        }
+    }
+
     fn visit_local_mut(&mut self, i: &mut Local) {
         // // println!("decl mut: {}", i.clone().into_token_stream().to_string());
         match &mut i.pat {
@@ -707,23 +718,37 @@ impl VisitMut for CallerFnArgHelper<'_> {
         let callee = i.func.as_ref().into_token_stream().to_string();
         match callee == self.callee_fn_name {
             false => syn::visit_mut::visit_expr_call_mut(self, i),
-            true => i.args.iter_mut().for_each(|arg| {
-                let id = arg.into_token_stream().to_string();
-                match self.make_mut.contains(&id) && (!self.mut_ref_inputs.contains(&id)) {
-                    true => {
-                        *arg = syn::parse_quote! {&mut #arg};
-                    }
-                    false => match self.make_ref.contains(&id)
-                        && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id))
-                    {
-                        false => (),
-                        true => {
-                            *arg = syn::parse_quote! {&#arg};
-                        }
-                    },
-                }
-            }),
+            true => self.caller_fn_arg_helper(&mut i.args),
         }
+    }
+
+    fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
+        let callee = i.method.clone().into_token_stream().to_string();
+        match callee == self.callee_fn_name {
+            true => self.caller_fn_arg_helper(&mut i.args),
+            false => syn::visit_mut::visit_expr_method_call_mut(self, i),
+        }
+    }
+}
+
+impl CallerFnArgHelper<'_> {
+    fn caller_fn_arg_helper(&mut self, args: &mut Punctuated<Expr, Token![,]>) {
+        args.iter_mut().for_each(|arg| {
+            let id = arg.into_token_stream().to_string();
+            match self.make_mut.contains(&id) && (!self.mut_ref_inputs.contains(&id)) {
+                true => {
+                    *arg = syn::parse_quote! {&mut #arg};
+                }
+                false => match self.make_ref.contains(&id)
+                    && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id))
+                {
+                    false => (),
+                    true => {
+                        *arg = syn::parse_quote! {&#arg};
+                    }
+                },
+            }
+        })
     }
 }
 

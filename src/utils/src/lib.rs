@@ -25,7 +25,7 @@ pub mod wrappers;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use quote::ToTokens;
-use syn::ExprCall;
+use syn::{ExprCall, ExprMethodCall};
 use syn::visit_mut::VisitMut;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,6 +75,14 @@ impl VisitMut for FindCallee<'_> {
         match callee == self.callee_fn_name {
             true => self.found = true,
             false => syn::visit_mut::visit_expr_call_mut(self, i),
+        }
+    }
+
+    fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
+        let callee = i.method.clone().into_token_stream().to_string();
+        match callee == self.callee_fn_name {
+            true => self.found = true,
+            false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
     }
 }

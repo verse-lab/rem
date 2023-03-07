@@ -4,8 +4,9 @@ use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
-use syn::{Block, Expr, ExprCall, ExprMatch, ExprReturn, ImplItemMethod, Item, ItemEnum, ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type};
+use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ImplItemMethod, Item, ItemEnum, ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type};
 use utils::{FindCallee, format_source};
+use log::{debug, info};
 
 const ENUM_NAME: &str = "Ret";
 
@@ -24,6 +25,14 @@ impl VisitMut for CheckCalleeWithinLoopHelper<'_> {
         match id == self.callee_fn_name {
             true => self.callee_in_loop = true,
             false => syn::visit_mut::visit_expr_call_mut(self, i),
+        }
+    }
+
+    fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
+        let callee = i.clone().method.into_token_stream().to_string();
+        match callee == self.callee_fn_name {
+            true => self.callee_in_loop = true,
+            false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
     }
 }
@@ -89,12 +98,14 @@ impl VisitMut for CallerVisitor<'_> {
         if self.callee_finder.found {
             return;
         }
-
+        debug!("finding caller in impl...");
         let id = i.sig.ident.clone().to_string();
         match id == self.caller_fn_name {
             false => (),
             true => {
+                debug!("found same id: {}...", id);
                 self.callee_finder.visit_impl_item_method_mut(i);
+                debug!("found callee: {}? {}...", self.callee_finder.callee_fn_name, self.callee_finder.found);
                 if !self.callee_finder.found {
                     return;
                 }
@@ -621,6 +632,7 @@ pub fn make_controls(
     caller_fn_name: &str,
 ) -> bool {
     let mut success = true;
+    debug!("debugging controller...");
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
 
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
@@ -641,8 +653,8 @@ pub fn make_controls(
         caller_rety: &mut caller_rety,
     };
     caller_visitor.visit_file_mut(&mut file);
-
     if !caller_visitor.found {
+        debug!("did not find caller");
         return false;
     }
 
@@ -656,7 +668,8 @@ pub fn make_controls(
     };
     callee_visitor.visit_file_mut(&mut file);
 
-    if !caller_visitor.found {
+    if !callee_visitor.found {
+        debug!("did not find callee");
         return false;
     }
 
