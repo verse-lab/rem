@@ -10,7 +10,7 @@ use syn::{
 
 use crate::common::{
     elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project,
-    RepairSystem, RustcError,
+    RepairSystem, RustcError, RenameFn
 };
 use crate::repair_lifetime_simple;
 use utils::{compile_file, check_project, format_source};
@@ -37,6 +37,7 @@ impl RepairSystem for Repairer {
             }
             (false, count) => (false, count),
         }
+        let mut rename_fn = RenameFn { callee_name: fn_name, callee_postfix: "____EXTRACT_THIS" };
     }
 
     fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32) {

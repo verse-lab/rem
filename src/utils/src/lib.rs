@@ -24,6 +24,10 @@ pub mod wrappers;
 
 use std::io::Write;
 use std::process::{Command, Stdio};
+use quote::ToTokens;
+use syn::ExprCall;
+use syn::visit_mut::VisitMut;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////        COMPILE        /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,6 +63,22 @@ pub fn build_project(manifest_path: &str, cargo_args: &Vec<&str>) -> Command {
     check.arg("--message-format=json");
     check
 }
+
+pub struct FindCallee<'a> {
+    pub found: bool,
+    pub callee_fn_name: &'a str,
+}
+
+impl VisitMut for FindCallee<'_> {
+    pub fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
+        let callee = i.func.as_ref().into_token_stream().to_string();
+        match callee == self.callee_fn_name {
+            true => self.found = true,
+            false => syn::visit_mut::visit_expr_call_mut(self, i),
+        }
+    }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////          MISC          ////////////////////////////////////////////

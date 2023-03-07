@@ -8,10 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{
-    visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam,
-    ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate,
-};
+use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate, TraitItemMethod, ImplItemMethod, ExprCall};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -502,6 +499,55 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     PROJECT HELPERS    ////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+pub struct RenameFn<'a> {
+    pub(crate) callee_name: &'a str,
+    pub(crate) callee_postfix: &'a str,
+}
+
+impl VisitMut for RenameFn<'_> {
+    fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
+        let callee = i.func.as_ref().into_token_stream().to_string();
+        match callee == self.callee_fn_name {
+            true => {
+                *i.func.as_mut() = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_expr_call_mut(self, i);
+    }
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let callee = i.sig.ident.to_string();
+        match callee == self.callee_fn_name {
+            true => {
+                *i.sig.ident= syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let callee = i.sig.ident.to_string();
+        match callee == self.callee_fn_name {
+            true => {
+                *i.sig.ident = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        let callee = i.sig.ident.to_string();
+        match callee == self.callee_fn_name {
+            true => {
+                *i.sig.ident = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_item_fn_mut(self, i);
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CargoError {
     pub message: Option<RustcError>,

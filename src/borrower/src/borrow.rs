@@ -10,9 +10,10 @@ use constraint::ConstraintManager;
 use itertools::Itertools;
 use regex::Regex;
 use syn::punctuated::Punctuated;
-use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference, ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference, TraitItemMethod, ItemImpl, TraitItem, ImplItemMethod};
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference, ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference, TraitItemMethod, ItemImpl, TraitItem, ImplItemMethod, ImplItem, Block, Signature};
 
-use utils::format_source;
+use log::debug;
+use utils::{format_source, FindCallee};
 
 struct RefBorrowAssignerHelper<'a> {
     make_ref: &'a Vec<String>,
@@ -103,27 +104,54 @@ struct CalleeBorrowAssigner<'a> {
 }
 
 impl VisitMut for CalleeBorrowAssigner<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name {
+            false => (),
+            true => self.callee_borrow_assigner(&mut i.sig, &mut i.block),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name {
+            false => (),
+            true => {
+                let _ = i.default.as_mut().and_then(|block| Some (self.callee_borrow_assigner(&mut i.sig, block)));
+                ()
+            }
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name {
             false => (),
-            true => {
-                let mut borrow_assigner = RefBorrowAssignerHelper {
-                    make_ref: self.make_ref,
-                    make_mut: self.make_mut,
-                    ref_inputs: self.ref_inputs,
-                    mut_ref_inputs: self.mut_ref_inputs,
-                };
-                i.sig
-                    .inputs
-                    .iter_mut()
-                    .for_each(|fn_arg| borrow_assigner.visit_fn_arg_mut(fn_arg));
-                i.block
-                    .stmts
-                    .iter_mut()
-                    .for_each(|stmt| borrow_assigner.visit_stmt_mut(stmt))
-            }
+            true => self.callee_borrow_assigner(&mut i.sig, &mut i.block),
         }
+    }
+}
+
+impl CalleeBorrowAssigner<'_> {
+    fn callee_borrow_assigner(&mut self, sig: &mut Signature, block: &mut Block) {
+        let mut borrow_assigner = RefBorrowAssignerHelper {
+            make_ref: self.make_ref,
+            make_mut: self.make_mut,
+            ref_inputs: self.ref_inputs,
+            mut_ref_inputs: self.mut_ref_inputs,
+        };
+        sig
+            .inputs
+            .iter_mut()
+            .for_each(|fn_arg| borrow_assigner.visit_fn_arg_mut(fn_arg));
+        block
+            .stmts
+            .iter_mut()
+            .for_each(|stmt| borrow_assigner.visit_stmt_mut(stmt))
     }
 }
 
@@ -206,43 +234,70 @@ struct CalleeInputs<'a> {
 }
 
 impl VisitMut for CalleeInputs<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name {
+            false => (),
+            true => self.callee_inputs(&mut i.sig, &mut i.block),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name {
+            false => (),
+            true => {
+                let _ = i.default.as_mut().and_then(|block| Some (self.callee_inputs(&mut i.sig, block)));
+                ()
+            },
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name {
-            true => {
-                self.found = true;
-                i.sig.inputs.iter().for_each(|fn_arg| match fn_arg {
-                    FnArg::Receiver(_) => (),
-                    FnArg::Typed(t) => {
-                        match t.ty.as_ref() {
-                            Type::Reference(r) => {
-                                match r.mutability {
-                                    None => {
-                                        self.refs_inputs
-                                            .push(t.pat.as_ref().into_token_stream().to_string())
-                                        // don't add reference no need to make it a ref
-                                    }
-                                    Some(_) => {
-                                        self.mut_refs_inputs
-                                            .push(t.pat.as_ref().into_token_stream().to_string())
-                                        // don't add reference no need to make it a ref
-                                    }
-                                }
-                            }
-                            _ => self
-                                .inputs
-                                .push(t.pat.as_ref().into_token_stream().to_string()),
-                        }
-                    }
-                });
-            }
+            true => self.callee_inputs(&mut i.sig, &mut i.block),
             false => (),
         }
+    }
+}
+
+impl CalleeInputs<'_> {
+    fn callee_inputs(&mut self, sig: &mut Signature, block: &mut Block) {
+        self.found = true;
+        sig.inputs.iter().for_each(|fn_arg| match fn_arg {
+            FnArg::Receiver(_) => (),
+            FnArg::Typed(t) => {
+                match t.ty.as_ref() {
+                    Type::Reference(r) => {
+                        match r.mutability {
+                            None => {
+                                self.refs_inputs
+                                    .push(t.pat.as_ref().into_token_stream().to_string())
+                                // don't add reference no need to make it a ref
+                            }
+                            Some(_) => {
+                                self.mut_refs_inputs
+                                    .push(t.pat.as_ref().into_token_stream().to_string())
+                                // don't add reference no need to make it a ref
+                            }
+                        }
+                    }
+                    _ => self
+                        .inputs
+                        .push(t.pat.as_ref().into_token_stream().to_string()),
+                }
+            }
+        });
         let mut ret_helper = CalleeReturnsHelper {
             inputs: self.inputs,
             make_ref: self.make_ref,
         };
-        ret_helper.visit_item_fn_mut(i)
+        ret_helper.visit_block_mut(block);
     }
 }
 
@@ -363,69 +418,93 @@ struct CallerHelper<'a> {
 }
 
 impl VisitMut for CallerHelper<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.caller_fn_name {
+            false => (),
+            true => self.caller_checker(&mut i.sig, &mut i.block),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.caller_fn_name {
+            false => (),
+            true => {let _ = i.default.as_mut().and_then(|block| Some (self.caller_checker(&mut i.sig, block))); },
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
         match id == self.caller_fn_name {
             false => (),
-            true => {
-                self.found = true;
-                //println!("found the caller");
-                i.sig.inputs.clone().iter().for_each(|input| match input {
-                    FnArg::Receiver(_) => (),
-                    FnArg::Typed(t) => match t.ty.as_ref() {
-                        Type::Reference(r) => match r.mutability {
-                            None => (),
-                            Some(_) => self
-                                .decl_mut
-                                .push(t.pat.as_ref().into_token_stream().to_string()),
-                        },
-                        _ => (),
-                    },
-                });
-
-                let mut check_input = CallerCheckInput {
-                    input: &self.callee_inputs,
-                    found: &mut true,
-                    make_ref: &mut self.make_ref,
-                    use_after: self.use_after,
-                };
-
-                let mut temp = vec![];
-                let mut temp_use_after = vec![];
-                let mut check_input_temp = CallerCheckInput {
-                    input: &self.callee_inputs,
-                    found: &mut false,
-                    make_ref: &mut temp,
-                    use_after: &mut temp_use_after,
-                };
-                let mut check_callee = CallerCheckCallee {
-                    callee_fn_name: self.callee_fn_name,
-                    decl_mut: self.decl_mut,
-                    found: false,
-                    check_input_visitor: &mut check_input_temp,
-                };
-
-                i.block.stmts.iter_mut().for_each(|stmt| {
-                    if check_callee.found {
-                        // println!("found callee");
-                        check_input.visit_stmt_mut(stmt);
-                    } else {
-                        // println!("not found callee yet");
-                        check_callee.visit_stmt_mut(stmt);
-                    }
-                });
-
-                temp.into_iter().for_each(|x| self.make_ref.push(x));
-                temp_use_after
-                    .into_iter()
-                    .for_each(|x| self.use_after.push(x));
-                self.make_ref
-                    .iter()
-                    .for_each(|x| self.use_after.push(x.clone()));
-                // if in ref then also in use after
-            }
+            true => self.caller_checker(&mut i.sig, &mut i.block),
         }
+    }
+}
+
+impl CallerHelper<'_> {
+    fn caller_checker(&mut self, sig: &mut Signature, block: &mut Block){
+        self.found = true;
+        //println!("found the caller");
+        sig.inputs.clone().iter().for_each(|input| match input {
+            FnArg::Receiver(_) => (),
+            FnArg::Typed(t) => match t.ty.as_ref() {
+                Type::Reference(r) => match r.mutability {
+                    None => (),
+                    Some(_) => self
+                        .decl_mut
+                        .push(t.pat.as_ref().into_token_stream().to_string()),
+                },
+                _ => (),
+            },
+        });
+
+        let mut check_input = CallerCheckInput {
+            input: &self.callee_inputs,
+            found: &mut true,
+            make_ref: &mut self.make_ref,
+            use_after: self.use_after,
+        };
+
+        let mut temp = vec![];
+        let mut temp_use_after = vec![];
+        let mut check_input_temp = CallerCheckInput {
+            input: &self.callee_inputs,
+            found: &mut false,
+            make_ref: &mut temp,
+            use_after: &mut temp_use_after,
+        };
+        let mut check_callee = CallerCheckCallee {
+            callee_fn_name: self.callee_fn_name,
+            decl_mut: self.decl_mut,
+            found: false,
+            check_input_visitor: &mut check_input_temp,
+        };
+
+        block.stmts.iter_mut().for_each(|stmt| {
+            if check_callee.found {
+                // println!("found callee");
+                check_input.visit_stmt_mut(stmt);
+            } else {
+                // println!("not found callee yet");
+                check_callee.visit_stmt_mut(stmt);
+            }
+        });
+
+        temp.into_iter().for_each(|x| self.make_ref.push(x));
+        temp_use_after
+            .into_iter()
+            .for_each(|x| self.use_after.push(x));
+        self.make_ref
+            .iter()
+            .for_each(|x| self.use_after.push(x.clone()));
+        // if in ref then also in use after
     }
 }
 
@@ -545,6 +624,52 @@ struct MutableBorrower<'a> {
 }
 
 impl VisitMut for MutableBorrower<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            false => (),
+            true => {
+                let mut mut_borrower_helper = MutableBorrowerHelper {
+                    make_ref: self.make_ref,
+                    make_mut: self.make_mut,
+                    ref_inputs: self.ref_inputs,
+                    decl_mut: self.decl_mut,
+                    callee_inputs: self.callee_inputs,
+                    mut_methods: self.mut_methods,
+                };
+                i.block
+                    .stmts
+                    .iter_mut()
+                    .for_each(|stmt| mut_borrower_helper.visit_stmt_mut(stmt))
+            }
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            false => (),
+            true => {
+                let mut mut_borrower_helper = MutableBorrowerHelper {
+                    make_ref: self.make_ref,
+                    make_mut: self.make_mut,
+                    ref_inputs: self.ref_inputs,
+                    decl_mut: self.decl_mut,
+                    callee_inputs: self.callee_inputs,
+                    mut_methods: self.mut_methods,
+                };
+                let _ = i.default.as_mut().and_then(|block| {
+                    Some (block
+                        .stmts
+                        .iter_mut()
+                        .for_each(|stmt| mut_borrower_helper.visit_stmt_mut(stmt)))
+                });
+            }
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name {
@@ -564,6 +689,7 @@ impl VisitMut for MutableBorrower<'_> {
                     .for_each(|stmt| mut_borrower_helper.visit_stmt_mut(stmt))
             }
         }
+        syn::visit_mut::visit_item_fn_mut(self, i);
     }
 }
 
@@ -603,6 +729,7 @@ impl VisitMut for CallerFnArgHelper<'_> {
 
 struct CallerFnArg<'a> {
     caller_fn_name: &'a str,
+    callee_finder: &'a mut FindCallee<'a>,
     callee_fn_name: &'a str,
     decl_mut: &'a Vec<String>,
     ref_inputs: &'a Vec<String>,
@@ -613,20 +740,86 @@ struct CallerFnArg<'a> {
 
 impl VisitMut for CallerFnArg<'_> {
     fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
-        println!("{:?}", i);
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+                self.callee_finder.visit_impl_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                let mut helper = CallerFnArgHelper {
+                    callee_fn_name: self.callee_fn_name,
+                    mut_ref_inputs: self.mut_ref_inputs,
+                    ref_inputs: self.ref_inputs,
+                    decl_mut: self.decl_mut,
+                    make_ref: self.make_ref,
+                    make_mut: self.make_mut,
+                };
+                i.block
+                    .stmts
+                    .iter_mut()
+                    .for_each(|stmt| helper.visit_stmt_mut(stmt))
+            }
+            false => {}
+        }
+
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
-        println!("{:?}", i);
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+                self.callee_finder.visit_trait_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                let mut helper = CallerFnArgHelper {
+                    callee_fn_name: self.callee_fn_name,
+                    mut_ref_inputs: self.mut_ref_inputs,
+                    ref_inputs: self.ref_inputs,
+                    decl_mut: self.decl_mut,
+                    make_ref: self.make_ref,
+                    make_mut: self.make_mut,
+                };
+                match &mut i.default {
+                    None => {} // impossible because then can't have found callee
+                    Some(block) => {
+                        block
+                            .stmts
+                            .iter_mut()
+                            .for_each(|stmt| helper.visit_stmt_mut(stmt))
+                    }
+                }
+            }
+            false => {}
+        }
+
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
 
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.callee_finder.found {
+            return;
+        }
+
         let id = i.sig.ident.to_string();
         match id == self.caller_fn_name {
             false => (),
             true => {
+                self.callee_finder.visit_item_fn_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+
                 let mut helper = CallerFnArgHelper {
                     callee_fn_name: self.callee_fn_name,
                     mut_ref_inputs: self.mut_ref_inputs,
@@ -646,6 +839,7 @@ impl VisitMut for CallerFnArg<'_> {
 
 struct PreExtracter<'a> {
     caller_fn_name: &'a str,
+    callee_finder: &'a mut FindCallee<'a>,
     inputs: &'a Vec<String>,
     ref_inputs: &'a Vec<String>,
     make_ref: &'a mut Vec<String>,
@@ -719,9 +913,17 @@ fn run_alias_analysis(i: &mut ItemFn, inputs: &Vec<String>, ref_inputs: &Vec<Str
 
 impl VisitMut for PreExtracter<'_> {
     fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        if self.callee_finder.found {
+            return;
+        }
+
         let id = i.sig.ident.to_string();
         match id == self.caller_fn_name {
             true => {
+                self.callee_finder.visit_impl_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
                 match syn::parse_str::<ItemFn>(i.into_token_stream().to_string().as_str()) {
                     Ok(mut item_fn) => run_alias_analysis(&mut item_fn, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
                     Err(e) => {
@@ -736,9 +938,18 @@ impl VisitMut for PreExtracter<'_> {
     }
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        if self.callee_finder.found {
+            return;
+        }
+
         let id = i.sig.ident.to_string();
         match id == self.caller_fn_name {
             true => {
+                self.callee_finder.visit_trait_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+
                 match syn::parse_str::<ItemFn>(i.into_token_stream().to_string().as_str()) {
                     Ok(mut item_fn) => run_alias_analysis(&mut item_fn, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
                     Err(e) => {
@@ -753,9 +964,19 @@ impl VisitMut for PreExtracter<'_> {
     }
 
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.callee_finder.found {
+            return;
+        }
+
         let id = i.sig.ident.to_string();
         match id == self.caller_fn_name {
-            true => run_alias_analysis(i, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
+            true => {
+                self.callee_finder.visit_item_fn_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                run_alias_analysis(i, self.inputs, self.ref_inputs, self.make_ref, self.use_after)
+            },
             false => (),
         }
     }
@@ -809,7 +1030,7 @@ pub fn make_borrows(
     callee_input_helper.visit_file_mut(&mut file);
 
     if !callee_input_helper.found {
-        false
+        return false;
     }
 
     let mut use_after = vec![];
@@ -827,11 +1048,14 @@ pub fn make_borrows(
     caller_helper.visit_file_mut(&mut file);
 
     if !caller_helper.found {
-        false
+        return false;
     }
+
+    let mut callee_finder = FindCallee { found: false, callee_fn_name };
 
     let mut constraint_visitor = PreExtracter {
         caller_fn_name,
+        callee_finder: &mut callee_finder,
         inputs: &callee_inputs,
         ref_inputs: &callee_ref_inputs,
         make_ref: &mut make_ref,
@@ -869,9 +1093,12 @@ pub fn make_borrows(
     //     // println!("make {} mut", s);
     // }
     callee_assigner.visit_file_mut(&mut file);
+    
+    callee_finder = FindCallee { found: false, callee_fn_name };
 
     let mut caller_assigner = CallerFnArg {
         caller_fn_name,
+        callee_finder: &mut callee_finder,
         callee_fn_name,
         decl_mut: &decl_mut,
         ref_inputs: &callee_ref_inputs,

@@ -4,8 +4,8 @@ use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
-use syn::{Expr, ExprCall, ExprMatch, ExprReturn, Item, ItemEnum, ItemFn, ReturnType, Stmt, Type};
-use utils::format_source;
+use syn::{Block, Expr, ExprCall, ExprMatch, ExprReturn, ImplItemMethod, Item, ItemEnum, ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type};
+use utils::{FindCallee, format_source};
 
 const ENUM_NAME: &str = "Ret";
 
@@ -76,6 +76,7 @@ impl VisitMut for CheckCalleeWithinLoop<'_> {
 struct CallerVisitor<'a> {
     found: bool,
     caller_fn_name: &'a str,
+    callee_finder: &'a FindCallee<'a>,
     callee_fn_name: &'a str,
     callee_in_loop: bool,
     // very simplified handling: if caller has loop and callee has break/continue but no loop
@@ -84,21 +85,63 @@ struct CallerVisitor<'a> {
 }
 
 impl VisitMut for CallerVisitor<'_> {
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.clone().to_string();
+        match id == self.caller_fn_name {
+            false => (),
+            true => self.caller_visitor(&mut i.sig, &mut i.block),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        if self.callee_finder.found {
+            return;
+        }
+
         let id = i.sig.ident.clone().to_string();
         match id == self.caller_fn_name {
             false => (),
             true => {
-                self.found = true;
-                *self.caller_rety = i.sig.output.clone();
-                let mut helper = CheckCalleeWithinLoop {
-                    callee_fn_name: self.callee_fn_name,
-                    callee_in_loop: false,
-                };
-                helper.visit_item_fn_mut(i);
-                self.callee_in_loop = helper.callee_in_loop;
+                self.caller_visitor(&mut i.sig, &mut i.block)
+            },
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.clone().to_string();
+        match id == self.caller_fn_name {
+            false => (),
+            true => {
+                self.callee_finder.visit_item_fn_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.caller_visitor(&mut i.sig, &mut i.block)
             }
         }
+    }
+}
+
+impl CallerVisitor<'_> {
+    fn caller_visitor(&mut self, sig: &mut Signature, block: &mut Block) {
+        self.found = true;
+        *self.caller_rety = sig.output.clone();
+        let mut helper = CheckCalleeWithinLoop {
+            callee_fn_name: self.callee_fn_name,
+            callee_in_loop: false,
+        };
+        helper.visit_block_mut(block);
+        self.callee_in_loop = helper.callee_in_loop;
     }
 }
 
