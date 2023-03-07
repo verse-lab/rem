@@ -76,7 +76,7 @@ impl VisitMut for CheckCalleeWithinLoop<'_> {
 struct CallerVisitor<'a> {
     found: bool,
     caller_fn_name: &'a str,
-    callee_finder: &'a FindCallee<'a>,
+    callee_finder: &'a mut FindCallee<'a>,
     callee_fn_name: &'a str,
     callee_in_loop: bool,
     // very simplified handling: if caller has loop and callee has break/continue but no loop
@@ -93,7 +93,13 @@ impl VisitMut for CallerVisitor<'_> {
         let id = i.sig.ident.clone().to_string();
         match id == self.caller_fn_name {
             false => (),
-            true => self.caller_visitor(&mut i.sig, &mut i.block),
+            true => {
+                self.callee_finder.visit_impl_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.caller_visitor(&mut i.sig, &mut i.block)
+            },
         }
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
@@ -107,7 +113,11 @@ impl VisitMut for CallerVisitor<'_> {
         match id == self.caller_fn_name {
             false => (),
             true => {
-                self.caller_visitor(&mut i.sig, &mut i.block)
+                self.callee_finder.visit_trait_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                let _ = i.default.as_mut().and_then(|block| Some (self.caller_visitor(&mut i.sig, block)));
             },
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
@@ -186,30 +196,53 @@ struct CalleeCheckNCF<'a> {
 }
 
 impl VisitMut for CalleeCheckNCF<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.callee_fn_name {
+            false => (),
+            true => self.callee_check_ncf(&mut i.block),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.callee_fn_name {
+            false => (),
+            true => {let _ = i.default.as_mut().and_then(|block| Some (self.callee_check_ncf(block))); },
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
             false => (),
-            true => {
-                self.found = true;
-                let mut check_return = CalleeCheckReturn {
-                    has_return: self.has_return,
-                };
-                let mut check_loops = CalleeCheckLoops {
-                    has_break: self.has_break,
-                    has_continue: self.has_continue,
-                };
-                i.block.stmts.iter_mut().for_each(|stmt| {
-                    check_return.visit_stmt_mut(stmt);
-                    if self.within_caller_loop {
-                        check_loops.visit_stmt_mut(stmt);
-                    }
-                });
-                self.has_return = check_return.has_return;
-                self.has_break = check_loops.has_break;
-                self.has_continue = check_loops.has_continue;
-            }
+            true => self.callee_check_ncf(&mut i.block),
         }
+    }
+}
+
+impl CalleeCheckNCF<'_> {
+    fn callee_check_ncf(&mut self, block: &mut Block) {
+        self.found = true;
+        let mut check_return = CalleeCheckReturn {
+            has_return: self.has_return,
+        };
+        let mut check_loops = CalleeCheckLoops {
+            has_break: self.has_break,
+            has_continue: self.has_continue,
+        };
+        block.stmts.iter_mut().for_each(|stmt| {
+            check_return.visit_stmt_mut(stmt);
+            if self.within_caller_loop {
+                check_loops.visit_stmt_mut(stmt);
+            }
+        });
+        self.has_return = check_return.has_return;
+        self.has_break = check_loops.has_break;
+        self.has_continue = check_loops.has_continue;
     }
 }
 
@@ -274,46 +307,70 @@ struct MakeBrkAndCont<'a> {
 }
 
 impl VisitMut for MakeBrkAndCont<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.callee_fn_name {
+            false => (),
+            true => self.make_brk_and_cont(&mut i.sig, &mut i.block),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.callee_fn_name {
+            false => (),
+            true => {let _ = i.default.as_mut().and_then(|block| Some (self.make_brk_and_cont(&mut i.sig, block))); },
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
             false => (),
-            true => {
-                let mut helper = MakeBrkAndContVisitor {
-                    callee_fn_name: self.callee_fn_name,
-                    success: self.success,
-                };
-                helper.visit_block_mut(i.block.as_mut());
-                self.success = helper.success;
-                if !self.already_did_return {
-                    let ident_str =
-                        format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
-                    let ident = Ident::new(ident_str.as_str(), Span::call_site());
-                    let callee_rety = match i.sig.output.clone() {
-                        ReturnType::Default => Type::Verbatim(quote! {()}),
-                        ReturnType::Type(_, t) => t.as_ref().clone(),
-                    };
-                    let ty: Type = Type::Verbatim(quote! {#ident<#callee_rety>});
-                    i.sig.output = ReturnType::Type(syn::parse_quote! {->}, Box::new(ty));
+            true => self.make_brk_and_cont(&mut i.sig, &mut i.block),
+        }
+    }
+}
 
-                    let ok = quote!(Ok);
-                    match i.block.stmts.last_mut() {
-                        None => {}
-                        Some(s) => match s {
-                            Stmt::Expr(_) => {
-                                let mut helper = MakeLastReturnBlkVisitor {};
-                                helper.visit_stmt_mut(s);
-                                let re = quote!(result);
-                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
-                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
-                            }
-                            _ => {
-                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
-                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
-                            }
-                        },
+impl MakeBrkAndCont<'_> {
+    fn make_brk_and_cont(&mut self, sig:&mut Signature, block: &mut Block) {
+        let mut helper = MakeBrkAndContVisitor {
+            callee_fn_name: self.callee_fn_name,
+            success: self.success,
+        };
+        helper.visit_block_mut(block);
+        self.success = helper.success;
+        if !self.already_did_return {
+            let ident_str =
+                format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
+            let ident = Ident::new(ident_str.as_str(), Span::call_site());
+            let callee_rety = match sig.output.clone() {
+                ReturnType::Default => Type::Verbatim(quote! {()}),
+                ReturnType::Type(_, t) => t.as_ref().clone(),
+            };
+            let ty: Type = Type::Verbatim(quote! {#ident<#callee_rety>});
+            sig.output = ReturnType::Type(syn::parse_quote! {->}, Box::new(ty));
+
+            let ok = quote!(Ok);
+            match block.stmts.last_mut() {
+                None => {}
+                Some(s) => match s {
+                    Stmt::Expr(_) => {
+                        let mut helper = MakeLastReturnBlkVisitor {};
+                        helper.visit_stmt_mut(s);
+                        let re = quote!(result);
+                        let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
+                        block.stmts.push(Stmt::Expr(ret_stmt_expr))
                     }
-                }
+                    _ => {
+                        let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
+                        block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                    }
+                },
             }
         }
     }
@@ -325,39 +382,62 @@ struct MakeReturn<'a> {
 }
 
 impl VisitMut for MakeReturn<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id == self.callee_fn_name {
+            false => (),
+            true => self.make_return(&mut i.sig, &mut i.block),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.callee_fn_name {
+            false => (),
+            true => {let _ = i.default.as_mut().and_then(|block| Some (self.make_return(&mut i.sig, block))); },
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
             false => (),
-            true => {
-                let ident_str = format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
-                let ident = Ident::new(ident_str.as_str(), Span::call_site());
-                let caller_rety = self.caller_rety.clone();
-                let callee_rety = match i.sig.output.clone() {
-                    ReturnType::Default => Type::Verbatim(quote! {()}),
-                    ReturnType::Type(_, t) => t.as_ref().clone(),
-                };
-                let ty: Type = Type::Verbatim(quote! {#ident<#callee_rety,#caller_rety>});
-                i.sig.output = ReturnType::Type(syn::parse_quote! {->}, Box::new(ty));
+            true => self.make_return(&mut i.sig, &mut i.block),
+        }
+    }
+}
 
-                let ok = quote!(Ok);
-                match i.block.stmts.last_mut() {
-                    None => {}
-                    Some(s) => {
-                        // println!("last stmt: {}", s.into_token_stream().to_string());
-                        match s {
-                            Stmt::Expr(_) => {
-                                let mut helper = MakeLastReturnBlkVisitor {};
-                                helper.visit_stmt_mut(s);
-                                let re = quote!(result);
-                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
-                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
-                            }
-                            _ => {
-                                let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
-                                i.block.stmts.push(Stmt::Expr(ret_stmt_expr))
-                            }
-                        }
+impl MakeReturn<'_> {
+    fn make_return(&mut self, sig: &mut Signature, block: &mut Block) {
+        let ident_str = format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
+        let ident = Ident::new(ident_str.as_str(), Span::call_site());
+        let caller_rety = self.caller_rety.clone();
+        let callee_rety = match sig.output.clone() {
+            ReturnType::Default => Type::Verbatim(quote! {()}),
+            ReturnType::Type(_, t) => t.as_ref().clone(),
+        };
+        let ty: Type = Type::Verbatim(quote! {#ident<#callee_rety,#caller_rety>});
+        sig.output = ReturnType::Type(syn::parse_quote! {->}, Box::new(ty));
+
+        let ok = quote!(Ok);
+        match block.stmts.last_mut() {
+            None => {}
+            Some(s) => {
+                // println!("last stmt: {}", s.into_token_stream().to_string());
+                match s {
+                    Stmt::Expr(_) => {
+                        let mut helper = MakeLastReturnBlkVisitor {};
+                        helper.visit_stmt_mut(s);
+                        let re = quote!(result);
+                        let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(#re)};
+                        block.stmts.push(Stmt::Expr(ret_stmt_expr))
+                    }
+                    _ => {
+                        let ret_stmt_expr: Expr = syn::parse_quote! {#ident::#ok(())};
+                        block.stmts.push(Stmt::Expr(ret_stmt_expr))
                     }
                 }
             }
@@ -456,6 +536,7 @@ impl VisitMut for MatchCallSiteHelper<'_> {
 
 struct MatchCallSite<'a> {
     caller_fn_name: &'a str,
+    callee_finder: &'a mut FindCallee<'a>,
     callee_fn_name: &'a str,
     has_return: bool,
     has_continue: bool,
@@ -463,20 +544,73 @@ struct MatchCallSite<'a> {
 }
 
 impl VisitMut for MatchCallSite<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            false => (),
+            true => {
+                self.callee_finder.visit_impl_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.match_callsite(&mut i.block)
+            },
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.caller_fn_name {
+            false => (),
+            true => {
+                self.callee_finder.visit_trait_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                let _ = i.default.as_mut().and_then(|block| Some (self.match_callsite(block)));
+            },
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.callee_finder.found {
+            return;
+        }
+
         let id = i.sig.ident.to_string();
         match id == self.caller_fn_name {
             true => {
-                let mut helper = MatchCallSiteHelper {
-                    callee_fn_name: self.callee_fn_name,
-                    has_return: self.has_return,
-                    has_continue: self.has_continue,
-                    has_break: self.has_break,
-                };
-                helper.visit_item_fn_mut(i)
+                self.callee_finder.visit_item_fn_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.match_callsite(&mut i.block)
             }
             false => {}
         }
+    }
+}
+
+impl MatchCallSite<'_> {
+    fn match_callsite(&mut self, block: &mut Block) {
+        let mut helper = MatchCallSiteHelper {
+            callee_fn_name: self.callee_fn_name,
+            has_return: self.has_return,
+            has_continue: self.has_continue,
+            has_break: self.has_break,
+        };
+        helper.visit_block_mut(block);
     }
 }
 
@@ -501,6 +635,7 @@ pub fn make_controls(
     let mut caller_visitor = CallerVisitor {
         found: false,
         caller_fn_name,
+        callee_finder: &mut FindCallee { found: false, callee_fn_name },
         callee_fn_name,
         callee_in_loop: false,
         caller_rety: &mut caller_rety,
@@ -508,7 +643,7 @@ pub fn make_controls(
     caller_visitor.visit_file_mut(&mut file);
 
     if !caller_visitor.found {
-        false
+        return false;
     }
 
     let mut callee_visitor = CalleeCheckNCF {
@@ -522,7 +657,7 @@ pub fn make_controls(
     callee_visitor.visit_file_mut(&mut file);
 
     if !caller_visitor.found {
-        false
+        return false;
     }
 
     if callee_visitor.has_return || callee_visitor.has_continue || callee_visitor.has_break {
@@ -584,6 +719,7 @@ pub fn make_controls(
 
         let mut caller_matcher = MatchCallSite {
             caller_fn_name,
+            callee_finder: &mut FindCallee { found: false, callee_fn_name },
             callee_fn_name,
             has_return: callee_visitor.has_return,
             has_continue: callee_visitor.has_continue,

@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate, TraitItemMethod, ImplItemMethod, ExprCall};
+use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate, TraitItemMethod, ImplItemMethod, ExprCall, Signature};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,26 +99,50 @@ struct FnLifetimeBounder<'a> {
 }
 
 impl VisitMut for FnLifetimeBounder<'_> {
-    fn visit_item_fn_mut(&mut self, i: &mut syn::ItemFn) {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => self.fn_lifetime_bounder(&mut i.sig),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name.to_string() {
             false => (),
-            true => {
-                let gen = &mut i.sig.generics;
-                let wc = gen.where_clause.get_or_insert(WhereClause {
-                    where_token: Default::default(),
-                    predicates: Default::default(),
-                });
-                let mut wp = PredicateLifetime {
-                    lifetime: Lifetime::new(self.lifetime, Span::call_site()),
-                    colon_token: Default::default(),
-                    bounds: Default::default(),
-                };
-                wp.bounds.push(Lifetime::new(self.bound, Span::call_site()));
-                wc.predicates.push(WherePredicate::Lifetime(wp));
-                self.success = true
-            }
+            true => self.fn_lifetime_bounder(&mut i.sig),
         }
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => self.fn_lifetime_bounder(&mut i.sig),
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+}
+
+impl FnLifetimeBounder<'_> {
+    fn fn_lifetime_bounder(&mut self, sig: &mut Signature) {
+        let gen = &mut sig.generics;
+        let wc = gen.where_clause.get_or_insert(WhereClause {
+            where_token: Default::default(),
+            predicates: Default::default(),
+        });
+        let mut wp = PredicateLifetime {
+            lifetime: Lifetime::new(self.lifetime, Span::call_site()),
+            colon_token: Default::default(),
+            bounds: Default::default(),
+        };
+        wp.bounds.push(Lifetime::new(self.bound, Span::call_site()));
+        wc.predicates.push(WherePredicate::Lifetime(wp));
+        self.success = true
     }
 }
 
@@ -301,175 +325,200 @@ impl VisitMut for ChangeLtHelperElider<'_> {
 }
 
 impl VisitMut for FnLifetimeElider<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => self.fn_lifetime_elider(&mut i.sig),
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id == self.fn_name.to_string() {
             false => (),
-            true => {
-                // println!("original : {}", i.sig.clone().into_token_stream().to_string());
-                let gen = &mut i.sig.generics;
-                let mut cannot_elide = vec![];
-                match &gen.where_clause {
-                    None => (),
-                    Some(wc) => wc.predicates.iter().for_each(|wp| match wp {
-                        WherePredicate::Lifetime(lt) => {
-                            cannot_elide.push(lt.lifetime.to_string());
-                            cannot_elide.push(lt.bounds.first().unwrap().to_string())
-                        }
-                        _ => (),
-                    }),
+            true => self.fn_lifetime_elider(&mut i.sig),
+        }
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
+        match id == self.fn_name.to_string() {
+            false => (),
+            true => self.fn_lifetime_elider(&mut i.sig),
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+}
+
+impl FnLifetimeElider<'_> {
+    fn fn_lifetime_elider(&mut self, sig: &mut Signature) {
+
+        // println!("original : {}", i.sig.clone().into_token_stream().to_string());
+        let gen = &mut sig.generics;
+        let mut cannot_elide = vec![];
+        match &gen.where_clause {
+            None => (),
+            Some(wc) => wc.predicates.iter().for_each(|wp| match wp {
+                WherePredicate::Lifetime(lt) => {
+                    cannot_elide.push(lt.lifetime.to_string());
+                    cannot_elide.push(lt.bounds.first().unwrap().to_string())
                 }
-                let inputs = &mut i.sig.inputs;
-                let mut has_receiver = false;
-                let mut map = HashMap::new();
-                let mut v = vec![];
-                inputs.iter_mut().for_each(|fn_arg| {
-                    match fn_arg {
-                        FnArg::Receiver(_) => has_receiver = true,
-                        FnArg::Typed(_) => {
-                            let mut get_lt = LtGetterElider { v: &mut v };
-                            get_lt.visit_fn_arg_mut(fn_arg)
-                        }
+                _ => (),
+            }),
+        }
+        let inputs = &mut sig.inputs;
+        let mut has_receiver = false;
+        let mut map = HashMap::new();
+        let mut v = vec![];
+        inputs.iter_mut().for_each(|fn_arg| {
+            match fn_arg {
+                FnArg::Receiver(_) => has_receiver = true,
+                FnArg::Typed(_) => {
+                    let mut get_lt = LtGetterElider { v: &mut v };
+                    get_lt.visit_fn_arg_mut(fn_arg)
+                }
+            };
+        });
+        match has_receiver {
+            true => (),
+            false => {
+                match sig.output.borrow_mut() {
+                    ReturnType::Default => (),
+                    ReturnType::Type(_, ty) => {
+                        let mut get_lt = LtGetterElider { v: &mut v };
+                        get_lt.visit_type_mut(ty.clone().as_mut());
+                    }
+                };
+                gen.params.iter_mut().for_each(|gp| match gp {
+                    GenericParam::Lifetime(_) => (),
+                    gp => {
+                        let mut get_lt = LtGetterElider { v: &mut v };
+                        get_lt.visit_generic_param_mut(gp);
+                    }
+                });
+                v.iter().for_each(|lt| {
+                    match map.contains_key(lt) {
+                        true => map.insert(lt, *map.get(lt).unwrap() + 1),
+                        false => map.insert(lt, 1),
                     };
                 });
-                match has_receiver {
-                    true => (),
-                    false => {
-                        match i.sig.output.borrow_mut() {
-                            ReturnType::Default => (),
-                            ReturnType::Type(_, ty) => {
-                                let mut get_lt = LtGetterElider { v: &mut v };
-                                get_lt.visit_type_mut(ty.clone().as_mut());
-                            }
-                        };
-                        gen.params.iter_mut().for_each(|gp| match gp {
-                            GenericParam::Lifetime(_) => (),
-                            gp => {
-                                let mut get_lt = LtGetterElider { v: &mut v };
-                                get_lt.visit_generic_param_mut(gp);
-                            }
-                        });
-                        v.iter().for_each(|lt| {
-                            match map.contains_key(lt) {
-                                true => map.insert(lt, *map.get(lt).unwrap() + 1),
-                                false => map.insert(lt, 1),
-                            };
-                        });
-                        let mut fn_arg_helper = FnLifetimeEliderArgHelper {
+                let mut fn_arg_helper = FnLifetimeEliderArgHelper {
+                    cannot_elide: &cannot_elide,
+                    lt_count: &map,
+                };
+                inputs
+                    .iter_mut()
+                    .for_each(|fn_arg| fn_arg_helper.visit_fn_arg_mut(fn_arg));
+
+                match sig.output.borrow_mut() {
+                    ReturnType::Default => (),
+                    ReturnType::Type(_, ty) => {
+                        let mut type_helper = FnLifetimeEliderTypeHelper {
                             cannot_elide: &cannot_elide,
                             lt_count: &map,
                         };
-                        inputs
-                            .iter_mut()
-                            .for_each(|fn_arg| fn_arg_helper.visit_fn_arg_mut(fn_arg));
-
-                        match i.sig.output.borrow_mut() {
-                            ReturnType::Default => (),
-                            ReturnType::Type(_, ty) => {
-                                let mut type_helper = FnLifetimeEliderTypeHelper {
-                                    cannot_elide: &cannot_elide,
-                                    lt_count: &map,
-                                };
-                                type_helper.visit_type_mut(ty.as_mut());
-                            }
+                        type_helper.visit_type_mut(ty.as_mut());
+                    }
+                };
+                gen.params.iter_mut().for_each(|gp| match gp {
+                    GenericParam::Lifetime(_) => (),
+                    gp => {
+                        let mut type_helper = FnLifetimeEliderTypeHelper {
+                            cannot_elide: &cannot_elide,
+                            lt_count: &map,
                         };
+                        type_helper.visit_generic_param_mut(gp);
+                    }
+                });
+                gen.params = gen
+                    .params
+                    .iter()
+                    .cloned()
+                    .filter(|g| match g {
+                        GenericParam::Lifetime(lt) => {
+                            let id = lt.lifetime.to_string();
+                            if !map.contains_key(&id) {
+                                false
+                            } else {
+                                let result = *map.get(&id).unwrap() > 1
+                                    || cannot_elide.contains(&id);
+                                debug!("lt: {}, result: {}", id, result);
+                                result
+                            }
+                        }
+                        _ => true,
+                    })
+                    .collect();
+                match gen.params.is_empty() {
+                    true => (),
+                    false => {
+                        let mut lt_count = 0;
+                        let mut new_lts = HashMap::new();
+                        gen.params.iter_mut().for_each(|gp| match gp {
+                            GenericParam::Lifetime(lt) => {
+                                let id = lt.lifetime.to_string();
+                                new_lts.insert(id, format!("'lt{}", lt_count));
+                                lt.lifetime = Lifetime::new(
+                                    format!("'lt{}", lt_count).as_str(),
+                                    Span::call_site(),
+                                );
+                                lt_count += 1
+                            }
+                            _ => (),
+                        });
                         gen.params.iter_mut().for_each(|gp| match gp {
                             GenericParam::Lifetime(_) => (),
                             gp => {
-                                let mut type_helper = FnLifetimeEliderTypeHelper {
-                                    cannot_elide: &cannot_elide,
-                                    lt_count: &map,
-                                };
-                                type_helper.visit_generic_param_mut(gp);
+                                let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                                change_lt.visit_generic_param_mut(gp);
                             }
                         });
-                        gen.params = gen
-                            .params
-                            .iter()
-                            .cloned()
-                            .filter(|g| match g {
-                                GenericParam::Lifetime(lt) => {
+                        match &mut gen.where_clause {
+                            None => (),
+                            Some(wc) => wc.predicates.iter_mut().for_each(|wp| match wp {
+                                WherePredicate::Lifetime(lt) => {
                                     let id = lt.lifetime.to_string();
-                                    if !map.contains_key(&id) {
-                                        false
-                                    } else {
-                                        let result = *map.get(&id).unwrap() > 1
-                                            || cannot_elide.contains(&id);
-                                        debug!("lt: {}, result: {}", id, result);
-                                        result
-                                    }
-                                }
-                                _ => true,
-                            })
-                            .collect();
-                        match gen.params.is_empty() {
-                            true => (),
-                            false => {
-                                let mut lt_count = 0;
-                                let mut new_lts = HashMap::new();
-                                gen.params.iter_mut().for_each(|gp| match gp {
-                                    GenericParam::Lifetime(lt) => {
-                                        let id = lt.lifetime.to_string();
-                                        new_lts.insert(id, format!("'lt{}", lt_count));
-                                        lt.lifetime = Lifetime::new(
-                                            format!("'lt{}", lt_count).as_str(),
-                                            Span::call_site(),
-                                        );
-                                        lt_count += 1
-                                    }
-                                    _ => (),
-                                });
-                                gen.params.iter_mut().for_each(|gp| match gp {
-                                    GenericParam::Lifetime(_) => (),
-                                    gp => {
-                                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
-                                        change_lt.visit_generic_param_mut(gp);
-                                    }
-                                });
-                                match &mut gen.where_clause {
-                                    None => (),
-                                    Some(wc) => wc.predicates.iter_mut().for_each(|wp| match wp {
-                                        WherePredicate::Lifetime(lt) => {
-                                            let id = lt.lifetime.to_string();
-                                            match new_lts.get(&id) {
-                                                Some(new_lt) => {
-                                                    lt.lifetime = Lifetime::new(
-                                                        new_lt.as_str(),
-                                                        Span::call_site(),
-                                                    )
-                                                }
-                                                None => (),
-                                            };
-                                            lt.bounds.iter_mut().for_each(|bound| {
-                                                let id = bound.to_string();
-                                                match new_lts.get(&id) {
-                                                    Some(new_lt) => {
-                                                        *bound = Lifetime::new(
-                                                            new_lt.as_str(),
-                                                            Span::call_site(),
-                                                        )
-                                                    }
-                                                    None => (),
-                                                }
-                                            })
+                                    match new_lts.get(&id) {
+                                        Some(new_lt) => {
+                                            lt.lifetime = Lifetime::new(
+                                                new_lt.as_str(),
+                                                Span::call_site(),
+                                            )
                                         }
-                                        _ => (),
-                                    }),
+                                        None => (),
+                                    };
+                                    lt.bounds.iter_mut().for_each(|bound| {
+                                        let id = bound.to_string();
+                                        match new_lts.get(&id) {
+                                            Some(new_lt) => {
+                                                *bound = Lifetime::new(
+                                                    new_lt.as_str(),
+                                                    Span::call_site(),
+                                                )
+                                            }
+                                            None => (),
+                                        }
+                                    })
                                 }
-                                inputs.iter_mut().for_each(|fn_arg| match fn_arg {
-                                    FnArg::Receiver(_) => (),
-                                    FnArg::Typed(t) => {
-                                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
-                                        change_lt.visit_pat_type_mut(t);
-                                    }
-                                });
-                                match i.sig.output.borrow_mut() {
-                                    ReturnType::Default => (),
-                                    ReturnType::Type(_, ty) => {
-                                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
-                                        change_lt.visit_type_mut(ty.as_mut());
-                                    }
-                                }
+                                _ => (),
+                            }),
+                        }
+                        inputs.iter_mut().for_each(|fn_arg| match fn_arg {
+                            FnArg::Receiver(_) => (),
+                            FnArg::Typed(t) => {
+                                let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                                change_lt.visit_pat_type_mut(t);
+                            }
+                        });
+                        match sig.output.borrow_mut() {
+                            ReturnType::Default => (),
+                            ReturnType::Type(_, ty) => {
+                                let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                                change_lt.visit_type_mut(ty.as_mut());
                             }
                         }
                     }
@@ -526,16 +575,6 @@ impl VisitMut for RenameFn<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
-    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
-        let callee = i.sig.ident.to_string();
-        match callee == self.callee_fn_name {
-            true => {
-                *i.sig.ident = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
-            }
-            false => {}
-        }
-        syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let callee = i.sig.ident.to_string();
         match callee == self.callee_fn_name {
@@ -545,6 +584,16 @@ impl VisitMut for RenameFn<'_> {
             false => {}
         }
         syn::visit_mut::visit_item_fn_mut(self, i);
+    }
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let callee = i.sig.ident.to_string();
+        match callee == self.callee_fn_name {
+            true => {
+                *i.sig.ident = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
 }
 
