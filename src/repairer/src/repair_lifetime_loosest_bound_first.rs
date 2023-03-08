@@ -1,13 +1,20 @@
+use log::debug;
 use proc_macro2::Span;
 use quote::ToTokens;
 use std::borrow::BorrowMut;
 use std::fs;
-use log::debug;
-use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, Lifetime, LifetimeDef, PathArguments, ReturnType, Type, TypeParamBound, Signature, ImplItemMethod, TraitItemMethod};
+use syn::{
+    visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, ImplItemMethod,
+    Lifetime, LifetimeDef, PathArguments, ReturnType, Signature, TraitItemMethod, Type,
+    TypeParamBound,
+};
 
-use crate::common::{elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project, RepairSystem, RustcError, RenameFn, callee_renamer};
+use crate::common::{
+    callee_renamer, elide_lifetimes_annotations, repair_bounds_help, repair_iteration,
+    repair_iteration_project, RenameFn, RepairSystem, RustcError,
+};
 use crate::repair_lifetime_simple;
-use utils::{compile_file, check_project, format_source};
+use utils::{check_project, compile_file, format_source};
 
 pub struct Repairer {}
 
@@ -246,8 +253,7 @@ impl LooseLifetimeAnnotator<'_> {
                     ReturnType::Default => {}
                 };
                 for lt in 0..self.lt_num {
-                    let lifetime =
-                        Lifetime::new(format!("'lt{}", lt).as_str(), Span::call_site());
+                    let lifetime = Lifetime::new(format!("'lt{}", lt).as_str(), Span::call_site());
                     gen.params.push(syn::GenericParam::Lifetime(LifetimeDef {
                         attrs: vec![],
                         lifetime,

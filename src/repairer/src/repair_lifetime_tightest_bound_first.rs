@@ -10,7 +10,7 @@ use crate::common::{
     RepairSystem, RustcError,
 };
 use crate::repair_lifetime_simple;
-use utils::{compile_file, check_project, format_source};
+use utils::{check_project, compile_file, format_source};
 
 pub struct Repairer {}
 

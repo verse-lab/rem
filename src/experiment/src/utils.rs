@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::{debug, info, warn};
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
@@ -10,7 +10,7 @@ use repairer::common::RepairSystem;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
 use utils::check_project;
 
-const CALLEE_NAME : &str = "bar____EXTRACT_THIS";
+pub const CALLEE_NAME: &str = "bar____EXTRACT_THIS";
 
 /*********************************    MISC    ***************************************************/
 #[macro_export]
@@ -106,6 +106,42 @@ pub fn reset_to_base_branch(dir: &String, base_branch: &String, active_branch: &
         && del_branch(dir, active_branch)
         && checkout(dir, base_branch)
         && checkout_b(dir, active_branch)
+}
+
+pub fn update_expr_branch(dir: &String, active_branch: &String) -> bool {
+    commit(dir, active_branch) && push_branch(dir, active_branch, true)
+}
+
+pub fn rename_callee(
+    dir: &String,
+    branch: &String,
+    callee_old_name: &str,
+    callee_name: &str,
+    e: &Extraction,
+) {
+    either!(
+        checkout(dir, branch),
+        panic!("could not check out branch {} at {}", branch, dir)
+    );
+    let replace = format!("s/{}(/{}(/g", callee_old_name, callee_name);
+    let mut cmd = Command::new("sed");
+    cmd.arg("-i").arg(replace).arg(&e.src_path);
+    let out = cmd.output().unwrap();
+    let replace2 = format!("s/{}</{}</g", callee_old_name, callee_name);
+    let mut cmd2 = Command::new("sed");
+    cmd2.arg("-i").arg(replace2).arg(&e.src_path);
+    let out = cmd.output().unwrap();
+    either!(
+        out.status.success(),
+        warn!(
+            "could not rename callee turbofish: {}",
+            String::from_utf8_lossy(&out.stderr)
+        )
+    );
+    let msg = format!("{} renamed callee to {}", branch, callee_name);
+    if !update_expr_branch(dir, &msg) {
+        warn!("failed to rename callee")
+    }
 }
 
 /*************************************** Extraction Related ************************************/
@@ -239,8 +275,4 @@ pub fn run_extraction(
     extraction_result.total_duration_ms = duration.as_millis();
     extraction_result.total_duration_s = duration.as_millis() as f64 * 0.001;
     (success, duration)
-}
-
-pub fn update_expr_branch(dir: &String, active_branch: &String) -> bool {
-    commit(dir, active_branch) && push_branch(dir, active_branch, true)
 }

@@ -109,7 +109,7 @@ fn print_repair_stat_project(
 ) -> bool {
     println!("\n\n{}: {}", src_path, fn_name);
     let now = SystemTime::now();
-    let (success, _ ) = repair_system.repair_project(src_path, manifest_path, fn_name);
+    let (success, _) = repair_system.repair_project(src_path, manifest_path, fn_name);
     let time_elapsed = now.elapsed().unwrap();
     println!(
         "{}: {} refactored {} in {:#?}",

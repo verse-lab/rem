@@ -1,12 +1,15 @@
 use std::fs;
 
 use convert_case::{Case, Casing};
+use log::{debug, info};
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
-use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ImplItemMethod, Item, ItemEnum, ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type};
-use utils::{FindCallee, format_source};
-use log::{debug, info};
+use syn::{
+    Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ImplItemMethod, Item, ItemEnum,
+    ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type,
+};
+use utils::{format_source, FindCallee};
 
 const ENUM_NAME: &str = "Ret";
 
@@ -105,12 +108,15 @@ impl VisitMut for CallerVisitor<'_> {
             true => {
                 debug!("found same id: {}...", id);
                 self.callee_finder.visit_impl_item_method_mut(i);
-                debug!("found callee: {}? {}...", self.callee_finder.callee_fn_name, self.callee_finder.found);
+                debug!(
+                    "found callee: {}? {}...",
+                    self.callee_finder.callee_fn_name, self.callee_finder.found
+                );
                 if !self.callee_finder.found {
                     return;
                 }
                 self.caller_visitor(&mut i.sig, &mut i.block)
-            },
+            }
         }
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
@@ -146,8 +152,11 @@ impl VisitMut for CallerVisitor<'_> {
                 if !self.callee_finder.found {
                     return;
                 }
-                let _ = i.default.as_mut().and_then(|block| Some (self.caller_visitor(&mut i.sig, block)));
-            },
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.caller_visitor(&mut i.sig, block)));
+            }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
@@ -224,12 +233,16 @@ impl VisitMut for CalleeCheckNCF<'_> {
         }
     }
 
-
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
             false => (),
-            true => {let _ = i.default.as_mut().and_then(|block| Some (self.callee_check_ncf(block))); },
+            true => {
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.callee_check_ncf(block)));
+            }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
@@ -335,20 +348,24 @@ impl VisitMut for MakeBrkAndCont<'_> {
         }
     }
 
-
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
         match id == self.callee_fn_name {
             false => (),
-            true => {let _ = i.default.as_mut().and_then(|block| Some (self.make_brk_and_cont(&mut i.sig, block))); },
+            true => {
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.make_brk_and_cont(&mut i.sig, block)));
+            }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
 }
 
 impl MakeBrkAndCont<'_> {
-    fn make_brk_and_cont(&mut self, sig:&mut Signature, block: &mut Block) {
+    fn make_brk_and_cont(&mut self, sig: &mut Signature, block: &mut Block) {
         let mut helper = MakeBrkAndContVisitor {
             callee_fn_name: self.callee_fn_name,
             success: self.success,
@@ -356,8 +373,7 @@ impl MakeBrkAndCont<'_> {
         helper.visit_block_mut(block);
         self.success = helper.success;
         if !self.already_did_return {
-            let ident_str =
-                format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
+            let ident_str = format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
             let ident = Ident::new(ident_str.as_str(), Span::call_site());
             let callee_rety = match sig.output.clone() {
                 ReturnType::Default => Type::Verbatim(quote! {()}),
@@ -407,7 +423,12 @@ impl VisitMut for MakeReturn<'_> {
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
         match id == self.callee_fn_name {
             false => (),
-            true => {let _ = i.default.as_mut().and_then(|block| Some (self.make_return(&mut i.sig, block))); },
+            true => {
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.make_return(&mut i.sig, block)));
+            }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
@@ -569,7 +590,7 @@ impl VisitMut for MatchCallSite<'_> {
                     return;
                 }
                 self.match_callsite(&mut i.block)
-            },
+            }
         }
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
@@ -588,8 +609,11 @@ impl VisitMut for MatchCallSite<'_> {
                 if !self.callee_finder.found {
                     return;
                 }
-                let _ = i.default.as_mut().and_then(|block| Some (self.match_callsite(block)));
-            },
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.match_callsite(block)));
+            }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
@@ -647,7 +671,10 @@ pub fn make_controls(
     let mut caller_visitor = CallerVisitor {
         found: false,
         caller_fn_name,
-        callee_finder: &mut FindCallee { found: false, callee_fn_name },
+        callee_finder: &mut FindCallee {
+            found: false,
+            callee_fn_name,
+        },
         callee_fn_name,
         callee_in_loop: false,
         caller_rety: &mut caller_rety,
@@ -732,7 +759,10 @@ pub fn make_controls(
 
         let mut caller_matcher = MatchCallSite {
             caller_fn_name,
-            callee_finder: &mut FindCallee { found: false, callee_fn_name },
+            callee_finder: &mut FindCallee {
+                found: false,
+                callee_fn_name,
+            },
             callee_fn_name,
             has_return: callee_visitor.has_return,
             has_continue: callee_visitor.has_continue,

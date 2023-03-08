@@ -1,16 +1,20 @@
 use quote::ToTokens;
 use std::collections::HashMap;
 
+use colored::Colorize;
 use proc_macro2::Ident;
 use std::fs;
-use colored::Colorize;
 
 use constraint::common::AliasConstraints;
 use constraint::ConstraintManager;
 use itertools::Itertools;
 use regex::Regex;
 use syn::punctuated::Punctuated;
-use syn::{visit_mut::VisitMut, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference, ExprReturn, FnArg, ItemFn, Local, Macro, Pat, Stmt, Token, Type, TypeReference, TraitItemMethod, ItemImpl, TraitItem, ImplItemMethod, ImplItem, Block, Signature};
+use syn::{
+    visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall,
+    ExprReference, ExprReturn, FnArg, ImplItem, ImplItemMethod, ItemFn, ItemImpl, Local, Macro,
+    Pat, Signature, Stmt, Token, TraitItem, TraitItemMethod, Type, TypeReference,
+};
 
 use log::debug;
 use utils::{format_source, FindCallee};
@@ -128,7 +132,10 @@ impl VisitMut for CalleeBorrowAssigner<'_> {
         match id == self.fn_name {
             false => (),
             true => {
-                let _ = i.default.as_mut().and_then(|block| Some (self.callee_borrow_assigner(&mut i.sig, block)));
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.callee_borrow_assigner(&mut i.sig, block)));
                 ()
             }
         }
@@ -144,8 +151,7 @@ impl CalleeBorrowAssigner<'_> {
             ref_inputs: self.ref_inputs,
             mut_ref_inputs: self.mut_ref_inputs,
         };
-        sig
-            .inputs
+        sig.inputs
             .iter_mut()
             .for_each(|fn_arg| borrow_assigner.visit_fn_arg_mut(fn_arg));
         block
@@ -258,9 +264,12 @@ impl VisitMut for CalleeInputs<'_> {
         match id == self.fn_name {
             false => (),
             true => {
-                let _ = i.default.as_mut().and_then(|block| Some (self.callee_inputs(&mut i.sig, block)));
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.callee_inputs(&mut i.sig, block)));
                 ()
-            },
+            }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
@@ -335,7 +344,7 @@ impl VisitMut for CallerCheckCallee<'_> {
             true => {
                 self.found = true;
                 *self.check_input_visitor.found = true;
-            },
+            }
             false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
     }
@@ -453,14 +462,19 @@ impl VisitMut for CallerHelper<'_> {
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
         match id == self.caller_fn_name {
             false => (),
-            true => {let _ = i.default.as_mut().and_then(|block| Some (self.caller_checker(&mut i.sig, block))); },
+            true => {
+                let _ = i
+                    .default
+                    .as_mut()
+                    .and_then(|block| Some(self.caller_checker(&mut i.sig, block)));
+            }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
 }
 
 impl CallerHelper<'_> {
-    fn caller_checker(&mut self, sig: &mut Signature, block: &mut Block){
+    fn caller_checker(&mut self, sig: &mut Signature, block: &mut Block) {
         self.found = true;
         //println!("found the caller");
         sig.inputs.clone().iter().for_each(|input| match input {
@@ -693,10 +707,12 @@ impl VisitMut for MutableBorrower<'_> {
                     mut_methods: self.mut_methods,
                 };
                 let _ = i.default.as_mut().and_then(|block| {
-                    Some (block
-                        .stmts
-                        .iter_mut()
-                        .for_each(|stmt| mut_borrower_helper.visit_stmt_mut(stmt)))
+                    Some(
+                        block
+                            .stmts
+                            .iter_mut()
+                            .for_each(|stmt| mut_borrower_helper.visit_stmt_mut(stmt)),
+                    )
                 });
             }
         }
@@ -817,12 +833,10 @@ impl VisitMut for CallerFnArg<'_> {
                 };
                 match &mut i.default {
                     None => {} // impossible because then can't have found callee
-                    Some(block) => {
-                        block
-                            .stmts
-                            .iter_mut()
-                            .for_each(|stmt| helper.visit_stmt_mut(stmt))
-                    }
+                    Some(block) => block
+                        .stmts
+                        .iter_mut()
+                        .for_each(|stmt| helper.visit_stmt_mut(stmt)),
                 }
             }
             false => {}
@@ -871,7 +885,13 @@ struct PreExtracter<'a> {
     use_after: &'a Vec<String>,
 }
 
-fn run_alias_analysis(i: &mut ItemFn, inputs: &Vec<String>, ref_inputs: &Vec<String>, make_ref: &mut Vec<String>, use_after: &Vec<String>) {
+fn run_alias_analysis(
+    i: &mut ItemFn,
+    inputs: &Vec<String>,
+    ref_inputs: &Vec<String>,
+    make_ref: &mut Vec<String>,
+    use_after: &Vec<String>,
+) {
     let mut cs = ConstraintManager::default();
 
     let annot_ast = utils::annotation::annotate_ast(i);
@@ -950,7 +970,13 @@ impl VisitMut for PreExtracter<'_> {
                     return;
                 }
                 match syn::parse_str::<ItemFn>(i.into_token_stream().to_string().as_str()) {
-                    Ok(mut item_fn) => run_alias_analysis(&mut item_fn, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
+                    Ok(mut item_fn) => run_alias_analysis(
+                        &mut item_fn,
+                        self.inputs,
+                        self.ref_inputs,
+                        self.make_ref,
+                        self.use_after,
+                    ),
                     Err(e) => {
                         debug!("cannot parse implementation as function: {:?}", e);
                     }
@@ -975,7 +1001,13 @@ impl VisitMut for PreExtracter<'_> {
                 }
 
                 match syn::parse_str::<ItemFn>(i.into_token_stream().to_string().as_str()) {
-                    Ok(mut item_fn) => run_alias_analysis(&mut item_fn, self.inputs, self.ref_inputs, self.make_ref, self.use_after),
+                    Ok(mut item_fn) => run_alias_analysis(
+                        &mut item_fn,
+                        self.inputs,
+                        self.ref_inputs,
+                        self.make_ref,
+                        self.use_after,
+                    ),
                     Err(e) => {
                         debug!("cannot parse implementation as function: {:?}", e);
                     }
@@ -998,8 +1030,14 @@ impl VisitMut for PreExtracter<'_> {
                 if !self.callee_finder.found {
                     return;
                 }
-                run_alias_analysis(i, self.inputs, self.ref_inputs, self.make_ref, self.use_after)
-            },
+                run_alias_analysis(
+                    i,
+                    self.inputs,
+                    self.ref_inputs,
+                    self.make_ref,
+                    self.use_after,
+                )
+            }
             false => (),
         }
     }
@@ -1074,7 +1112,10 @@ pub fn make_borrows(
         return false;
     }
 
-    let mut callee_finder = FindCallee { found: false, callee_fn_name };
+    let mut callee_finder = FindCallee {
+        found: false,
+        callee_fn_name,
+    };
 
     let mut constraint_visitor = PreExtracter {
         caller_fn_name,
@@ -1116,8 +1157,11 @@ pub fn make_borrows(
     //     // println!("make {} mut", s);
     // }
     callee_assigner.visit_file_mut(&mut file);
-    
-    callee_finder = FindCallee { found: false, callee_fn_name };
+
+    callee_finder = FindCallee {
+        found: false,
+        callee_fn_name,
+    };
 
     let mut caller_assigner = CallerFnArg {
         caller_fn_name,

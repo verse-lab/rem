@@ -1,12 +1,13 @@
 mod projects;
 mod utils;
 
-use std::fs;
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
 use crate::utils::{
-    get_latest_commit, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult,
+    get_latest_commit, rename_callee, reset_to_base_branch, run_extraction, update_expr_branch,
+    ExtractionResult, CALLEE_NAME,
 };
 use log::info;
+use std::fs;
 
 fn main() {
     env_logger::init();
@@ -18,6 +19,7 @@ fn main() {
             for i in 1..(experiment.extractions.len() + 1) {
                 let expr_branch = format!("{}{}-expr", experiment.expr_type, i);
                 let expr_branch_active = format!("{}{}-expr-active", experiment.expr_type, i);
+                // rename_callee(&repo_path, &expr_branch, "bar", CALLEE_NAME, experiment.extractions.get(i - 1).unwrap());
 
                 // reset all branch to their base branch
                 either!(
@@ -63,12 +65,12 @@ fn main() {
                 );
 
                 extraction_result.commit = get_latest_commit(&repo_path);
-                extraction_result.commit_url = format!("{}/commit/{}", expr_project.project_url, extraction_result.commit);
-
-                info!(
-                    "experiment branch HEAD <--- {}",
-                    extraction_result.commit
+                extraction_result.commit_url = format!(
+                    "{}/commit/{}",
+                    expr_project.project_url, extraction_result.commit
                 );
+
+                info!("experiment branch HEAD <--- {}", extraction_result.commit);
 
                 wtr.serialize(extraction_result)
                     .expect("failed to write experiment results!");

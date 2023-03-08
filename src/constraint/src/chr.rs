@@ -2,8 +2,8 @@ use std::fmt::Write as fmtWrite;
 use std::io::prelude::*;
 use std::io::Write;
 
-use std::process::{Command, Stdio};
 use log::debug;
+use std::process::{Command, Stdio};
 use utils::parser::ws;
 
 use crate::constraint;

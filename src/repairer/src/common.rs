@@ -8,7 +8,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use syn::{visit_mut::VisitMut, AngleBracketedGenericArguments, FnArg, GenericArgument, GenericParam, ItemFn, Lifetime, PredicateLifetime, ReturnType, TypeReference, WhereClause, WherePredicate, TraitItemMethod, ImplItemMethod, ExprCall, Signature, ExprMethodCall};
+use syn::{
+    visit_mut::VisitMut, AngleBracketedGenericArguments, ExprCall, ExprMethodCall, FnArg,
+    GenericArgument, GenericParam, ImplItemMethod, ItemFn, Lifetime, PredicateLifetime, ReturnType,
+    Signature, TraitItemMethod, TypeReference, WhereClause, WherePredicate,
+};
 use utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -356,7 +360,6 @@ impl VisitMut for FnLifetimeElider<'_> {
 
 impl FnLifetimeElider<'_> {
     fn fn_lifetime_elider(&mut self, sig: &mut Signature) {
-
         // println!("original : {}", i.sig.clone().into_token_stream().to_string());
         let gen = &mut sig.generics;
         let mut cannot_elide = vec![];
@@ -444,8 +447,8 @@ impl FnLifetimeElider<'_> {
                             if !map.contains_key(&id) {
                                 false
                             } else {
-                                let result = *map.get(&id).unwrap() > 1
-                                    || cannot_elide.contains(&id);
+                                let result =
+                                    *map.get(&id).unwrap() > 1 || cannot_elide.contains(&id);
                                 debug!("lt: {}, result: {}", id, result);
                                 result
                             }
@@ -484,10 +487,8 @@ impl FnLifetimeElider<'_> {
                                     let id = lt.lifetime.to_string();
                                     match new_lts.get(&id) {
                                         Some(new_lt) => {
-                                            lt.lifetime = Lifetime::new(
-                                                new_lt.as_str(),
-                                                Span::call_site(),
-                                            )
+                                            lt.lifetime =
+                                                Lifetime::new(new_lt.as_str(), Span::call_site())
                                         }
                                         None => (),
                                     };
@@ -557,7 +558,9 @@ impl VisitMut for RenameFn<'_> {
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let callee = i.clone().method.into_token_stream().to_string();
         match callee == self.callee_name {
-            true => i.method = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap(),
+            true => {
+                i.method = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap()
+            }
             false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
     }
@@ -566,7 +569,8 @@ impl VisitMut for RenameFn<'_> {
         let callee = i.func.as_ref().into_token_stream().to_string();
         match callee == self.callee_name {
             true => {
-                *i.func.as_mut() = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+                *i.func.as_mut() =
+                    syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
             }
             false => {}
         }
@@ -576,7 +580,8 @@ impl VisitMut for RenameFn<'_> {
         let callee = i.sig.ident.to_string();
         match callee == self.callee_name {
             true => {
-                i.sig.ident= syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+                i.sig.ident =
+                    syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
             }
             false => {}
         }
@@ -587,7 +592,8 @@ impl VisitMut for RenameFn<'_> {
         let callee = i.sig.ident.to_string();
         match callee == self.callee_name {
             true => {
-                i.sig.ident = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+                i.sig.ident =
+                    syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
             }
             false => {}
         }
@@ -597,7 +603,8 @@ impl VisitMut for RenameFn<'_> {
         let callee = i.sig.ident.to_string();
         match callee == self.callee_name {
             true => {
-                i.sig.ident = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
+                i.sig.ident =
+                    syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
             }
             false => {}
         }

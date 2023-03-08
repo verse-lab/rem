@@ -88,7 +88,7 @@ pub fn gitoxide() -> ExperimentProject {
                     Extraction::new(
                         &project_path,
                         "gix-pack/src/verify.rs",
-                        "checksum_on_disk_or_mmap",
+                        "fan",
                         "gix-pack/Cargo.toml",
                     ),
                     Extraction::new(
@@ -171,25 +171,23 @@ pub fn sniffnet() -> ExperimentProject {
     ExperimentProject {
         project,
         project_url,
-        experiments: vec![
-            Experiment {
-                expr_type: "inline-ext".to_string(),
-                extractions: vec![
-                    Extraction::new(
-                        &project_path,
-                        "src/utility/manage_packets.rs",
-                        "modify_or_insert_in_map",
-                        "Cargo.toml",
-                    ),
-                    Extraction::new(
-                        &project_path,
-                        "src/thread_parse_packets.rs",
-                        "parse_packets_loop",
-                        "Cargo.toml",
-                    ),
-                ],
-            },
-        ],
+        experiments: vec![Experiment {
+            expr_type: "inline-ext".to_string(),
+            extractions: vec![
+                Extraction::new(
+                    &project_path,
+                    "src/utility/manage_packets.rs",
+                    "modify_or_insert_in_map",
+                    "Cargo.toml",
+                ),
+                Extraction::new(
+                    &project_path,
+                    "src/thread_parse_packets.rs",
+                    "parse_packets_loop",
+                    "Cargo.toml",
+                ),
+            ],
+        }],
     }
 }
 
@@ -202,19 +200,15 @@ pub fn kickoff() -> ExperimentProject {
     ExperimentProject {
         project,
         project_url,
-        experiments: vec![
-            Experiment {
-                expr_type: "inline-ext".to_string(),
-                extractions: vec![
-                    Extraction::new(
-                        &project_path,
-                        "src/gui.rs",
-                        "register_inputs",
-                        "Cargo.toml",
-                    ),
-                ],
-            },
-        ],
+        experiments: vec![Experiment {
+            expr_type: "inline-ext".to_string(),
+            extractions: vec![Extraction::new(
+                &project_path,
+                "src/gui.rs",
+                "register_inputs",
+                "Cargo.toml",
+            )],
+        }],
     }
 }
 
@@ -227,19 +221,15 @@ pub fn beerus() -> ExperimentProject {
     ExperimentProject {
         project,
         project_url,
-        experiments: vec![
-            Experiment {
-                expr_type: "ext-com".to_string(),
-                extractions: vec![
-                    Extraction::new(
-                        &project_path,
-                        "beerus_rest_api/src/main.rs",
-                        "rocket",
-                        "beerus_rest_api/Cargo.toml",
-                    ),
-                ],
-            },
-        ],
+        experiments: vec![Experiment {
+            expr_type: "ext-com".to_string(),
+            extractions: vec![Extraction::new(
+                &project_path,
+                "beerus_rest_api/src/main.rs",
+                "rocket",
+                "beerus_rest_api/Cargo.toml",
+            )],
+        }],
     }
 }
 
@@ -251,22 +241,17 @@ pub fn petgraph() -> ExperimentProject {
     ExperimentProject {
         project,
         project_url,
-        experiments: vec![
-            Experiment {
-                expr_type: "ext".to_string(),
-                extractions: vec![
-                    Extraction::new(
-                        &project_path,
-                        "src/generate.rs",
-                        "all",
-                        "Cargo.toml",
-                    ),
-                ],
-            },
-        ],
+        experiments: vec![Experiment {
+            expr_type: "ext".to_string(),
+            extractions: vec![Extraction::new(
+                &project_path,
+                "src/generate.rs",
+                "all",
+                "Cargo.toml",
+            )],
+        }],
     }
 }
-
 
 #[allow(dead_code)]
 /// demo for testing only
@@ -278,24 +263,12 @@ pub fn demo() -> ExperimentProject {
     ExperimentProject {
         project,
         project_url,
-        experiments: vec![
-            Experiment {
-                expr_type: "ext".to_string(),
-                extractions: vec![
-                    Extraction::new(
-                        &project_path,
-                        "src/main.rs",
-                        "trait_function",
-                        "Cargo.toml",
-                    ),
-                    Extraction::new(
-                        &project_path,
-                        "src/main.rs",
-                        "test",
-                        "Cargo.toml",
-                    ),
-                ],
-            },
-        ],
+        experiments: vec![Experiment {
+            expr_type: "ext".to_string(),
+            extractions: vec![
+                Extraction::new(&project_path, "src/main.rs", "trait_function", "Cargo.toml"),
+                Extraction::new(&project_path, "src/main.rs", "test", "Cargo.toml"),
+            ],
+        }],
     }
 }
