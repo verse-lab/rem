@@ -14,8 +14,6 @@ fn main() {
     env_logger::init();
     let secrets_content = fs::read_to_string("secrets.json").unwrap();
     let secrets = serde_json::from_str::<Secrets>(secrets_content.as_str()).unwrap();
-
-    either!(upload_csv(&secrets, &"./results/result_8.csv".to_string(), &RESULT_SPREADSHEET.to_string(), RESULT_SHEET_ID, 0, 0), panic!("failed to upload result csv!"));
     let result_n = fs::read_dir("./results").unwrap().count();
     let csv_file = format!("./results/result_{}.csv", result_n);
     let mut wtr = csv::Writer::from_path(&csv_file).unwrap();

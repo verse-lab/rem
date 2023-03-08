@@ -1,6 +1,7 @@
 use log::{debug, info, warn};
 use regex::Regex;
 use std::fs;
+use std::io::Read;
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -80,10 +81,10 @@ pub fn make_jwt(secrets: &Secrets) -> String {
 
     let claims = JwtClaims {
         iss: secrets.iss.clone(),
-        scope: "https://www.googleapis.com/auth/spreadsheets,https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/drive.file".to_string(),
+        scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file".to_string(),
         aud: "https://oauth2.googleapis.com/token".to_string(),
     };
-    let claims = Claims::with_custom_claims( claims, Duration::from_secs(60).into());
+    let claims = Claims::with_custom_claims( claims, Duration::from_secs(30).into());
 
     let token = key.sign(claims).unwrap();
     debug!("token: {}", token.as_str());
@@ -98,9 +99,14 @@ pub struct AccessTokenReq {
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct AccessTokenRes {
-    access_token: String,
-    scope: String,
-    token_type: String,
+    #[serde(default)]
+    access_token: Option<String>,
+    #[serde(default)]
+    scope: Option<String>,
+    #[serde(default)]
+    token_type: Option<String>,
+    #[serde(default)]
+    id_token: Option<String>,
 }
 
 pub fn get_gcp_access_token(secrets: &Secrets, client: &Client) -> String {
@@ -111,12 +117,22 @@ pub fn get_gcp_access_token(secrets: &Secrets, client: &Client) -> String {
     };
 
     match client.post("https://oauth2.googleapis.com/token").form(&body).send() {
-        Ok(res) => {
+        Ok(mut res) => {
             if res.status().is_success() {
-                debug!("got res: {:?}", res);
-                let access_token_res: AccessTokenRes = res.json().unwrap();
-                debug!("got res body: {:?}", &access_token_res);
-                access_token_res.access_token
+                match res.json::<AccessTokenRes>() {
+                    Ok(res) => {
+                        match res.access_token {
+                            Some(t) => t,
+                            None => {
+                                match res.id_token {
+                                    None => panic!("neither access token nor id token found"),
+                                    Some(t) => t,
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => panic!("failed to parse access token: {:?}", e),
+                }
             } else {
                 panic!("failed to get access token: {:?}", res);
             }
