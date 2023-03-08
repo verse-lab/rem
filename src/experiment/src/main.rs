@@ -2,7 +2,10 @@ mod projects;
 mod utils;
 
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
-use crate::utils::{get_latest_commit, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult, get_project_size, get_src_size, get_caller_size};
+use crate::utils::{
+    get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch,
+    run_extraction, update_expr_branch, ExtractionResult,
+};
 use log::info;
 use std::fs;
 
@@ -51,10 +54,7 @@ fn main() {
                     caller_size: get_caller_size(extraction),
                 };
 
-                let (success, duration) = run_extraction(
-                    extraction,
-                    &mut extraction_result,
-                );
+                let (success, duration) = run_extraction(extraction, &mut extraction_result);
                 info!(
                     "extraction completed success : {}, duration: {}",
                     success,

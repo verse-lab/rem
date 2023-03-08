@@ -1,9 +1,9 @@
-use std::fs;
 use log::{debug, info, warn};
+use regex::Regex;
+use std::fs;
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
-use regex::Regex;
 
 use crate::projects::Extraction;
 use borrower::borrow::make_borrows;
@@ -169,10 +169,9 @@ pub struct ExtractionResult {
 }
 
 pub fn read_cargo_count(stats: &str) -> i32 {
-    let re = Regex::new(r"Rust\D+\d+\D+\d+\D+\d+\D+\d+\D+(?P<code_size>\d+)")
-        .unwrap();
+    let re = Regex::new(r"Rust\D+\d+\D+\d+\D+\d+\D+\d+\D+(?P<code_size>\d+)").unwrap();
     match re.captures(stats.as_ref()) {
-        Some (captured) => match captured["code_size"].parse::<i32>() {
+        Some(captured) => match captured["code_size"].parse::<i32>() {
             Ok(n) => n,
             Err(_) => panic!("did not find code size"),
         },
@@ -183,7 +182,12 @@ pub fn read_cargo_count(stats: &str) -> i32 {
 pub fn get_project_size(e: &Extraction) -> i32 {
     let mut cmd = Command::new("cargo");
     let path = e.cargo_path.clone().replace("Cargo.toml", "");
-    cmd.arg("count").arg(&path).arg("--exclude").arg(format!("{}.git,{}*/test.rs,{}target", &path, &path, &path)).arg("-l").arg("rs");
+    cmd.arg("count")
+        .arg(&path)
+        .arg("--exclude")
+        .arg(format!("{}.git,{}*/test.rs,{}target", &path, &path, &path))
+        .arg("-l")
+        .arg("rs");
     let out = cmd.output().unwrap();
     if out.status.success() {
         let stats = String::from_utf8_lossy(&out.stdout);
