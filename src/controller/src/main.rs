@@ -1,7 +1,7 @@
 mod non_local_controller;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use std::fs;
+use std::{env, fs};
 use std::process::exit;
 use std::time::SystemTime;
 use utils::compile_file;
@@ -25,6 +25,8 @@ enum Commands {
 }
 
 fn main() {
+    env::set_var("RUST_LOG", "debug");
+    env_logger::init();
     let args = Cli::parse();
     match &args.command {
         Commands::Test {} => test(),

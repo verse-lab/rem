@@ -2,17 +2,19 @@ mod projects;
 mod utils;
 
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
-use crate::utils::{
-    get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch,
-    run_extraction, update_expr_branch, ExtractionResult,
-};
+use crate::utils::{get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult, upload_csv};
 use log::info;
 use std::fs;
+use std::string::ToString;
+
+const RESULT_SPREADSHEET : &str = "121Lwpv03Vq5K4IBdbQGn7OS5aBGPVKg-jDn8xczkXJc";
+const RESULT_SHEET_ID: i32 = 549359316;
 
 fn main() {
     env_logger::init();
     let result_n = fs::read_dir("./results").unwrap().count();
-    let mut wtr = csv::Writer::from_path(format!("./results/result_{}.csv", result_n)).unwrap();
+    let csv_file = format!("./results/result_{}.csv", result_n);
+    let mut wtr = csv::Writer::from_path(&csv_file).unwrap();
     for expr_project in projects::all() {
         let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, expr_project.project);
         for experiment in expr_project.experiments {
@@ -79,5 +81,7 @@ fn main() {
             }
         }
     }
-    wtr.flush().expect("failed to flush csv")
+    wtr.flush().expect("failed to flush csv");
+
+    upload_csv(&csv_file, &RESULT_SPREADSHEET.to_string(), RESULT_SHEET_ID, 0, 0);
 }

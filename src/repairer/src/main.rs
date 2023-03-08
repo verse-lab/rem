@@ -1,3 +1,4 @@
+use std::env;
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 use std::iter::zip;
@@ -50,6 +51,7 @@ enum RepairerType {
 }
 
 fn main() {
+    env::set_var("RUST_LOG", "debug");
     env_logger::init();
     let args = Cli::parse();
     match &args.command {

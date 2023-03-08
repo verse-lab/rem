@@ -4,6 +4,7 @@ use std::fs;
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
+use reqwest::blocking::{Client};
 
 use crate::projects::Extraction;
 use borrower::borrow::make_borrows;
@@ -27,6 +28,69 @@ macro_rules! either {
             }
         }
     };
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridCoordinate {
+    sheet_id: i32,
+    row_index: i32,
+    column_index: i32,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PasteDataRequest {
+    coordinate: GridCoordinate,
+    data: String,
+    type_: String,
+    delimiter: String,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PasteDataRequestWrapper {
+    paste_data: PasteDataRequest
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpreadsheetsBatchUpdate {
+    include_spreadsheet_in_response: bool,
+    requests: Vec<PasteDataRequestWrapper>,
+}
+
+pub fn upload_csv(csv_file: &String, spreadsheet: &String, sheet_id: i32, row_index: i32, column_index: i32) -> bool {
+    let data : String = fs::read_to_string(csv_file).unwrap().parse().unwrap();
+    let paste_data = PasteDataRequest {
+        coordinate: GridCoordinate {
+            sheet_id,
+            row_index,
+            column_index,
+        },
+        data,
+        type_: "PASTE_NORMAL".to_string(),
+        delimiter: ",".to_string(),
+    };
+
+    let body = SpreadsheetsBatchUpdate {
+        include_spreadsheet_in_response: false,
+        requests: vec![PasteDataRequestWrapper { paste_data }],
+    };
+
+    let url = format!("https://sheets.googleapis.com/v4/spreadsheets/{}:batchUpdate", spreadsheet);
+    let client = Client::new();
+    match client.post(url).json(&body).send() {
+        Ok(ok) => {
+            debug!("ok updated csv in sheet: {:?}", ok);
+            true
+        }
+        Err(err) => {
+            warn!("error updating csv: {:?}", err);
+            false
+        }
+    }
+
 }
 
 /******************************* GIT RELATED  ***************************************************/
