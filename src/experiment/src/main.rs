@@ -2,7 +2,7 @@ mod projects;
 mod utils;
 
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
-use crate::utils::{get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult, upload_csv};
+use crate::utils::{get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult, upload_csv, Secrets};
 use log::info;
 use std::fs;
 use std::string::ToString;
@@ -12,6 +12,10 @@ const RESULT_SHEET_ID: i32 = 549359316;
 
 fn main() {
     env_logger::init();
+    let secrets_content = fs::read_to_string("secrets.json").unwrap();
+    let secrets = serde_json::from_str::<Secrets>(secrets_content.as_str()).unwrap();
+
+    either!(upload_csv(&secrets, &"./results/result_8.csv".to_string(), &RESULT_SPREADSHEET.to_string(), RESULT_SHEET_ID, 0, 0), panic!("failed to upload result csv!"));
     let result_n = fs::read_dir("./results").unwrap().count();
     let csv_file = format!("./results/result_{}.csv", result_n);
     let mut wtr = csv::Writer::from_path(&csv_file).unwrap();
@@ -83,5 +87,5 @@ fn main() {
     }
     wtr.flush().expect("failed to flush csv");
 
-    upload_csv(&csv_file, &RESULT_SPREADSHEET.to_string(), RESULT_SHEET_ID, 0, 0);
+    either!(upload_csv(&secrets, &csv_file, &RESULT_SPREADSHEET.to_string(), RESULT_SHEET_ID, 0, 0), panic!("failed to upload result csv!"));
 }

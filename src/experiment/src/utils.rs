@@ -3,8 +3,9 @@ use regex::Regex;
 use std::fs;
 use std::ops::Add;
 use std::process::Command;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use reqwest::blocking::{Client};
+use jwt_simple::prelude::*;
 
 use crate::projects::Extraction;
 use borrower::borrow::make_borrows;
@@ -60,7 +61,77 @@ pub struct SpreadsheetsBatchUpdate {
     requests: Vec<PasteDataRequestWrapper>,
 }
 
-pub fn upload_csv(csv_file: &String, spreadsheet: &String, sheet_id: i32, row_index: i32, column_index: i32) -> bool {
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct Secrets {
+    iss: String,
+    api_key: String,
+    private_key: String,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct JwtClaims {
+    iss: String,
+    scope: String,
+    aud: String,
+}
+
+pub fn make_jwt(secrets: &Secrets) -> String {
+    let key = RS256KeyPair::from_pem(secrets.private_key.as_str()).unwrap();
+
+    let claims = JwtClaims {
+        iss: secrets.iss.clone(),
+        scope: "https://www.googleapis.com/auth/spreadsheets,https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/drive.file".to_string(),
+        aud: "https://oauth2.googleapis.com/token".to_string(),
+    };
+    let claims = Claims::with_custom_claims( claims, Duration::from_secs(60).into());
+
+    let token = key.sign(claims).unwrap();
+    debug!("token: {}", token.as_str());
+    token
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct AccessTokenReq {
+    grant_type: String,
+    assertion: String,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct AccessTokenRes {
+    access_token: String,
+    scope: String,
+    token_type: String,
+}
+
+pub fn get_gcp_access_token(secrets: &Secrets, client: &Client) -> String {
+    let token = make_jwt(secrets);
+    let body = AccessTokenReq {
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer".to_string(),
+        assertion: token.as_str().to_string(),
+    };
+
+    match client.post("https://oauth2.googleapis.com/token").form(&body).send() {
+        Ok(res) => {
+            if res.status().is_success() {
+                debug!("got res: {:?}", res);
+                let access_token_res: AccessTokenRes = res.json().unwrap();
+                debug!("got res body: {:?}", &access_token_res);
+                access_token_res.access_token
+            } else {
+                panic!("failed to get access token: {:?}", res);
+            }
+        }
+        Err(err) => {
+            panic!("failed to get access token: {:?}", err);
+        }
+    }
+}
+
+pub fn upload_csv(secrets: &Secrets, csv_file: &String, spreadsheet: &String, sheet_id: i32, row_index: i32, column_index: i32) -> bool {
+    let client = Client::new();
+
+    let access_token = get_gcp_access_token(secrets, &client);
+
     let data : String = fs::read_to_string(csv_file).unwrap().parse().unwrap();
     let paste_data = PasteDataRequest {
         coordinate: GridCoordinate {
@@ -78,12 +149,20 @@ pub fn upload_csv(csv_file: &String, spreadsheet: &String, sheet_id: i32, row_in
         requests: vec![PasteDataRequestWrapper { paste_data }],
     };
 
-    let url = format!("https://sheets.googleapis.com/v4/spreadsheets/{}:batchUpdate", spreadsheet);
-    let client = Client::new();
-    match client.post(url).json(&body).send() {
+    let url = format!("https://sheets.googleapis.com/v4/spreadsheets/{}:batchUpdate?key={}", spreadsheet, secrets.api_key);
+    let req = client.post(url).json(&body).bearer_auth(&access_token);
+    debug!("about to send: {:?}", req);
+    match req.send() {
         Ok(ok) => {
-            debug!("ok updated csv in sheet: {:?}", ok);
-            true
+            if ok.status().is_success() {
+                debug!("ok updated csv in sheet: {:?}", ok);
+                true
+            } else {
+                warn!("failed to update csv status {:?}: {:?}", ok.status(), &ok);
+                let text = ok.text().unwrap();
+                warn!("body: {}", text);
+                false
+            }
         }
         Err(err) => {
             warn!("error updating csv: {:?}", err);
