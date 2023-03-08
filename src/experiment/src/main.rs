@@ -2,10 +2,7 @@ mod projects;
 mod utils;
 
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
-use crate::utils::{
-    get_latest_commit, rename_callee, reset_to_base_branch, run_extraction, update_expr_branch,
-    ExtractionResult, CALLEE_NAME,
-};
+use crate::utils::{get_latest_commit, rename_callee, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult, CALLEE_NAME, get_project_size, get_src_size, get_caller_size};
 use log::info;
 use std::fs;
 
@@ -34,6 +31,8 @@ fn main() {
                     get_latest_commit(&repo_path)
                 );
 
+                let extraction = experiment.extractions.get(i - 1).unwrap();
+
                 let mut extraction_result = ExtractionResult {
                     success: false,
                     fix_nlcf_duration_ms: Default::default(),
@@ -47,10 +46,13 @@ fn main() {
                     failed_at: None,
                     project: expr_project.project.clone(),
                     branch: expr_branch_active.clone(),
+                    project_size: get_project_size(extraction),
+                    src_size: get_src_size(extraction),
+                    caller_size: get_caller_size(extraction),
                 };
 
                 let (success, duration) = run_extraction(
-                    experiment.extractions.get(i - 1).unwrap(),
+                    extraction,
                     &mut extraction_result,
                 );
                 info!(

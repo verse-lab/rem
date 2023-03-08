@@ -1,14 +1,16 @@
+use std::fs;
 use log::{debug, info, warn};
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
+use regex::Regex;
 
 use crate::projects::Extraction;
 use borrower::borrow::make_borrows;
 use controller::non_local_controller::make_controls;
 use repairer::common::RepairSystem;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
-use utils::check_project;
+use utils::{check_project, find_caller};
 
 pub const CALLEE_NAME: &str = "bar____EXTRACT_THIS";
 
@@ -112,6 +114,7 @@ pub fn update_expr_branch(dir: &String, active_branch: &String) -> bool {
     commit(dir, active_branch) && push_branch(dir, active_branch, true)
 }
 
+#[allow(dead_code)]
 pub fn rename_callee(
     dir: &String,
     branch: &String,
@@ -160,6 +163,65 @@ pub struct ExtractionResult {
     pub failed_at: Option<String>,
     pub project: String,
     pub branch: String,
+    pub project_size: i32,
+    pub src_size: i32,
+    pub caller_size: i32,
+}
+
+pub fn read_cargo_count(stats: &str) -> i32 {
+    let re = Regex::new(r"Rust\D+\d+\D+\d+\D+\d+\D+\d+\D+(?P<code_size>\d+)")
+        .unwrap();
+    match re.captures(stats.as_ref()) {
+        Some (captured) => match captured["code_size"].parse::<i32>() {
+            Ok(n) => n,
+            Err(_) => panic!("did not find code size"),
+        },
+        None => panic!("did not match rust code"),
+    }
+}
+
+pub fn get_project_size(e: &Extraction) -> i32 {
+    let mut cmd = Command::new("cargo");
+    let path = e.cargo_path.clone().replace("Cargo.toml", "");
+    cmd.arg("count").arg(&path).arg("--exclude").arg(format!("{}.git,{}*/test.rs,{}target", &path, &path, &path)).arg("-l").arg("rs");
+    let out = cmd.output().unwrap();
+    if out.status.success() {
+        let stats = String::from_utf8_lossy(&out.stdout);
+        debug!("found stats: {}", stats.as_ref());
+        read_cargo_count(stats.as_ref())
+    } else {
+        panic!("no commit hash found for HEAD")
+    }
+}
+
+pub fn get_src_size(e: &Extraction) -> i32 {
+    let mut cmd = Command::new("cargo");
+    cmd.arg("count").arg(&e.src_path);
+    let out = cmd.output().unwrap();
+    if out.status.success() {
+        let stats = String::from_utf8_lossy(&out.stdout);
+        debug!("found stats: {}", stats.as_ref());
+        read_cargo_count(stats.as_ref())
+    } else {
+        panic!("no commit hash found for HEAD")
+    }
+}
+
+pub fn get_caller_size(e: &Extraction) -> i32 {
+    let (found, caller, callee) = find_caller(e.src_path.as_str(), e.caller.as_str(), CALLEE_NAME);
+    either!(found, panic!("did not find caller/callee"));
+    let path = "/tmp/some_caller_tmp.rs";
+    fs::write(path, format!("{}\n\n{}", caller, callee)).unwrap();
+    let mut cmd = Command::new("cargo");
+    cmd.arg("count").arg(path);
+    let out = cmd.output().unwrap();
+    if out.status.success() {
+        let stats = String::from_utf8_lossy(&out.stdout);
+        debug!("found stats: {}", stats.as_ref());
+        read_cargo_count(stats.as_ref())
+    } else {
+        panic!("no commit hash found for HEAD")
+    }
 }
 
 pub fn time_exec(name: &str, f: &mut dyn FnMut() -> bool) -> (bool, Duration) {

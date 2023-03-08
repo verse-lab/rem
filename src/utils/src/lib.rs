@@ -22,12 +22,14 @@ pub mod parser;
 pub mod typ;
 pub mod wrappers;
 
+use std::fs;
 use log::debug;
 use quote::ToTokens;
 use std::io::Write;
 use std::process::{Command, Stdio};
+use proc_macro2::TokenStream;
 use syn::visit_mut::VisitMut;
-use syn::{ExprCall, ExprMethodCall};
+use syn::{ExprCall, ExprMethodCall, File, ImplItemMethod, Item, ItemFn, TraitItemMethod};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////        COMPILE        /////////////////////////////////////////////
@@ -88,6 +90,149 @@ impl VisitMut for FindCallee<'_> {
             false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
     }
+}
+
+pub struct FindCaller<'a> {
+    caller_fn_name: &'a str,
+    callee_finder: &'a mut FindCallee<'a>,
+    found: bool,
+    caller: String,
+}
+
+impl VisitMut for FindCaller<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        if self.found {
+            return;
+        }
+        debug!("{:?}", i);
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+                self.callee_finder.visit_impl_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.found = true;
+                self.caller = i.into_token_stream().to_string();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        if self.found {
+            return;
+        }
+        debug!("{:?}", i);
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+                self.callee_finder.visit_trait_item_method_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.found = true;
+                self.caller = i.into_token_stream().to_string();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.found {
+            return;
+        }
+        debug!("{:?}", i);
+        let id = i.sig.ident.to_string();
+        match id == self.caller_fn_name {
+            true => {
+                self.callee_finder.visit_item_fn_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.found = true;
+                self.caller = i.into_token_stream().to_string();
+            }
+            false => (),
+        }
+    }
+}
+
+pub struct FindFn<'a> {
+    fn_name: &'a str,
+    found: bool,
+    fn_txt: String,
+}
+
+impl VisitMut for FindFn<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        if self.found {
+            return;
+        }
+        debug!("{:?}", i);
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            true => {
+                self.found = true;
+                self.fn_txt = i.into_token_stream().to_string();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        if self.found {
+            return;
+        }
+        debug!("{:?}", i);
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            true => {
+                self.found = true;
+                self.fn_txt = i.into_token_stream().to_string();
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
+    }
+
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.found {
+            return;
+        }
+        debug!("{:?}", i);
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            true => {
+                self.found = true;
+                self.fn_txt = i.into_token_stream().to_string();
+            }
+            false => (),
+        }
+    }
+}
+
+pub fn find_caller(file_name: &str, caller_name: &str, callee_name: &str) -> (bool, String, String) {
+    let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
+    let mut file = syn::parse_str::<File>(file_content.as_str())
+        .map_err(|e| format!("{:?}", e))
+        .unwrap();
+
+    let mut visit = FindCaller { caller_fn_name:caller_name, callee_finder: &mut FindCallee { found: false, callee_fn_name: callee_name}, found: false, caller: String::new()};
+    visit.visit_file_mut(&mut file);
+
+    let mut callee = FindFn {
+        fn_name: callee_name,
+        found: false,
+        fn_txt: String::new(),
+    };
+
+    callee.visit_file_mut(&mut file);
+
+    (visit.found && callee.found, format_source(visit.caller.as_str()), format_source(callee.fn_txt.as_str()))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
