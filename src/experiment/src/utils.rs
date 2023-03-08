@@ -1,12 +1,12 @@
+use jwt_simple::prelude::*;
 use log::{debug, info, warn};
 use regex::Regex;
+use reqwest::blocking::Client;
 use std::fs;
-use std::io::Read;
+
 use std::ops::Add;
 use std::process::Command;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use reqwest::blocking::{Client};
-use jwt_simple::prelude::*;
+use std::time::{Duration, SystemTime};
 
 use crate::projects::Extraction;
 use borrower::borrow::make_borrows;
@@ -52,7 +52,7 @@ pub struct PasteDataRequest {
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PasteDataRequestWrapper {
-    paste_data: PasteDataRequest
+    paste_data: PasteDataRequest,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -84,7 +84,7 @@ pub fn make_jwt(secrets: &Secrets) -> String {
         scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file".to_string(),
         aud: "https://oauth2.googleapis.com/token".to_string(),
     };
-    let claims = Claims::with_custom_claims( claims, Duration::from_secs(30).into());
+    let claims = Claims::with_custom_claims(claims, Duration::from_secs(30).into());
 
     let token = key.sign(claims).unwrap();
     debug!("token: {}", token.as_str());
@@ -99,14 +99,7 @@ pub struct AccessTokenReq {
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct AccessTokenRes {
-    #[serde(default)]
-    access_token: Option<String>,
-    #[serde(default)]
-    scope: Option<String>,
-    #[serde(default)]
-    token_type: Option<String>,
-    #[serde(default)]
-    id_token: Option<String>,
+    access_token: String,
 }
 
 pub fn get_gcp_access_token(secrets: &Secrets, client: &Client) -> String {
@@ -116,23 +109,15 @@ pub fn get_gcp_access_token(secrets: &Secrets, client: &Client) -> String {
         assertion: token.as_str().to_string(),
     };
 
-    match client.post("https://oauth2.googleapis.com/token").form(&body).send() {
-        Ok(mut res) => {
+    match client
+        .post("https://oauth2.googleapis.com/token")
+        .form(&body)
+        .send()
+    {
+        Ok(res) => {
             if res.status().is_success() {
-                match res.json::<AccessTokenRes>() {
-                    Ok(res) => {
-                        match res.access_token {
-                            Some(t) => t,
-                            None => {
-                                match res.id_token {
-                                    None => panic!("neither access token nor id token found"),
-                                    Some(t) => t,
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => panic!("failed to parse access token: {:?}", e),
-                }
+                let res_json = res.json::<AccessTokenRes>().unwrap();
+                res_json.access_token
             } else {
                 panic!("failed to get access token: {:?}", res);
             }
@@ -143,12 +128,19 @@ pub fn get_gcp_access_token(secrets: &Secrets, client: &Client) -> String {
     }
 }
 
-pub fn upload_csv(secrets: &Secrets, csv_file: &String, spreadsheet: &String, sheet_id: i32, row_index: i32, column_index: i32) -> bool {
+pub fn upload_csv(
+    secrets: &Secrets,
+    csv_file: &String,
+    spreadsheet: &String,
+    sheet_id: i32,
+    row_index: i32,
+    column_index: i32,
+) -> bool {
     let client = Client::new();
 
     let access_token = get_gcp_access_token(secrets, &client);
 
-    let data : String = fs::read_to_string(csv_file).unwrap().parse().unwrap();
+    let data: String = fs::read_to_string(csv_file).unwrap().parse().unwrap();
     let paste_data = PasteDataRequest {
         coordinate: GridCoordinate {
             sheet_id,
@@ -165,7 +157,10 @@ pub fn upload_csv(secrets: &Secrets, csv_file: &String, spreadsheet: &String, sh
         requests: vec![PasteDataRequestWrapper { paste_data }],
     };
 
-    let url = format!("https://sheets.googleapis.com/v4/spreadsheets/{}:batchUpdate?key={}", spreadsheet, secrets.api_key);
+    let url = format!(
+        "https://sheets.googleapis.com/v4/spreadsheets/{}:batchUpdate?key={}",
+        spreadsheet, secrets.api_key
+    );
     let req = client.post(url).json(&body).bearer_auth(&access_token);
     debug!("about to send: {:?}", req);
     match req.send() {
@@ -185,7 +180,6 @@ pub fn upload_csv(secrets: &Secrets, csv_file: &String, spreadsheet: &String, sh
             false
         }
     }
-
 }
 
 /******************************* GIT RELATED  ***************************************************/

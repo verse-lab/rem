@@ -1,7 +1,7 @@
 use quote::ToTokens;
 use std::collections::HashMap;
 
-use colored::Colorize;
+
 use proc_macro2::Ident;
 use std::fs;
 
@@ -12,8 +12,8 @@ use regex::Regex;
 use syn::punctuated::Punctuated;
 use syn::{
     visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall,
-    ExprReference, ExprReturn, FnArg, ImplItem, ImplItemMethod, ItemFn, ItemImpl, Local, Macro,
-    Pat, Signature, Stmt, Token, TraitItem, TraitItemMethod, Type, TypeReference,
+    ExprReference, ExprReturn, FnArg, ImplItemMethod, ItemFn, Local, Macro,
+    Pat, Signature, Stmt, Token, TraitItemMethod, Type, TypeReference,
 };
 
 use log::debug;
@@ -724,7 +724,7 @@ struct CallerFnArgHelper<'a> {
     callee_fn_name: &'a str,
     mut_ref_inputs: &'a Vec<String>,
     ref_inputs: &'a Vec<String>,
-    decl_mut: &'a Vec<String>,
+    // decl_mut: &'a Vec<String>,
     make_ref: &'a Vec<String>,
     make_mut: &'a Vec<String>,
 }
@@ -796,7 +796,7 @@ impl VisitMut for CallerFnArg<'_> {
                     callee_fn_name: self.callee_fn_name,
                     mut_ref_inputs: self.mut_ref_inputs,
                     ref_inputs: self.ref_inputs,
-                    decl_mut: self.decl_mut,
+                    // decl_mut: self.decl_mut,
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
                 };
@@ -827,7 +827,7 @@ impl VisitMut for CallerFnArg<'_> {
                     callee_fn_name: self.callee_fn_name,
                     mut_ref_inputs: self.mut_ref_inputs,
                     ref_inputs: self.ref_inputs,
-                    decl_mut: self.decl_mut,
+                    // decl_mut: self.decl_mut,
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
                 };
@@ -863,7 +863,7 @@ impl VisitMut for CallerFnArg<'_> {
                     callee_fn_name: self.callee_fn_name,
                     mut_ref_inputs: self.mut_ref_inputs,
                     ref_inputs: self.ref_inputs,
-                    decl_mut: self.decl_mut,
+                    // decl_mut: self.decl_mut,
                     make_ref: self.make_ref,
                     make_mut: self.make_mut,
                 };

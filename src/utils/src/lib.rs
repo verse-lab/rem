@@ -27,9 +27,9 @@ use log::debug;
 use quote::ToTokens;
 use std::io::Write;
 use std::process::{Command, Stdio};
-use proc_macro2::TokenStream;
+
 use syn::visit_mut::VisitMut;
-use syn::{ExprCall, ExprMethodCall, File, ImplItemMethod, Item, ItemFn, TraitItemMethod};
+use syn::{ExprCall, ExprMethodCall, File, ImplItemMethod, ItemFn, TraitItemMethod};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////        COMPILE        /////////////////////////////////////////////

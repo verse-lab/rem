@@ -11,7 +11,7 @@ use syn::{
 
 use crate::common::{
     callee_renamer, elide_lifetimes_annotations, repair_bounds_help, repair_iteration,
-    repair_iteration_project, RenameFn, RepairSystem, RustcError,
+    repair_iteration_project, RepairSystem, RustcError,
 };
 use crate::repair_lifetime_simple;
 use utils::{check_project, compile_file, format_source};

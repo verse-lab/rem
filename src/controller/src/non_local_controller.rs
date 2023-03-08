@@ -1,7 +1,7 @@
 use std::fs;
 
 use convert_case::{Case, Casing};
-use log::{debug, info};
+use log::{debug};
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
