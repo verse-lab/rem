@@ -129,7 +129,7 @@ pub fn rename_callee(
     let replace = format!("s/{}(/{}(/g", callee_old_name, callee_name);
     let mut cmd = Command::new("sed");
     cmd.arg("-i").arg(replace).arg(&e.src_path);
-    let out = cmd.output().unwrap();
+    let _out = cmd.output().unwrap();
     let replace2 = format!("s/{}</{}</g", callee_old_name, callee_name);
     let mut cmd2 = Command::new("sed");
     cmd2.arg("-i").arg(replace2).arg(&e.src_path);

@@ -2,7 +2,7 @@ mod projects;
 mod utils;
 
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
-use crate::utils::{get_latest_commit, rename_callee, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult, CALLEE_NAME, get_project_size, get_src_size, get_caller_size};
+use crate::utils::{get_latest_commit, reset_to_base_branch, run_extraction, update_expr_branch, ExtractionResult, get_project_size, get_src_size, get_caller_size};
 use log::info;
 use std::fs;
 
