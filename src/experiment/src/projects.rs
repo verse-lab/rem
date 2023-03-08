@@ -69,7 +69,7 @@ pub struct ExperimentProject {
 // MUTABLE METHOD CALL is <SRC NAME>_MUTABLE_METHOD_CALLS
 
 pub fn all() -> Vec<ExperimentProject> {
-    vec![demo()] //gitoxide(), kickoff(), sniffnet(), beerus()]
+    vec![petgraph(), gitoxide(), kickoff(), sniffnet(), beerus()]
 }
 
 /// gitoxide experiment
@@ -243,7 +243,32 @@ pub fn beerus() -> ExperimentProject {
     }
 }
 
+pub fn petgraph() -> ExperimentProject {
+    let project = "petgraph".to_string();
+    let project_url = "https://github.com/sewenthy/petgraph".to_string();
+    let project_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, project);
 
+    ExperimentProject {
+        project,
+        project_url,
+        experiments: vec![
+            Experiment {
+                expr_type: "ext".to_string(),
+                extractions: vec![
+                    Extraction::new(
+                        &project_path,
+                        "src/generate.rs",
+                        "all",
+                        "Cargo.toml",
+                    ),
+                ],
+            },
+        ],
+    }
+}
+
+
+#[allow(dead_code)]
 /// demo for testing only
 pub fn demo() -> ExperimentProject {
     let project = "demo".to_string();

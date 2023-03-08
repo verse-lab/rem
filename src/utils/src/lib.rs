@@ -73,7 +73,8 @@ pub struct FindCallee<'a> {
 impl VisitMut for FindCallee<'_> {
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let callee = i.func.as_ref().into_token_stream().to_string();
-        match callee == self.callee_fn_name {
+        debug!("looking at callee: {}", callee);
+        match callee.contains(self.callee_fn_name) {
             true => self.found = true,
             false => syn::visit_mut::visit_expr_call_mut(self, i),
         }
@@ -82,7 +83,7 @@ impl VisitMut for FindCallee<'_> {
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let callee = i.method.clone().into_token_stream().to_string();
         debug!("looking at callee: {}", callee);
-        match callee == self.callee_fn_name {
+        match callee.contains(self.callee_fn_name) {
             true => self.found = true,
             false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
