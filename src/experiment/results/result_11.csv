@@ -1,0 +1,10 @@
+SUCCESS,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CARGO_MS,CARGO_CYCLES,TOTAL_DURATION_MS,TOTAL_DURATION_S,COMMIT,COMMIT_URL,FAILED_AT,PROJECT,BRANCH,PROJECT_SIZE,SRC_SIZE,CALLER_SIZE
+true,85,72,246,0,404,0.404,"8e1bf483c3c528cc101eda54c30905cda6c6ded0
+","https://github.com/sewenthy/petgraph/commit/8e1bf483c3c528cc101eda54c30905cda6c6ded0
+",,petgraph,ext1-expr-active,20114,89,27
+true,77,56,796,0,930,0.93,"298ea946edd87eeb9def80010332cfc9486ba47d
+","https://github.com/sewenthy/gitoxide/commit/298ea946edd87eeb9def80010332cfc9486ba47d
+",,gitoxide,ext1-expr-active,9131,56,9
+true,52,54,1081,1,1189,1.189,"6acd00b123eb716876f07d87fc071707941a4b64
+","https://github.com/sewenthy/gitoxide/commit/6acd00b123eb716876f07d87fc071707941a4b64
+",,gitoxide,ext2-expr-active,771,109,53
