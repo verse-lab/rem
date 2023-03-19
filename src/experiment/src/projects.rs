@@ -208,6 +208,13 @@ pub fn gitoxide() -> ExperimentProject {
                         "gix-glob/Cargo.toml",
                         None,
                     ),
+                    Extraction::new(
+                        &project_path,
+                        "gix-diff/src/tree/changes.rs",
+                        "catchup_rhs_with_lhs",
+                        "gix-diff/Cargo.toml",
+                        Some("elide even more than author"),
+                    ),
                 ],
             },
         ],
