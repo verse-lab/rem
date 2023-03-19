@@ -1,0 +1,10 @@
+SUCCESS,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CARGO_MS,CARGO_CYCLES,TOTAL_DURATION_MS,TOTAL_DURATION_S,COMMIT,COMMIT_URL,FAILED_AT,PROJECT,BRANCH,PROJECT_SIZE,SRC_SIZE,CALLER_SIZE,NOTES
+true,82,61,270,0,413,0.41300000000000003,"223914be14b26020538fee0a448df171302c9213
+","https://github.com/sewenthy/petgraph/commit/223914be14b26020538fee0a448df171302c9213
+",,petgraph,ext1-expr-active,20114,89,27,within impl
+true,118,196,1028,0,1343,1.343,"aee680df71680e49509a22b07249adfafb19e1da
+","https://github.com/sewenthy/petgraph/commit/aee680df71680e49509a22b07249adfafb19e1da
+",,petgraph,ext2-expr-active,20115,921,20,new impl with generics annotated + invoc using self.bar
+true,106,195,1600,1,1902,1.9020000000000001,"a4f750f870a4eaa7b1382bfbb6448bfc842ccfe8
+","https://github.com/sewenthy/petgraph/commit/a4f750f870a4eaa7b1382bfbb6448bfc842ccfe8
+",,petgraph,ext3-expr-active,20115,921,8,new impl + invoc using self.bar + lt bound needed between genrics and output

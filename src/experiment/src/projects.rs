@@ -14,7 +14,13 @@ pub struct Extraction {
 }
 
 impl Extraction {
-    fn new(project_path: &String, src_path: &str, caller: &str, cargo_path: &str, notes: Option<&str>) -> Self {
+    fn new(
+        project_path: &String,
+        src_path: &str,
+        caller: &str,
+        cargo_path: &str,
+        notes: Option<&str>,
+    ) -> Self {
         let src_name = match src_path.split("/").last() {
             None => panic!("invalid path maybe"),
             Some(tmp) => match tmp.strip_suffix(".rs") {
@@ -99,14 +105,14 @@ pub fn gitoxide() -> ExperimentProject {
                         "gix-mailmap/src/parse.rs",
                         "parse_line",
                         "gix-mailmap/Cargo.toml",
-                        Some("complex lifetime + bounds + nlcf--used in paper")
+                        Some("complex lifetime + bounds + nlcf--used in paper"),
                     ),
                     Extraction::new(
                         &project_path,
                         "gix-hash/src/object_id.rs",
                         "from_hex",
                         "gix-hash/Cargo.toml",
-                        Some("extracted within impl + invoc Self::bar")
+                        Some("extracted within impl + invoc Self::bar"),
                     ),
                 ],
             },
@@ -118,14 +124,14 @@ pub fn gitoxide() -> ExperimentProject {
                         "git-protocol/src/packet_line/decode.rs",
                         "streaming",
                         "git-protocol/Cargo.toml",
-                        Some("nclf")
+                        Some("nclf"),
                     ),
                     Extraction::new(
                         &project_path,
                         "git-config/src/file/resolve_includes.rs",
                         "resolve_includes_recursive",
                         "git-config/Cargo.toml",
-                        Some("2 lifetimes usage + good elision")
+                        Some("2 lifetimes usage + good elision"),
                     ),
                 ],
             },
@@ -137,16 +143,22 @@ pub fn gitoxide() -> ExperimentProject {
                         "gix-validate/src/reference.rs",
                         "name",
                         "gix-validate/Cargo.toml",
-                        Some("nclf + lifetime within traits + some non-elidibles")
+                        Some("nclf + lifetime within traits + some non-elidibles"),
                     ),
                     Extraction::new(
                         &project_path,
                         "gix-object/src/parse.rs",
                         "signature",
                         "gix-object/Cargo.toml",
-                        Some("generic has lifetimes + very complex boundings--good to show")
+                        Some("generic has lifetimes + very complex boundings--good to show"),
                     ),
-                    Extraction::new(&project_path, "gix/src/create.rs", "into", "gix/Cargo.toml", Some("failed due to cargo check")),
+                    Extraction::new(
+                        &project_path,
+                        "gix/src/create.rs",
+                        "into",
+                        "gix/Cargo.toml",
+                        Some("failed due to cargo check"),
+                    ),
                     Extraction::new(
                         &project_path,
                         "gix-lock/src/acquire.rs",
@@ -228,7 +240,7 @@ pub fn kickoff() -> ExperimentProject {
                 "src/gui.rs",
                 "register_inputs",
                 "Cargo.toml",
-                Some("all elidible lifetimes")
+                Some("all elidible lifetimes"),
             )],
         }],
     }
@@ -250,7 +262,7 @@ pub fn beerus() -> ExperimentProject {
                 "beerus_rest_api/src/main.rs",
                 "rocket",
                 "beerus_rest_api/Cargo.toml",
-                Some("small use of async")
+                Some("small use of async"),
             )],
         }],
     }
@@ -269,8 +281,16 @@ pub fn petgraph() -> ExperimentProject {
             extractions: vec![
                 Extraction::new(&project_path, "src/generate.rs", "all", "Cargo.toml", Some("within impl")),
                 Extraction::new(&project_path, "src/graphmap.rs", "next", "Cargo.toml", Some("new impl with generics annotated + invoc using self.bar")),
+                Extraction::new(&project_path, "src/graphmap.rs", "nth", "Cargo.toml", Some("new impl + invoc using self.bar + lt bound needed between genrics and output")),
+                Extraction::new(&project_path, "src/dot.rs", "graph_fmt", "Cargo.toml", None),
             ],
-        }],
+        },
+          Experiment {
+              expr_type: "inline-ext".to_string(),
+              extractions: vec![
+                  Extraction::new(&project_path, "src/dot.rs", "fmt", "Cargo.toml", Some("failed due to type inference on generics")),
+              ],
+          }],
     }
 }
 
@@ -287,7 +307,13 @@ pub fn demo() -> ExperimentProject {
         experiments: vec![Experiment {
             expr_type: "ext".to_string(),
             extractions: vec![
-                Extraction::new(&project_path, "src/main.rs", "trait_function", "Cargo.toml", None),
+                Extraction::new(
+                    &project_path,
+                    "src/main.rs",
+                    "trait_function",
+                    "Cargo.toml",
+                    None,
+                ),
                 Extraction::new(&project_path, "src/main.rs", "test", "Cargo.toml", None),
             ],
         }],
