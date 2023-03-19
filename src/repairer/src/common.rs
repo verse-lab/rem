@@ -557,7 +557,7 @@ pub struct RenameFn<'a> {
 impl VisitMut for RenameFn<'_> {
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let callee = i.clone().method.into_token_stream().to_string();
-        match callee == self.callee_name {
+        match callee.contains(self.callee_name) {
             true => {
                 i.method = syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap()
             }
@@ -567,8 +567,10 @@ impl VisitMut for RenameFn<'_> {
 
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let callee = i.func.as_ref().into_token_stream().to_string();
-        match callee == self.callee_name {
+        debug!("callee: {}", &callee);
+        match callee.contains(self.callee_name) {
             true => {
+                debug!("callee: {} matched", &callee);
                 *i.func.as_mut() =
                     syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
             }
@@ -578,7 +580,7 @@ impl VisitMut for RenameFn<'_> {
     }
     fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
         let callee = i.sig.ident.to_string();
-        match callee == self.callee_name {
+        match callee.contains(self.callee_name) {
             true => {
                 i.sig.ident =
                     syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
@@ -590,7 +592,7 @@ impl VisitMut for RenameFn<'_> {
 
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let callee = i.sig.ident.to_string();
-        match callee == self.callee_name {
+        match callee.contains(self.callee_name) {
             true => {
                 i.sig.ident =
                     syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
@@ -601,7 +603,7 @@ impl VisitMut for RenameFn<'_> {
     }
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let callee = i.sig.ident.to_string();
-        match callee == self.callee_name {
+        match callee.contains(self.callee_name) {
             true => {
                 i.sig.ident =
                     syn::parse_str(callee.replace(self.callee_postfix, "").as_str()).unwrap();
