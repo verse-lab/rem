@@ -121,6 +121,20 @@ pub fn gitoxide() -> ExperimentProject {
                         "gix-config/Cargo.toml",
                         Some("extracted within impl + invoc self.bar with non-elidible lifetime"),
                     ),
+                    Extraction::new(
+                        &project_path,
+                        "gix-config/src/source.rs",
+                        "storage_location",
+                        "gix-config/Cargo.toml",
+                        Some("extracted within impl + invoc Self::bar"),
+                    ),
+                    Extraction::new(
+                        &project_path,
+                        "gix-config/src/source.rs",
+                        "install_config_path",
+                        "gix-config/Cargo.toml",
+                        Some("within closure"),
+                    ),
                 ],
             },
             Experiment {

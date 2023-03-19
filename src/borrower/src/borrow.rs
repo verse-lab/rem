@@ -50,7 +50,7 @@ impl VisitMut for RefBorrowAssignerHelper<'_> {
             _ => match (self.make_mut.contains(&id) || self.make_ref.contains(&id))
                 && !(self.ref_inputs.contains(&id) || self.mut_ref_inputs.contains(&id))
             {
-                true => *i = syn::parse_quote! {*#i},
+                true => *i = syn::parse_quote! {(*#i)},
                 false => syn::visit_mut::visit_expr_mut(self, i),
             },
         }
