@@ -97,6 +97,12 @@ pub fn gitoxide() -> ExperimentProject {
                         "parse_line",
                         "gix-mailmap/Cargo.toml",
                     ),
+                    Extraction::new(
+                        &project_path,
+                        "gix-hash/src/object_id.rs",
+                        "from_hex",
+                        "gix-hash/Cargo.toml",
+                    ),
                 ],
             },
             Experiment {
