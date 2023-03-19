@@ -258,6 +258,7 @@ pub fn get_latest_commit(dir: &String) -> String {
 
 pub fn reset_to_base_branch(dir: &String, base_branch: &String, active_branch: &String) -> bool {
     checkout(dir, base_branch)
+        && (push_branch(dir, base_branch, false) || true) // don't care if can't push
         && (del_branch(dir, active_branch) || true) // don't care if can't delete
         && checkout(dir, base_branch)
         && checkout_b(dir, active_branch)

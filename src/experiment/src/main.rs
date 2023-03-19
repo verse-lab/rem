@@ -31,7 +31,10 @@ fn main() {
                 // reset all branch to their base branch
                 either!(
                     reset_to_base_branch(&repo_path, &expr_branch, &expr_branch_active),
-                    panic!("could not reset to initial state")
+                    panic!(
+                        "could not reset to initial state for {}:{}",
+                        &expr_project.project, &expr_branch
+                    )
                 );
 
                 info!(
@@ -71,7 +74,10 @@ fn main() {
 
                 either!(
                     update_expr_branch(&repo_path, &expr_branch_active),
-                    panic!("could not update experiment branch!")
+                    panic!(
+                        "could not update experiment branch for {}:{}!",
+                        &expr_project.project, &expr_branch
+                    )
                 );
 
                 extraction_result.commit = get_latest_commit(&repo_path);

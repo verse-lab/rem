@@ -135,6 +135,20 @@ pub fn gitoxide() -> ExperimentProject {
                         "gix-config/Cargo.toml",
                         Some("within closure"),
                     ),
+                    Extraction::new(
+                        &project_path,
+                        "gix-glob/src/parse.rs",
+                        "truncate_non_escaped_trailing_spaces",
+                        "gix-glob/Cargo.toml",
+                        Some("loop"),
+                    ),
+                    Extraction::new(
+                        &project_path,
+                        "gix-glob/src/pattern.rs",
+                        "matches_repo_relative_path",
+                        "gix-glob/Cargo.toml",
+                        Some("some unrelated syntax feature |"),
+                    ),
                 ],
             },
             Experiment {
@@ -221,7 +235,7 @@ pub fn gitoxide() -> ExperimentProject {
     }
 }
 
-/// sniffnet experiment
+/// sniffnet experiment: packet sniffer
 pub fn sniffnet() -> ExperimentProject {
     let project = "sniffnet".to_string();
     let project_url = "https://github.com/sewenthy/sniffnet".to_string();
@@ -248,7 +262,26 @@ pub fn sniffnet() -> ExperimentProject {
                     Some("technial; need to introduce A{x=*x} if taken x as reference and init struct")
                 ),
             ],
-        }],
+        },
+                          Experiment {
+                              expr_type: "ext".to_string(),
+                              extractions: vec![
+                                  Extraction::new(
+                                      &project_path,
+                                      "src/utility/manage_charts_data.rs",
+                                      "update_charts_data",
+                                      "Cargo.toml",
+                                      None
+                                  ),
+                                  Extraction::new(
+                                      &project_path,
+                                      "src/utility/manage_notifications.rs",
+                                      "notify_and_log",
+                                      "Cargo.toml",
+                                      Some("path-ed receiver")
+                                  ),
+                              ],
+                          },],
     }
 }
 
@@ -274,7 +307,7 @@ pub fn kickoff() -> ExperimentProject {
     }
 }
 
-/// beerus experiment
+/// beerus experiment: small and fast web server using async
 pub fn beerus() -> ExperimentProject {
     let project = "beerus".to_string();
     let project_url = "https://github.com/sewenthy/beerus".to_string();
@@ -296,6 +329,7 @@ pub fn beerus() -> ExperimentProject {
     }
 }
 
+/// petgraph project: graph theory implementations for Rust
 pub fn petgraph() -> ExperimentProject {
     let project = "petgraph".to_string();
     let project_url = "https://github.com/sewenthy/petgraph".to_string();

@@ -10,11 +10,7 @@ use constraint::ConstraintManager;
 use itertools::Itertools;
 use regex::Regex;
 use syn::punctuated::Punctuated;
-use syn::{
-    visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall,
-    ExprReference, ExprReturn, FnArg, ImplItemMethod, ItemFn, Local, Macro,
-    Pat, Signature, Stmt, Token, TraitItemMethod, Type, TypeReference,
-};
+use syn::{visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference, ExprReturn, FnArg, ImplItemMethod, ItemFn, Local, Macro, Pat, Signature, Stmt, Token, TraitItemMethod, Type, TypeReference, PathSegment};
 
 use log::debug;
 use utils::{format_source, FindCallee};
@@ -555,6 +551,25 @@ impl VisitMut for MutBorrowLHSChecker<'_> {
     }
 }
 
+struct ReceiverHelper<'a> {
+    check_match: &'a Vec<String>,
+    found: bool,
+    exprs: &'a mut Vec<String>,
+}
+
+impl VisitMut for ReceiverHelper<'_> {
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
+        let id = i.clone().into_token_stream().to_string();
+        match self.check_match.contains(&id) {
+            false => syn::visit_mut::visit_expr_mut(self, i),
+            true => {
+                self.found = true;
+                self.exprs.push(id);
+            },
+        }
+    }
+}
+
 struct MutableBorrowerHelper<'a> {
     make_ref: &'a mut Vec<String>,
     make_mut: &'a mut Vec<String>,
@@ -599,16 +614,32 @@ impl VisitMut for MutableBorrowerHelper<'_> {
 
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let id = i.receiver.as_ref().into_token_stream().to_string();
-        // println!(
-        //     "call decl id: {}, {}",
-        //     id,
-        //     i.clone().into_token_stream().to_string()
-        // );
-        match self.decl_mut.contains(&id) || self.callee_inputs.contains(&id) {
-            true => self.mut_methods.clone().iter().for_each(|mut_call| {
-                let mut_call_id = mut_call.receiver.as_ref().into_token_stream().to_string();
-                if i.clone().method == mut_call.method && id == mut_call_id {
-                    self.make_mut.push(id.clone())
+        debug!(
+            "call decl, {:?}, id: {}, {}",
+            i.receiver,
+            id,
+            i.clone().into_token_stream().to_string()
+        );
+        let mut input_exprs = vec![];
+        let mut input_in_receiver = ReceiverHelper {
+            check_match: self.callee_inputs,
+            found: false,
+            exprs: &mut input_exprs,
+        };
+        input_in_receiver.visit_expr_mut(i.receiver.as_mut());
+        match self.decl_mut.contains(&id) || input_in_receiver.found {
+            true => self.mut_methods.clone().iter_mut().for_each(|mut_call| {
+                if i.clone().method == mut_call.method {
+                    let mut mut_exprs = vec![];
+                    let mut mut_methods_receiver = ReceiverHelper {
+                        check_match: &input_exprs,
+                        found: false,
+                        exprs: &mut mut_exprs,
+                    };
+                    mut_methods_receiver.visit_expr_mut(mut_call.receiver.as_mut());
+                    for x in mut_exprs {
+                        self.make_mut.push(x.clone())
+                    }
                 }
             }),
             false => (),
