@@ -25,7 +25,7 @@ struct CheckCalleeWithinLoopHelper<'a> {
 impl VisitMut for CheckCalleeWithinLoopHelper<'_> {
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let id = i.func.as_ref().into_token_stream().to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             true => self.callee_in_loop = true,
             false => syn::visit_mut::visit_expr_call_mut(self, i),
         }
@@ -33,7 +33,7 @@ impl VisitMut for CheckCalleeWithinLoopHelper<'_> {
 
     fn visit_expr_method_call_mut(&mut self, i: &mut ExprMethodCall) {
         let callee = i.clone().method.into_token_stream().to_string();
-        match callee == self.callee_fn_name {
+        match callee.contains(self.callee_fn_name) {
             true => self.callee_in_loop = true,
             false => syn::visit_mut::visit_expr_method_call_mut(self, i),
         }
@@ -53,28 +53,19 @@ impl VisitMut for CheckCalleeWithinLoop<'_> {
         };
         match i {
             Expr::ForLoop(l) => {
-                l.body
-                    .stmts
-                    .iter_mut()
-                    .for_each(|stmt| helper.visit_stmt_mut(stmt));
+                helper.visit_expr_for_loop_mut(l);
                 if helper.callee_in_loop {
                     self.callee_in_loop = true
                 };
             }
             Expr::Loop(l) => {
-                l.body
-                    .stmts
-                    .iter_mut()
-                    .for_each(|stmt| helper.visit_stmt_mut(stmt));
+                helper.visit_expr_loop_mut(l);
                 if helper.callee_in_loop {
                     self.callee_in_loop = true
                 };
             }
             Expr::While(l) => {
-                l.body
-                    .stmts
-                    .iter_mut()
-                    .for_each(|stmt| helper.visit_stmt_mut(stmt));
+                helper.visit_expr_while_mut(l);
                 if helper.callee_in_loop {
                     self.callee_in_loop = true
                 };

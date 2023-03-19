@@ -67,6 +67,7 @@ pub struct Experiment {
     pub expr_type: String,
     pub extractions: Vec<Extraction>,
 }
+
 pub struct ExperimentProject {
     pub project: String,
     pub project_url: String,
@@ -252,36 +253,56 @@ pub fn sniffnet() -> ExperimentProject {
                     "src/utility/manage_packets.rs",
                     "modify_or_insert_in_map",
                     "Cargo.toml",
-                    Some("all elidible lifetimes")
+                    Some("all elidible lifetimes"),
                 ),
                 Extraction::new(
                     &project_path,
                     "src/thread_parse_packets.rs",
                     "parse_packets_loop",
                     "Cargo.toml",
-                    Some("technial; need to introduce A{x=*x} if taken x as reference and init struct")
+                    Some("technial; need to introduce A{x=*x} if taken x as reference and init struct"),
                 ),
             ],
-        },
-                          Experiment {
-                              expr_type: "ext".to_string(),
-                              extractions: vec![
-                                  Extraction::new(
-                                      &project_path,
-                                      "src/utility/manage_charts_data.rs",
-                                      "update_charts_data",
-                                      "Cargo.toml",
-                                      None
-                                  ),
-                                  Extraction::new(
-                                      &project_path,
-                                      "src/utility/manage_notifications.rs",
-                                      "notify_and_log",
-                                      "Cargo.toml",
-                                      Some("path-ed receiver")
-                                  ),
-                              ],
-                          },],
+        }, Experiment {
+            expr_type: "ext".to_string(),
+            extractions: vec![
+                Extraction::new(
+                    &project_path,
+                    "src/utility/manage_charts_data.rs",
+                    "update_charts_data",
+                    "Cargo.toml",
+                    None,
+                ),
+                Extraction::new(
+                    &project_path,
+                    "src/utility/manage_notifications.rs",
+                    "notify_and_log",
+                    "Cargo.toml",
+                    Some("path-ed receiver"),
+                ),
+                Extraction::new(
+                    &project_path,
+                    "src/utility/get_formatted_strings.rs",
+                    "get_active_filters_string",
+                    "Cargo.toml",
+                    None,
+                ),
+                Extraction::new(
+                    &project_path,
+                    "src/utility/get_formatted_strings.rs",
+                    "get_app_count_string",
+                    "Cargo.toml",
+                    None,
+                ),
+                Extraction::new(
+                    &project_path,
+                    "src/utility/manage_packets.rs",
+                    "analyze_transport_header",
+                    "Cargo.toml",
+                    Some("lots of references but all elidible"),
+                ),
+            ],
+        }, ],
     }
 }
 
@@ -302,6 +323,15 @@ pub fn kickoff() -> ExperimentProject {
                 "register_inputs",
                 "Cargo.toml",
                 Some("all elidible lifetimes"),
+            )],
+        }, Experiment {
+            expr_type: "ext".to_string(),
+            extractions: vec![Extraction::new(
+                &project_path,
+                "src/font.rs",
+                "render",
+                "Cargo.toml",
+                None,
             )],
         }],
     }
@@ -349,12 +379,12 @@ pub fn petgraph() -> ExperimentProject {
                 Extraction::new(&project_path, "src/algo/isomorphism.rs", "push_mapping", "Cargo.toml", Some("has self so smart not elide")),
             ],
         },
-          Experiment {
-              expr_type: "inline-ext".to_string(),
-              extractions: vec![
-                  Extraction::new(&project_path, "src/dot.rs", "fmt", "Cargo.toml", Some("failed due to type inference on generics")),
-              ],
-          }],
+                          Experiment {
+                              expr_type: "inline-ext".to_string(),
+                              extractions: vec![
+                                  Extraction::new(&project_path, "src/dot.rs", "fmt", "Cargo.toml", Some("failed due to type inference on generics")),
+                              ],
+                          }],
     }
 }
 
