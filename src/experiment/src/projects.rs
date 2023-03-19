@@ -114,6 +114,13 @@ pub fn gitoxide() -> ExperimentProject {
                         "gix-hash/Cargo.toml",
                         Some("extracted within impl + invoc Self::bar"),
                     ),
+                    Extraction::new(
+                        &project_path,
+                        "gix-config/src/source.rs",
+                        "sources",
+                        "gix-config/Cargo.toml",
+                        Some("extracted within impl + invoc self.bar with non-elidible lifetime"),
+                    ),
                 ],
             },
             Experiment {
@@ -283,6 +290,8 @@ pub fn petgraph() -> ExperimentProject {
                 Extraction::new(&project_path, "src/graphmap.rs", "next", "Cargo.toml", Some("new impl with generics annotated + invoc using self.bar")),
                 Extraction::new(&project_path, "src/graphmap.rs", "nth", "Cargo.toml", Some("new impl + invoc using self.bar + lt bound needed between genrics and output")),
                 Extraction::new(&project_path, "src/dot.rs", "graph_fmt", "Cargo.toml", None),
+                Extraction::new(&project_path, "src/algo/floyd_warshall.rs", "floyd_warshall", "Cargo.toml", None),
+                Extraction::new(&project_path, "src/algo/isomorphism.rs", "push_mapping", "Cargo.toml", Some("has self so smart not elide")),
             ],
         },
           Experiment {

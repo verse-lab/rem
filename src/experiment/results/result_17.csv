@@ -1,0 +1,70 @@
+SUCCESS,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CARGO_MS,CARGO_CYCLES,TOTAL_DURATION_MS,TOTAL_DURATION_S,COMMIT,COMMIT_URL,FAILED_AT,PROJECT,BRANCH,PROJECT_SIZE,SRC_SIZE,CALLER_SIZE,NOTES
+true,64,54,269,0,387,0.387,"849481a662e715de5585cfeab9f3e013354a4acc
+","https://github.com/sewenthy/petgraph/commit/849481a662e715de5585cfeab9f3e013354a4acc
+",,petgraph,ext1-expr-active,20114,89,27,within impl
+true,154,164,931,0,1251,1.2510000000000001,"cbe5f7b7e8cdf3cac02c2cb17111d068aae53333
+","https://github.com/sewenthy/petgraph/commit/cbe5f7b7e8cdf3cac02c2cb17111d068aae53333
+",,petgraph,ext2-expr-active,20115,921,20,new impl with generics annotated + invoc using self.bar
+true,126,138,1609,1,1874,1.874,"6dd9848eb2d2ae57f3d5333f38a4f737a4d9c3cf
+","https://github.com/sewenthy/petgraph/commit/6dd9848eb2d2ae57f3d5333f38a4f737a4d9c3cf
+",,petgraph,ext3-expr-active,20115,921,8,new impl + invoc using self.bar + lt bound needed between genrics and output
+true,99,113,1713,0,1926,1.926,"2bd34bb133a49bb9e81136bc8a96881c69ddf414
+","https://github.com/sewenthy/petgraph/commit/2bd34bb133a49bb9e81136bc8a96881c69ddf414
+",,petgraph,ext4-expr-active,20113,264,54,
+true,57,88,778,0,924,0.924,"f42c796d8dc21425c36f1425f6df138ece4a136e
+","https://github.com/sewenthy/petgraph/commit/f42c796d8dc21425c36f1425f6df138ece4a136e
+",,petgraph,ext5-expr-active,20113,55,122,
+true,126,151,1021,0,1299,1.299,"b6569f45ff6361c2b06bee28ce261816cfa12056
+","https://github.com/sewenthy/petgraph/commit/b6569f45ff6361c2b06bee28ce261816cfa12056
+",,petgraph,ext6-expr-active,20113,815,22,has self so smart not elide
+false,87,107,415,1,610,0.61,"bd4d579c6e54eeebb8111b09a8174e7d7df1bbb4
+","https://github.com/sewenthy/petgraph/commit/bd4d579c6e54eeebb8111b09a8174e7d7df1bbb4
+",cargo,petgraph,inline-ext1-expr-active,20157,308,54,failed due to type inference on generics
+true,77,59,826,0,964,0.964,"f62ec77a9486331dfbe573035239df697728dac5
+","https://github.com/sewenthy/gitoxide/commit/f62ec77a9486331dfbe573035239df697728dac5
+",,gitoxide,ext1-expr-active,9131,56,9,
+true,78,77,1009,1,1166,1.166,"88d53d9c526810041f3c350538a7b7f756579c0b
+","https://github.com/sewenthy/gitoxide/commit/88d53d9c526810041f3c350538a7b7f756579c0b
+",,gitoxide,ext2-expr-active,771,109,53,complex lifetime + bounds + nlcf--used in paper
+true,91,85,581,0,758,0.758,"6d756d360269510cddf8931b44036b6a90f34723
+","https://github.com/sewenthy/gitoxide/commit/6d756d360269510cddf8931b44036b6a90f34723
+",,gitoxide,ext3-expr-active,800,178,19,extracted within impl + invoc Self::bar
+true,48,80,401,0,531,0.531,"c3ed982ba557c1f60b60a93ae5a0df2c143d8fb1
+","https://github.com/sewenthy/gitoxide/commit/c3ed982ba557c1f60b60a93ae5a0df2c143d8fb1
+",,gitoxide,ext-com1-expr-active,574,84,47,nclf
+true,66,99,1248,1,1413,1.413,"87e208e422d3e6b4d42bcb5d63f560050688fff4
+","https://github.com/sewenthy/gitoxide/commit/87e208e422d3e6b4d42bcb5d63f560050688fff4
+",,gitoxide,ext-com2-expr-active,6761,192,73,2 lifetimes usage + good elision
+true,59,72,875,1,1006,1.006,"3b9055c462da2f6ec92262966994d641255eac74
+","https://github.com/sewenthy/gitoxide/commit/3b9055c462da2f6ec92262966994d641255eac74
+",,gitoxide,inline-ext1-expr-active,375,86,32,nclf + lifetime within traits + some non-elidibles
+true,95,79,2668,3,2843,2.843,"fb1a478be20a4e2bdf06d81ade4bbefed39393e8
+","https://github.com/sewenthy/gitoxide/commit/fb1a478be20a4e2bdf06d81ade4bbefed39393e8
+",,gitoxide,inline-ext2-expr-active,3759,122,60,generic has lifetimes + very complex boundings--good to show
+false,88,112,1080,1,1281,1.281,"18cb02f2aa13c179fba0db355f36ea2b50d98bed
+","https://github.com/sewenthy/gitoxide/commit/18cb02f2aa13c179fba0db355f36ea2b50d98bed
+",cargo,gitoxide,inline-ext3-expr-active,20211,216,121,failed due to cargo check
+true,84,109,531,0,725,0.725,"9806af58648fa4d247365f8953369e669d5c3108
+","https://github.com/sewenthy/gitoxide/commit/9806af58648fa4d247365f8953369e669d5c3108
+",,gitoxide,inline-ext4-expr-active,630,154,52,
+true,90,66,530,0,688,0.6880000000000001,"9d098647922805b54ac0628fbc0d88f2b62f4a0b
+","https://github.com/sewenthy/gitoxide/commit/9d098647922805b54ac0628fbc0d88f2b62f4a0b
+",,gitoxide,inline-ext5-expr-active,625,149,49,
+true,63,85,547,0,696,0.6960000000000001,"78a063e94984834f9c5e785f14a27cfe2cfb2bd5
+","https://github.com/sewenthy/gitoxide/commit/78a063e94984834f9c5e785f14a27cfe2cfb2bd5
+",,gitoxide,inline-ext6-expr-active,1428,143,144,
+true,56,65,475,0,597,0.597,"aa451001f3319350f7f712fa97684c26d0e5e044
+","https://github.com/sewenthy/gitoxide/commit/aa451001f3319350f7f712fa97684c26d0e5e044
+",,gitoxide,inline-ext7-expr-active,1026,72,43,
+true,71,124,667,0,863,0.863,"7b6c451caacb97f63366ca3d02edbccc49470ef3
+","https://github.com/sewenthy/kickoff/commit/7b6c451caacb97f63366ca3d02edbccc49470ef3
+",,kickoff,inline-ext1-expr-active,1502,324,56,all elidible lifetimes
+true,105,93,1101,0,1301,1.301,"391bf06185f3c20e7e3461746f65bb2dc75f8785
+","https://github.com/sewenthy/sniffnet/commit/391bf06185f3c20e7e3461746f65bb2dc75f8785
+",,sniffnet,inline-ext1-expr-active,7283,352,72,all elidible lifetimes
+false,105,88,736,1,929,0.929,"3a5281e3c8916dcc926240699d1080778e3f47aa
+","https://github.com/sewenthy/sniffnet/commit/3a5281e3c8916dcc926240699d1080778e3f47aa
+",cargo,sniffnet,inline-ext2-expr-active,7304,179,182,technial; need to introduce A{x=*x} if taken x as reference and init struct
+true,62,83,1556,0,1702,1.702,"17529fcb5c10b1f483b595adebeecaa2acaee75a
+","https://github.com/sewenthy/beerus/commit/17529fcb5c10b1f483b595adebeecaa2acaee75a
+",,beerus,ext-com1-expr-active,302,63,27,small use of async
