@@ -1,0 +1,22 @@
+SUCCESS,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CARGO_MS,CARGO_CYCLES,TOTAL_DURATION_MS,TOTAL_DURATION_S,COMMIT,COMMIT_URL,FAILED_AT,PROJECT,BRANCH,PROJECT_SIZE,SRC_SIZE,CALLER_SIZE,NOTES
+true,56,89,276,0,422,0.422,"a7b28c7999b58ab98f438742cec1faff90983837
+","https://github.com/sewenthy/petgraph/commit/a7b28c7999b58ab98f438742cec1faff90983837
+",,petgraph,ext1-expr-active,20114,89,27,within impl
+true,176,167,1028,0,1372,1.372,"e0e9a6ae1fbea928aead50131d36ed251462f7a7
+","https://github.com/sewenthy/petgraph/commit/e0e9a6ae1fbea928aead50131d36ed251462f7a7
+",,petgraph,ext2-expr-active,20115,921,20,new impl with generics annotated + invoc using self.bar
+true,179,178,1595,1,1952,1.952,"1f67b2f3e919b75f3415a0747b3cd29ce9e1603c
+","https://github.com/sewenthy/petgraph/commit/1f67b2f3e919b75f3415a0747b3cd29ce9e1603c
+",,petgraph,ext3-expr-active,20115,921,8,new impl + invoc using self.bar + lt bound needed between genrics and output
+true,107,130,1604,0,1842,1.842,"a99e6ec9e786bb940963d60afaf26503938fbac1
+","https://github.com/sewenthy/petgraph/commit/a99e6ec9e786bb940963d60afaf26503938fbac1
+",,petgraph,ext4-expr-active,20113,264,54,
+true,56,97,754,0,908,0.908,"f8aa5cb708a508e5261d7536b34f68de3025e478
+","https://github.com/sewenthy/petgraph/commit/f8aa5cb708a508e5261d7536b34f68de3025e478
+",,petgraph,ext5-expr-active,20113,55,122,
+true,167,114,1038,0,1320,1.32,"605ee55dac3c8de35532cbcc3a3a279fa32e617a
+","https://github.com/sewenthy/petgraph/commit/605ee55dac3c8de35532cbcc3a3a279fa32e617a
+",,petgraph,ext6-expr-active,20113,815,22,has self so smart not elide
+false,112,150,387,1,649,0.649,"05adc1efc9cbb6012ae97b6f80910608b198b28f
+","https://github.com/sewenthy/petgraph/commit/05adc1efc9cbb6012ae97b6f80910608b198b28f
+",cargo,petgraph,inline-ext1-expr-active,20157,308,54,failed due to type inference on generics

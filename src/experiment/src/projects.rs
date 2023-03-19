@@ -81,6 +81,17 @@ pub fn all() -> Vec<ExperimentProject> {
     vec![petgraph(), gitoxide(), kickoff(), sniffnet(), beerus()]
 }
 
+pub fn size() -> usize {
+    let all = all();
+    let mut count = 0;
+    for e in all {
+        for ee in e.experiments {
+            count += ee.extractions.len();
+        }
+    }
+    count
+}
+
 /// gitoxide experiment
 pub fn gitoxide() -> ExperimentProject {
     let project = "gitoxide".to_string();
@@ -301,6 +312,20 @@ pub fn sniffnet() -> ExperimentProject {
                     "Cargo.toml",
                     Some("lots of references but all elidible"),
                 ),
+                Extraction::new(
+                    &project_path,
+                    "src/utility/manage_packets.rs",
+                    "is_broadcast_address",
+                    "Cargo.toml",
+                    None,
+                ),
+                Extraction::new(
+                    &project_path,
+                    "src/utility/manage_packets.rs",
+                    "ipv6_from_long_dec_to_short_hex",
+                    "Cargo.toml",
+                    None,
+                ),
             ],
         }, ],
     }
@@ -330,6 +355,24 @@ pub fn kickoff() -> ExperimentProject {
                 &project_path,
                 "src/font.rs",
                 "render",
+                "Cargo.toml",
+                None,
+            ), Extraction::new(
+                &project_path,
+                "src/history.rs",
+                "load",
+                "Cargo.toml",
+                None,
+            ), Extraction::new(
+                &project_path,
+                "src/font.rs",
+                "new",
+                "Cargo.toml",
+                None,
+            ), Extraction::new(
+                &project_path,
+                "src/font.rs",
+                "render_glyph",
                 "Cargo.toml",
                 None,
             )],

@@ -183,6 +183,22 @@ pub fn upload_csv(
 }
 
 /******************************* GIT RELATED  ***************************************************/
+pub fn stash(dir: &String) -> bool {
+    let mut cmd = Command::new("git");
+    cmd.arg("-C").arg(dir).arg("stash");
+    let out = cmd.output().unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    debug!(
+        "stashed: {}, {}",
+        out.status.success(),
+        stderr,
+    );
+    out.status.success() || {
+        warn!("stash failed! {}", stderr);
+        true
+    }
+}
+
 pub fn checkout(dir: &String, branch: &String) -> bool {
     let mut cmd = Command::new("git");
     cmd.arg("-C").arg(dir).arg("checkout").arg(branch);
@@ -257,7 +273,8 @@ pub fn get_latest_commit(dir: &String) -> String {
 }
 
 pub fn reset_to_base_branch(dir: &String, base_branch: &String, active_branch: &String) -> bool {
-    checkout(dir, base_branch)
+    (stash(dir) || true) // don't care about stashing
+        && checkout(dir, base_branch)
         && (push_branch(dir, base_branch, false) || true) // don't care if can't push
         && (del_branch(dir, active_branch) || true) // don't care if can't delete
         && checkout(dir, base_branch)

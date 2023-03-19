@@ -20,6 +20,7 @@ fn main() {
     let result_n = fs::read_dir("./results").unwrap().count();
     let csv_file = format!("./results/result_{}.csv", result_n);
     let mut wtr = csv::Writer::from_path(&csv_file).unwrap();
+    info!("Currently running {} experiments!", projects::size());
     for expr_project in projects::all() {
         let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, expr_project.project);
         for experiment in expr_project.experiments {
