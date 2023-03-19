@@ -59,6 +59,7 @@ fn main() {
                     project_size: get_project_size(extraction),
                     src_size: get_src_size(extraction),
                     caller_size: get_caller_size(extraction),
+                    notes: extraction.notes.clone(),
                 };
 
                 let (success, duration) = run_extraction(extraction, &mut extraction_result);

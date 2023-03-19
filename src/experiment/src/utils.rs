@@ -319,6 +319,7 @@ pub struct ExtractionResult {
     pub project_size: i32,
     pub src_size: i32,
     pub caller_size: i32,
+    pub notes: Option<String>,
 }
 
 pub fn read_cargo_count(stats: &str) -> i32 {
