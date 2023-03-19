@@ -249,12 +249,10 @@ pub fn petgraph() -> ExperimentProject {
         project_url,
         experiments: vec![Experiment {
             expr_type: "ext".to_string(),
-            extractions: vec![Extraction::new(
-                &project_path,
-                "src/generate.rs",
-                "all",
-                "Cargo.toml",
-            )],
+            extractions: vec![
+                Extraction::new(&project_path, "src/generate.rs", "all", "Cargo.toml"),
+                Extraction::new(&project_path, "src/graphmap.rs", "next", "Cargo.toml"),
+            ],
         }],
     }
 }
