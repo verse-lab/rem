@@ -188,11 +188,7 @@ pub fn stash(dir: &String) -> bool {
     cmd.arg("-C").arg(dir).arg("stash");
     let out = cmd.output().unwrap();
     let stderr = String::from_utf8_lossy(&out.stderr);
-    debug!(
-        "stashed: {}, {}",
-        out.status.success(),
-        stderr,
-    );
+    debug!("stashed: {}, {}", out.status.success(), stderr,);
     out.status.success() || {
         warn!("stash failed! {}", stderr);
         true
@@ -487,14 +483,14 @@ pub fn run_extraction(
 ) -> (bool, Duration) {
     extraction.validate_paths();
 
-    let mut first_check = || {
+    let mut check = || {
         check_project(&extraction.cargo_path, &vec![])
             .output()
             .unwrap()
             .status
             .success()
     };
-    time_exec("first_check", &mut first_check);
+    time_exec("first_check", &mut check);
 
     let actions: Vec<&dyn Fn(&Extraction, &mut ExtractionResult) -> (bool, Duration)> =
         vec![&run_controller, &run_borrower, &run_repairer];
@@ -512,5 +508,10 @@ pub fn run_extraction(
     extraction_result.success = success;
     extraction_result.total_duration_ms = duration.as_millis();
     extraction_result.total_duration_s = duration.as_millis() as f64 * 0.001;
+
+    if success {
+        assert!(time_exec("final_check", &mut check).0); // in case elision or other optimization failed
+    }
+
     (success, duration)
 }

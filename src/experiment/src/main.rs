@@ -25,6 +25,7 @@ fn main() {
         let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, expr_project.project);
         for experiment in expr_project.experiments {
             for i in 1..(experiment.extractions.len() + 1) {
+                let extraction = experiment.extractions.get(i - 1).unwrap();
                 let expr_branch = format!("{}{}-expr", experiment.expr_type, i);
                 let expr_branch_active = format!("{}{}-expr-active", experiment.expr_type, i);
                 // rename_callee(&repo_path, &expr_branch, "bar", CALLEE_NAME, experiment.extractions.get(i - 1).unwrap());
@@ -44,8 +45,6 @@ fn main() {
                     expr_branch_active,
                     get_latest_commit(&repo_path)
                 );
-
-                let extraction = experiment.extractions.get(i - 1).unwrap();
 
                 let mut extraction_result = ExtractionResult {
                     success: false,

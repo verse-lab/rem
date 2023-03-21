@@ -340,43 +340,33 @@ pub fn kickoff() -> ExperimentProject {
     ExperimentProject {
         project,
         project_url,
-        experiments: vec![Experiment {
-            expr_type: "inline-ext".to_string(),
-            extractions: vec![Extraction::new(
-                &project_path,
-                "src/gui.rs",
-                "register_inputs",
-                "Cargo.toml",
-                Some("all elidible lifetimes"),
-            )],
-        }, Experiment {
-            expr_type: "ext".to_string(),
-            extractions: vec![Extraction::new(
-                &project_path,
-                "src/font.rs",
-                "render",
-                "Cargo.toml",
-                None,
-            ), Extraction::new(
-                &project_path,
-                "src/history.rs",
-                "load",
-                "Cargo.toml",
-                None,
-            ), Extraction::new(
-                &project_path,
-                "src/font.rs",
-                "new",
-                "Cargo.toml",
-                None,
-            ), Extraction::new(
-                &project_path,
-                "src/font.rs",
-                "render_glyph",
-                "Cargo.toml",
-                None,
-            )],
-        }],
+        experiments: vec![
+            Experiment {
+                expr_type: "inline-ext".to_string(),
+                extractions: vec![Extraction::new(
+                    &project_path,
+                    "src/gui.rs",
+                    "register_inputs",
+                    "Cargo.toml",
+                    Some("all elidible lifetimes"),
+                )],
+            },
+            Experiment {
+                expr_type: "ext".to_string(),
+                extractions: vec![
+                    Extraction::new(&project_path, "src/font.rs", "render", "Cargo.toml", None),
+                    Extraction::new(&project_path, "src/history.rs", "load", "Cargo.toml", None),
+                    Extraction::new(&project_path, "src/font.rs", "new", "Cargo.toml", None),
+                    Extraction::new(
+                        &project_path,
+                        "src/font.rs",
+                        "render_glyph",
+                        "Cargo.toml",
+                        None,
+                    ),
+                ],
+            },
+        ],
     }
 }
 

@@ -9,9 +9,10 @@ use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
 use syn::{
-    visit_mut::VisitMut, AngleBracketedGenericArguments, ExprCall, ExprMethodCall, FnArg,
-    GenericArgument, GenericParam, ImplItemMethod, ItemFn, Lifetime, PredicateLifetime, ReturnType,
-    Signature, TraitItemMethod, TypeReference, WhereClause, WherePredicate,
+    visit_mut::VisitMut, AngleBracketedGenericArguments, Expr, ExprCall, ExprForLoop,
+    ExprMethodCall, FnArg, GenericArgument, GenericParam, ImplItemMethod, ItemFn, Lifetime,
+    LifetimeDef, PatType, PredicateLifetime, ReturnType, Signature, TraitItemMethod, TypePath,
+    TypeReference, WhereClause, WherePredicate,
 };
 use utils::format_source;
 
@@ -237,30 +238,31 @@ struct FnLifetimeEliderTypeHelper<'a> {
 }
 
 impl VisitMut for FnLifetimeEliderTypeHelper<'_> {
-    fn visit_angle_bracketed_generic_arguments_mut(
-        &mut self,
-        i: &mut AngleBracketedGenericArguments,
-    ) {
-        i.args = i
-            .args
-            .clone()
-            .into_iter()
-            .filter(|arg| match arg {
-                GenericArgument::Lifetime(lt) => {
-                    let id = lt.to_string();
-                    if !self.lt_count.contains_key(&id) {
-                        false
-                    } else {
-                        let result =
-                            self.cannot_elide.contains(&id) || *self.lt_count.get(&id).unwrap() > 1;
-                        result
-                    }
-                }
-                _ => true,
-            })
-            .collect();
-        syn::visit_mut::visit_angle_bracketed_generic_arguments_mut(self, i);
-    }
+    // don't elide fully just replace with '_
+    // fn visit_angle_bracketed_generic_arguments_mut(
+    //     &mut self,
+    //     i: &mut AngleBracketedGenericArguments,
+    // ) {
+    //     i.args = i
+    //         .args
+    //         .clone()
+    //         .into_iter()
+    //         .filter(|arg| match arg {
+    //             GenericArgument::Lifetime(lt) => {
+    //                 let id = lt.to_string();
+    //                 if !self.lt_count.contains_key(&id) {
+    //                     false
+    //                 } else {
+    //                     let result =
+    //                         self.cannot_elide.contains(&id) || *self.lt_count.get(&id).unwrap() > 1;
+    //                     result
+    //                 }
+    //             }
+    //             _ => true,
+    //         })
+    //         .collect();
+    //     syn::visit_mut::visit_angle_bracketed_generic_arguments_mut(self, i);
+    // }
 
     fn visit_type_reference_mut(&mut self, i: &mut TypeReference) {
         match &mut i.lifetime {
@@ -318,6 +320,20 @@ struct ChangeLtHelperElider<'a> {
 }
 
 impl VisitMut for ChangeLtHelperElider<'_> {
+    fn visit_generic_argument_mut(&mut self, i: &mut GenericArgument) {
+        debug!("generic: {:?}", i);
+        match i {
+            GenericArgument::Lifetime(l) => {
+                let id = l.to_string();
+                debug!("generic lt: {:?}", &id);
+                match self.map.get(&id) {
+                    Some(new_lt) => *l = Lifetime::new(new_lt.as_str(), Span::call_site()),
+                    None => *l = Lifetime::new("'_", Span::call_site()),
+                }
+            }
+            _ => syn::visit_mut::visit_generic_argument_mut(self, i),
+        }
+    }
     fn visit_lifetime_mut(&mut self, i: &mut Lifetime) {
         let id = i.to_string();
         match self.map.get(&id) {
@@ -373,6 +389,16 @@ impl FnLifetimeElider<'_> {
                 _ => (),
             }),
         }
+        match sig.output.borrow_mut() {
+            ReturnType::Default => (),
+            ReturnType::Type(_, ty) => {
+                let mut get_lt = LtGetterElider {
+                    v: &mut cannot_elide,
+                };
+                get_lt.visit_type_mut(ty.clone().as_mut());
+            }
+        };
+
         let inputs = &mut sig.inputs;
         let mut has_receiver = false;
         let mut map = HashMap::new();
@@ -456,72 +482,64 @@ impl FnLifetimeElider<'_> {
                         _ => true,
                     })
                     .collect();
-                match gen.params.is_empty() {
-                    true => (),
-                    false => {
-                        let mut lt_count = 0;
-                        let mut new_lts = HashMap::new();
-                        gen.params.iter_mut().for_each(|gp| match gp {
-                            GenericParam::Lifetime(lt) => {
-                                let id = lt.lifetime.to_string();
-                                new_lts.insert(id, format!("'lt{}", lt_count));
-                                lt.lifetime = Lifetime::new(
-                                    format!("'lt{}", lt_count).as_str(),
-                                    Span::call_site(),
-                                );
-                                lt_count += 1
-                            }
-                            _ => (),
-                        });
-                        gen.params.iter_mut().for_each(|gp| match gp {
-                            GenericParam::Lifetime(_) => (),
-                            gp => {
-                                let mut change_lt = ChangeLtHelperElider { map: &new_lts };
-                                change_lt.visit_generic_param_mut(gp);
-                            }
-                        });
-                        match &mut gen.where_clause {
-                            None => (),
-                            Some(wc) => wc.predicates.iter_mut().for_each(|wp| match wp {
-                                WherePredicate::Lifetime(lt) => {
-                                    let id = lt.lifetime.to_string();
-                                    match new_lts.get(&id) {
-                                        Some(new_lt) => {
-                                            lt.lifetime =
-                                                Lifetime::new(new_lt.as_str(), Span::call_site())
-                                        }
-                                        None => (),
-                                    };
-                                    lt.bounds.iter_mut().for_each(|bound| {
-                                        let id = bound.to_string();
-                                        match new_lts.get(&id) {
-                                            Some(new_lt) => {
-                                                *bound = Lifetime::new(
-                                                    new_lt.as_str(),
-                                                    Span::call_site(),
-                                                )
-                                            }
-                                            None => (),
-                                        }
-                                    })
+                let mut lt_count = 0;
+                let mut new_lts = HashMap::new();
+                gen.params.iter_mut().for_each(|gp| match gp {
+                    GenericParam::Lifetime(lt) => {
+                        let id = lt.lifetime.to_string();
+                        new_lts.insert(id, format!("'lt{}", lt_count));
+                        lt.lifetime =
+                            Lifetime::new(format!("'lt{}", lt_count).as_str(), Span::call_site());
+                        lt_count += 1
+                    }
+                    _ => (),
+                });
+                gen.params.iter_mut().for_each(|gp| match gp {
+                    GenericParam::Lifetime(_) => (),
+                    gp => {
+                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                        change_lt.visit_generic_param_mut(gp);
+                    }
+                });
+                match &mut gen.where_clause {
+                    None => (),
+                    Some(wc) => wc.predicates.iter_mut().for_each(|wp| match wp {
+                        WherePredicate::Lifetime(lt) => {
+                            let id = lt.lifetime.to_string();
+                            match new_lts.get(&id) {
+                                Some(new_lt) => {
+                                    lt.lifetime = Lifetime::new(new_lt.as_str(), Span::call_site())
                                 }
-                                _ => (),
-                            }),
+                                None => (),
+                            };
+                            lt.bounds.iter_mut().for_each(|bound| {
+                                let id = bound.to_string();
+                                match new_lts.get(&id) {
+                                    Some(new_lt) => {
+                                        *bound = Lifetime::new(new_lt.as_str(), Span::call_site())
+                                    }
+                                    None => (),
+                                }
+                            })
                         }
-                        inputs.iter_mut().for_each(|fn_arg| match fn_arg {
-                            FnArg::Receiver(_) => (),
-                            FnArg::Typed(t) => {
-                                let mut change_lt = ChangeLtHelperElider { map: &new_lts };
-                                change_lt.visit_pat_type_mut(t);
-                            }
-                        });
-                        match sig.output.borrow_mut() {
-                            ReturnType::Default => (),
-                            ReturnType::Type(_, ty) => {
-                                let mut change_lt = ChangeLtHelperElider { map: &new_lts };
-                                change_lt.visit_type_mut(ty.as_mut());
-                            }
+                        _ => (),
+                    }),
+                }
+                inputs.iter_mut().for_each(|fn_arg| {
+                    match fn_arg {
+                        FnArg::Receiver(_) => (),
+                        FnArg::Typed(t) => {
+                            let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                            debug!("debugging input: {:?}", t);
+                            change_lt.visit_pat_type_mut(t);
                         }
+                    }
+                });
+                match sig.output.borrow_mut() {
+                    ReturnType::Default => (),
+                    ReturnType::Type(_, ty) => {
+                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                        change_lt.visit_type_mut(ty.as_mut());
                     }
                 }
             }
@@ -567,7 +585,6 @@ impl VisitMut for RenameFn<'_> {
 
     fn visit_expr_call_mut(&mut self, i: &mut ExprCall) {
         let callee = i.func.as_ref().into_token_stream().to_string();
-        debug!("callee: {}", &callee);
         match callee.contains(self.callee_name) {
             true => {
                 debug!("callee: {} matched", &callee);

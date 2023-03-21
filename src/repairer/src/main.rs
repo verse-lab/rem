@@ -1,6 +1,6 @@
-use std::env;
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
+use std::env;
 use std::iter::zip;
 use std::process::exit;
 use std::time::SystemTime;
