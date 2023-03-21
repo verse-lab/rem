@@ -1,0 +1,40 @@
+SUCCESS,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CARGO_MS,CARGO_CYCLES,TOTAL_DURATION_MS,TOTAL_DURATION_S,COMMIT,COMMIT_URL,FAILED_AT,PROJECT,BRANCH,PROJECT_SIZE,SRC_SIZE,CALLER_SIZE,NOTES
+true,65,60,285,0,410,0.41000000000000003,"3756daea772cc075b9d6da8cc6f9be47f2dc0464
+","https://github.com/sewenthy/petgraph/commit/3756daea772cc075b9d6da8cc6f9be47f2dc0464
+",,petgraph,ext1-expr-active,20114,89,27,within impl
+true,179,145,995,0,1321,1.321,"169e40a60eed47f3db2d32da77739d38b9f3c006
+","https://github.com/sewenthy/petgraph/commit/169e40a60eed47f3db2d32da77739d38b9f3c006
+",,petgraph,ext2-expr-active,20115,921,20,new impl with generics annotated + invoc using self.bar
+true,153,164,1674,1,1991,1.991,"07a564be782cdee2a8d0ba899a150fb4dfbebb22
+","https://github.com/sewenthy/petgraph/commit/07a564be782cdee2a8d0ba899a150fb4dfbebb22
+",,petgraph,ext3-expr-active,20115,921,8,new impl + invoc using self.bar + lt bound needed between genrics and output
+true,80,120,1688,0,1889,1.889,"2de9b0975c30656a27ae2573548d0370429b00e5
+","https://github.com/sewenthy/petgraph/commit/2de9b0975c30656a27ae2573548d0370429b00e5
+",,petgraph,ext4-expr-active,20113,264,54,
+true,57,91,814,0,963,0.963,"cc51b62713b8af94849085f0ead64c6eae08d43a
+","https://github.com/sewenthy/petgraph/commit/cc51b62713b8af94849085f0ead64c6eae08d43a
+",,petgraph,ext5-expr-active,20113,55,122,
+true,121,154,929,0,1205,1.205,"680af42edecaa23c18b40956cb56bc7930c86b6d
+","https://github.com/sewenthy/petgraph/commit/680af42edecaa23c18b40956cb56bc7930c86b6d
+",,petgraph,ext6-expr-active,20113,815,22,has self so smart not elide
+false,86,147,445,1,679,0.679,"3608a49a35b0f8d845c4a7b3baf6cbe9125bf6c0
+","https://github.com/sewenthy/petgraph/commit/3608a49a35b0f8d845c4a7b3baf6cbe9125bf6c0
+",cargo,petgraph,inline-ext1-expr-active,20157,308,54,failed due to type inference on generics
+true,52,80,776,0,909,0.909,"cbc19af25e035f1508b46f32f5eab7ef4164424e
+","https://github.com/sewenthy/gitoxide/commit/cbc19af25e035f1508b46f32f5eab7ef4164424e
+",,gitoxide,ext1-expr-active,9131,56,9,
+true,65,106,1183,1,1355,1.355,"26f9e8758da87198fe0198707dda4fdece0d6c8e
+","https://github.com/sewenthy/gitoxide/commit/26f9e8758da87198fe0198707dda4fdece0d6c8e
+",,gitoxide,ext2-expr-active,771,109,53,complex lifetime + bounds + nlcf--used in paper
+true,84,96,555,0,736,0.736,"f504d7a3b09a112b4d27b0506faf50653df59720
+","https://github.com/sewenthy/gitoxide/commit/f504d7a3b09a112b4d27b0506faf50653df59720
+",,gitoxide,ext3-expr-active,800,178,19,extracted within impl + invoc Self::bar
+true,92,99,684,0,876,0.876,"fa27dab63fd5862bcd34ca00e4168530528e91d6
+","https://github.com/sewenthy/gitoxide/commit/fa27dab63fd5862bcd34ca00e4168530528e91d6
+",,gitoxide,ext4-expr-active,8966,134,18,extracted within impl + invoc self.bar with non-elidible lifetime
+true,97,87,703,0,888,0.888,"bd769416411268ef8b594a7b3cc8b82007f49c9f
+","https://github.com/sewenthy/gitoxide/commit/bd769416411268ef8b594a7b3cc8b82007f49c9f
+",,gitoxide,ext5-expr-active,8966,134,60,extracted within impl + invoc Self::bar
+true,76,112,694,0,883,0.883,"4e4100419a3e81ac539247453bf874e702e4eac8
+","https://github.com/sewenthy/gitoxide/commit/4e4100419a3e81ac539247453bf874e702e4eac8
+",,gitoxide,ext6-expr-active,8966,134,15,within closure
