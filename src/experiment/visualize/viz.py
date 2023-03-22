@@ -45,7 +45,7 @@ def overall():
 def cargo_cycle_plot():
     df_with_cycles = df[df.CARGO_CYCLES > 0]
     df_with_cycles['CARGO_CYCLES'] = df_with_cycles.CARGO_CYCLES.astype(str)
-    in_k = lambda i: (i//1000) * 1000
+    in_k = lambda i: (i//1000) * 1000 + 1000
     df_with_cycles['PROJECT_SIZE_IN_K'] = df_with_cycles.PROJECT_SIZE.apply(in_k)
     fig_path = 'figs/cargo-cycle-duration.pdf'
     fig, ax = plt.subplots(figsize=(8,5))
@@ -53,10 +53,10 @@ def cargo_cycle_plot():
     line = sns.scatterplot(x='CARGO_CYCLES',
                            y='TOTAL_DURATION_S',
                            marker='o',
-                           size='PROJECT_SIZE',
-                           hue='PROJECT_SIZE',
-                           sizes=(100, 300),
-                           palette='deep',
+                           size='PROJECT_SIZE_IN_K',
+                           sizes=(30, 300),
+                           legend="full",
+                           hue='PROJECT_SIZE_IN_K',
                            data=df_with_cycles)
     boxplt = sns.boxplot(x='CARGO_CYCLES',
                          y='TOTAL_DURATION_S',
@@ -65,12 +65,11 @@ def cargo_cycle_plot():
     sns.despine(top=True, left=True, bottom=False)
     ax.set_xlabel('Cargo repair cycle count', fontweight='bold')
     ax.set_ylabel('Duration (s)', fontweight='bold')
-    def legend_txt(i):
-        if i == 0:
-            return '< 1000'
-        else:
-            return f'> {i}'
-    ax.legend(labels=dict([ (legend_txt(i), i) for i in df_with_cycles.PROJECT_SIZE_IN_K]), title='Project Size')
+    legend_txt = lambda i: f'< {i}'
+    handles, labels = ax.get_legend_handles_labels()
+    print([h.get_sizes() for h in handles], labels)
+    labels = [legend_txt(int(i)) for i in labels]
+    plt.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title='Project Size')
     plt.tight_layout()
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
