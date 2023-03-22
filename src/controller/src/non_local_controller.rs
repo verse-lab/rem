@@ -14,7 +14,7 @@ use utils::{format_source, FindCallee};
 const ENUM_NAME: &str = "Ret";
 
 fn make_pascal_case(s: &str) -> String {
-    s.to_case(Case::Pascal)
+    s.to_case(Case::Pascal).strip_suffix("ExtractThis").unwrap().to_string()
 }
 
 struct CheckCalleeWithinLoopHelper<'a> {
