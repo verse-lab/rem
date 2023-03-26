@@ -1,11 +1,11 @@
-gitoxide examples,Module Size(LOC),Caller size(LOC),Extracted input size,Non local return,Immutable borrow,Mutable borrow,Non elidible lifetimes,Extraction duration(s)
-Arbitrary extraction 2,771,53,6,\cmark,,,\cmark,1.774
-Arbitrary extraction 5,8966,60,1,,,,\cmark,1.437
-Arbitrary extraction 7,1027,31,4,,,\cmark,,0.955
-Developer extraction 1,574,47,1,\cmark,,,,0.809
-Developer extraction 2,6761,73,3,,\cmark,\cmark,\cmark,1.858
-Inline and extract 1,375,32,1,\cmark,,,\cmark,1.411
-Inline and extract 2,3759,60,1,,,,\cmark,3.379
-Inline and extract 3,20211,121,1,,,\cmark,\cmark,1.858
-Inline and extract 7,1026,43,1,,\cmark,,,0.98
-Inline and extract 8,1304,65,2,,\cmark,,,1.036
+gitoxide examples,Module Size(LOC),Repair count,Non local return,Immutable borrow,Mutable borrow,Non elidible lifetimes,Extraction duration(s)
+Arbitrary extraction 2,771,1,\cmark,,,\cmark,1.251
+Arbitrary extraction 5,8966,0,,,,\cmark,0.827
+Arbitrary extraction 7,1027,0,,,\cmark,,0.59
+Developer extraction 1,574,0,\cmark,,,,0.529
+Developer extraction 2,6761,1,,\cmark,\cmark,\cmark,1.238
+Inline and extract 1,375,1,\cmark,,,\cmark,0.928
+Inline and extract 2,3759,3,,,,\cmark,2.297
+Inline and extract 3,20211,1,,,\cmark,\cmark,1.088
+Inline and extract 7,1026,0,,\cmark,,,0.673
+Inline and extract 8,1304,0,,\cmark,,,0.707

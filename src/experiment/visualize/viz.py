@@ -5,6 +5,8 @@ import pandas as pd
 import seaborn as sns
 import json
 import sys, os, subprocess
+from argparse import ArgumentParser
+from glob import glob
 
 load_dotenv()
 
@@ -75,10 +77,7 @@ def cargo_cycle_plot(df):
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
 
-
-def features_table_by_project(df, show=False):
-    df['FEATURES_JSON'] = df.FEATURES.apply(json.loads)
-
+def features_table(df, name, headers, renames, show=False):
     def get_unique_features(df):
         features = df.FEATURES.unique()
         feat_cols = {}
@@ -96,7 +95,7 @@ def features_table_by_project(df, show=False):
                 n = x.lstrip(r)
                 return f"{rename[r]} {n}"
 
-    def make_latex_table(df, project):
+    def make_latex_table(df, name):
         replace_txt = r'{{{REPLACE_ME}}}'
         fmt = lambda x, y: x.replace(replace_txt, str(y))
         alignment = 'r' * (df.shape[1] - 1)
@@ -117,7 +116,7 @@ def features_table_by_project(df, show=False):
 \caption{\tool efficiency on {{{REPLACE_ME}}} project}
 \label{table:eff{{{REPLACE_ME}}}}
 \end{table}'''
-        footer = fmt(footer, project)
+        footer = fmt(footer, name)
         body = ''
         row_template = r' & \textit{{{{REPLACE_ME}}}}'
         for (_,row) in df.iterrows():
@@ -143,32 +142,39 @@ def features_table_by_project(df, show=False):
         elif 'lifetime' in x.lower():
             return '3' + x
         return 0
+    df['BRANCH'] = df.BRANCH.apply(better_example_name)
 
+    feat_cols = get_unique_features(df)
+    for col in feat_cols.keys():
+        df[feat_cols[col]] = df.FEATURES_JSON.apply(lambda feats: '\cmark' if col in feats else '')
+    sel = [h for h in headers]
+    sel.extend(sorted(feat_cols.values(), key=sort_feat_col))
+    sel.extend(['TOTAL_DURATION_S'])
+    out = df[sel]
+    default_renames = {'BRANCH': 'Examples', 'PROJECT_SIZE' : 'Module Size(LOC)', 'TOTAL_DURATION_S': 'Extraction duration(s)', 'CARGO_CYCLES': 'Repair count'}
+    default_renames.update(renames)
+    out = out.rename(columns=default_renames)
+    out.to_csv(f'tables/{name}StatsTbl.csv', index=False, encoding='utf-8')
+    latex = make_latex_table(out, name)
+    with open(f'tables/{name}StatsTbl.tex', 'w') as f:
+        f.write(latex)
+        f.flush()
+    copy_to_paper(f'tables/{name}StatsTbl.tex')
+    return out
+
+
+def features_table_by_project(df, show=False):
     projects = df.PROJECT.unique()
     projects_with_features = {}
+    sel = ['BRANCH', 'PROJECT_SIZE', 'CARGO_CYCLES']
+
     for project in projects:
         project_df = df[df.PROJECT == project]
         project_df = project_df[project_df.FEATURES_JSON.apply(lambda l: len(l) > 0)]
         if len(project_df) == 0:
             continue
-
-        project_df['BRANCH'] = project_df.BRANCH.apply(better_example_name)
-
-        feat_cols = get_unique_features(project_df)
-        for col in feat_cols.keys():
-            project_df[feat_cols[col]] = project_df.FEATURES_JSON.apply(lambda feats: '\cmark' if col in feats else '')
-        sel = ['BRANCH', 'PROJECT_SIZE', 'CALLER_SIZE', 'NUM_INPUTS']
-        sel.extend(sorted(feat_cols.values(), key=sort_feat_col))
-        sel.extend(['TOTAL_DURATION_S'])
-        out = project_df[sel]
-        projects_with_features[project] = out
-        out = out.rename(columns={'BRANCH': f'{project} examples', 'PROJECT_SIZE' : 'Module Size(LOC)', 'CALLER_SIZE': 'Caller size(LOC)', 'NUM_INPUTS': 'Extracted input size', 'TOTAL_DURATION_S': 'Extraction duration(s)'})
-        out.to_csv(f'tables/{project}StatsTbl.csv', index=False, encoding='utf-8')
-        latex = make_latex_table(out, project)
-        with open(f'tables/{project}StatsTbl.tex', 'w') as f:
-            f.write(latex)
-            f.flush()
-        copy_to_paper(f'tables/{project}StatsTbl.tex')
+        renames = {'BRANCH': f'{project} examples', 'PROJECT_SIZE' : 'Module Size(LOC)', 'CARGO_CYCLES': 'Repair count'}
+        projects_with_features[project] = features_table(project_df, project, sel, renames)
     if show:
         for p in projects_with_features:
             print(p)
@@ -177,19 +183,84 @@ def features_table_by_project(df, show=False):
             print(latex)
             print('\n\n')
 
+def appendix_table_all_experiment(df, show=False):
+    def make_latex_table(df):
+        replace_txt = r'{{{REPLACE_ME}}}'
+        fmt = lambda x, y: x.replace(replace_txt, str(y))
+        alignment = 'r' * (df.shape[1] - 1)
+        preamble = r'''\begin{table}[]
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{l{{{REPLACE_ME}}}}
+\hline'''
+        preamble = fmt(preamble, alignment)
+        example = df.columns[0]
+        header = fmt(r'\textit{\textbf{{{{REPLACE_ME}}}}}', example)
+        next_headers_template = r'& \multicolumn{1}{l}{\textit{\textbf{{{{REPLACE_ME}}}}}}'
+        for h in df.columns[1:]:
+            header += fmt(next_headers_template, h)
+        header += r'\\ \hline' + '\n'
+        footer = r''' \hline
+\end{tabular}%
+}
+\caption{\tool overall experiment result}
+\label{table:overallExprResult}
+\end{table}'''
+        body = ''
+        row_template = r' & \textit{{{{REPLACE_ME}}}}'
+        for (_,row) in df.iterrows():
+            body += row[example]
+            for r in df.columns[1:]:
+                h = row[r]
+                if h == '':
+                    body += ' &'
+                elif str(h).startswith('\\'):
+                    body += f' & {h}'
+                else:
+                    body += fmt(row_template, h)
+            body += r' \\' + '\n'
+        body = body.rstrip('\n')
+        latex = preamble + '\n' + header + body + footer
+        return latex
+
+    sel = ['PROJECT', 'BRANCH', 'FIX_NLCF_DURATION_MS', 'FIX_BORROW_DURATION_MS', 'FIX_LIFETIME_CARGO_MS', 'CARGO_CYCLES', 'TOTAL_DURATION_MS',	'COMMIT_URL', 'SUCCESS','FAILED_AT', 'FEATURES']
+    out = df[sel]
+    latex = make_latex_table(out)
+    tbl_path = 'tables/overallExperimentTbl.tex'
+    with open(tbl_path, 'w') as f:
+        f.write(latex)
+        f.flush()
+    copy_to_paper(tbl_path)
+
 def inner_handler(csv_path, show=False):
     csv_name = csv_path.split('/')[-1]
     df = pd.read_csv(csv_path)
+    df['TOTAL_DURATION_S'] = df.TOTAL_DURATION_S.apply(lambda x: round(x, 3))
+    df['FEATURES_JSON'] = df.FEATURES.apply(json.loads)
     overall(df)
     # cargo_cycle_plot(df)
     features_table_by_project(df, show)
+    sel = ['PROJECT', 'BRANCH', 'PROJECT_SIZE', 'SRC_SIZE', 'CALLER_SIZE', 'NUM_INPUTS', 'CARGO_CYCLES']
+    renames = {'PROJECT': 'Project', 'BRANCH': 'Example', 'PROJECT_SIZE' : 'Module Size(LOC)', 'SRC_SIZE': 'Source file size(LOC)', 'CALLER_SIZE': 'Caller size(LOC)', 'NUM_INPUTS':'Callee input count','CARGO_CYCLES': 'Repair count'}
+    features_table(df, "overall", sel, renames, show)
+
+    appendix_table_all_experiment(df, show)
     if show:
         plt.show()
 
 
 def main():
-    csv_path = sys.argv[1]
-    inner_handler(csv_path, show=True)
+    parser = ArgumentParser()
+    parser.add_argument("-c", "--csv_path", action="store")
+    parser.add_argument("-v", "--verbose", action="store_true")
+
+    args = parser.parse_args()
+
+    if args.csv_path is None:
+        csvs = glob('../results/result_*')
+        csvs = sorted(csvs, key=(lambda x: int(x.lstrip('../results/result_').rstrip('.csv'))))
+        args.csv_path = csvs[-1]
+        print(f'no csv path passed, using: {args.csv_path} ...')
+    inner_handler(args.csv_path, args.verbose)
 
 
 if __name__ == '__main__':

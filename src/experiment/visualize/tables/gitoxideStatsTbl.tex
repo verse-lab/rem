@@ -1,18 +1,18 @@
 \begin{table}[]
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrrrrrrr}
+\begin{tabular}{lrrrrrrr}
 \hline
-\textit{\textbf{gitoxide examples}}& \multicolumn{1}{l}{\textit{\textbf{Module Size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Caller size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Extracted input size}}}& \multicolumn{1}{l}{\textit{\textbf{Non local return}}}& \multicolumn{1}{l}{\textit{\textbf{Immutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Mutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Non elidible lifetimes}}}& \multicolumn{1}{l}{\textit{\textbf{Extraction duration(s)}}}\\ \hline
-Arbitrary extraction 2 & \textit{771} & \textit{53} & \textit{6} & \cmark & & & \cmark & \textit{1.774} \\
-Arbitrary extraction 5 & \textit{8966} & \textit{60} & \textit{1} & & & & \cmark & \textit{1.437} \\
-Arbitrary extraction 7 & \textit{1027} & \textit{31} & \textit{4} & & & \cmark & & \textit{0.955} \\
-Developer extraction 1 & \textit{574} & \textit{47} & \textit{1} & \cmark & & & & \textit{0.809} \\
-Developer extraction 2 & \textit{6761} & \textit{73} & \textit{3} & & \cmark & \cmark & \cmark & \textit{1.858} \\
-Inline and extract 1 & \textit{375} & \textit{32} & \textit{1} & \cmark & & & \cmark & \textit{1.411} \\
-Inline and extract 2 & \textit{3759} & \textit{60} & \textit{1} & & & & \cmark & \textit{3.379} \\
-Inline and extract 3 & \textit{20211} & \textit{121} & \textit{1} & & & \cmark & \cmark & \textit{1.858} \\
-Inline and extract 7 & \textit{1026} & \textit{43} & \textit{1} & & \cmark & & & \textit{0.98} \\
-Inline and extract 8 & \textit{1304} & \textit{65} & \textit{2} & & \cmark & & & \textit{1.036} \\ \hline
+\textit{\textbf{gitoxide examples}}& \multicolumn{1}{l}{\textit{\textbf{Module Size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Repair count}}}& \multicolumn{1}{l}{\textit{\textbf{Non local return}}}& \multicolumn{1}{l}{\textit{\textbf{Immutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Mutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Non elidible lifetimes}}}& \multicolumn{1}{l}{\textit{\textbf{Extraction duration(s)}}}\\ \hline
+Arbitrary extraction 2 & \textit{771} & \textit{1} & \cmark & & & \cmark & \textit{1.251} \\
+Arbitrary extraction 5 & \textit{8966} & \textit{0} & & & & \cmark & \textit{0.827} \\
+Arbitrary extraction 7 & \textit{1027} & \textit{0} & & & \cmark & & \textit{0.59} \\
+Developer extraction 1 & \textit{574} & \textit{0} & \cmark & & & & \textit{0.529} \\
+Developer extraction 2 & \textit{6761} & \textit{1} & & \cmark & \cmark & \cmark & \textit{1.238} \\
+Inline and extract 1 & \textit{375} & \textit{1} & \cmark & & & \cmark & \textit{0.928} \\
+Inline and extract 2 & \textit{3759} & \textit{3} & & & & \cmark & \textit{2.297} \\
+Inline and extract 3 & \textit{20211} & \textit{1} & & & \cmark & \cmark & \textit{1.088} \\
+Inline and extract 7 & \textit{1026} & \textit{0} & & \cmark & & & \textit{0.673} \\
+Inline and extract 8 & \textit{1304} & \textit{0} & & \cmark & & & \textit{0.707} \\ \hline
 \end{tabular}%
 }
 \caption{\tool efficiency on gitoxide project}

@@ -1,4 +1,4 @@
-kickoff examples,Module Size(LOC),Caller size(LOC),Extracted input size,Non local loop,Immutable borrow,Mutable borrow,Extraction duration(s)
-Inline and extract 1,1502,56,2,,\cmark,\cmark,1.531
-Arbitrary extraction 1,1486,53,3,\cmark,,,1.445
-Arbitrary extraction 4,1486,21,3,,\cmark,\cmark,1.214
+kickoff examples,Module Size(LOC),Repair count,Non local loop,Immutable borrow,Mutable borrow,Extraction duration(s)
+Inline and extract 1,1502,0,,\cmark,\cmark,1.049
+Arbitrary extraction 1,1486,0,\cmark,,,0.947
+Arbitrary extraction 4,1486,0,,\cmark,\cmark,0.809

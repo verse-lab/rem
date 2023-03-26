@@ -1,0 +1,41 @@
+Project,Example,Module Size(LOC),Source file size(LOC),Caller size(LOC),Callee input count,Repair count,Non local loop,Non local return,Immutable borrow,Mutable borrow,Non elidible lifetimes,Extraction duration(s)
+petgraph,Arbitrary extraction 1,20114,89,27,2,0,,,,,,0.385
+petgraph,Arbitrary extraction 2,20115,921,20,3,0,,,,,,1.015
+petgraph,Arbitrary extraction 3,20115,921,8,2,1,,,,,\cmark,1.576
+petgraph,Arbitrary extraction 4,20113,264,54,4,0,,,\cmark,,,1.751
+petgraph,Arbitrary extraction 5,20113,55,122,2,0,,,\cmark,\cmark,,0.907
+petgraph,Arbitrary extraction 6,20113,815,22,2,0,,,\cmark,,,1.033
+petgraph,Inline and extract 1,20157,308,54,4,1,,,\cmark,,\cmark,0.536
+gitoxide,Arbitrary extraction 1,9131,56,9,1,0,,,,,,0.887
+gitoxide,Arbitrary extraction 2,771,109,53,6,1,,\cmark,,,\cmark,1.251
+gitoxide,Arbitrary extraction 3,800,178,19,1,0,,,,,,0.622
+gitoxide,Arbitrary extraction 4,8966,134,18,1,0,,,,,,0.777
+gitoxide,Arbitrary extraction 5,8966,134,60,1,0,,,,,\cmark,0.827
+gitoxide,Arbitrary extraction 6,8966,134,15,0,0,,,,,,0.811
+gitoxide,Arbitrary extraction 7,1027,73,31,4,0,,,,\cmark,,0.59
+gitoxide,Arbitrary extraction 8,1026,121,41,1,0,,,,,,0.653
+gitoxide,Developer extraction 1,574,84,47,1,0,,\cmark,,,,0.529
+gitoxide,Developer extraction 2,6761,192,73,3,1,,,\cmark,\cmark,\cmark,1.238
+gitoxide,Inline and extract 1,375,86,32,1,1,,\cmark,,,\cmark,0.928
+gitoxide,Inline and extract 2,3759,122,60,1,3,,,,,\cmark,2.297
+gitoxide,Inline and extract 3,20211,216,121,1,1,,,,\cmark,\cmark,1.088
+gitoxide,Inline and extract 4,630,154,52,1,0,,,,,,0.684
+gitoxide,Inline and extract 5,625,149,49,1,0,,,,,,0.632
+gitoxide,Inline and extract 6,1428,143,144,1,0,,,,,,0.643
+gitoxide,Inline and extract 7,1026,72,43,1,0,,,\cmark,,,0.673
+gitoxide,Inline and extract 8,1304,368,65,2,0,,,\cmark,,,0.707
+kickoff,Inline and extract 1,1502,324,56,2,0,,,\cmark,\cmark,,1.049
+kickoff,Arbitrary extraction 1,1486,123,53,3,0,\cmark,,,,,0.947
+kickoff,Arbitrary extraction 2,1487,94,51,2,0,,,,,,0.975
+kickoff,Arbitrary extraction 3,1487,124,34,2,0,,,,,,0.996
+kickoff,Arbitrary extraction 4,1486,123,21,3,0,,,\cmark,\cmark,,0.809
+sniffnet,Inline and extract 1,7283,352,72,3,0,,,\cmark,,,1.044
+sniffnet,Inline and extract 2,7304,179,182,6,1,,,\cmark,,\cmark,0.777
+sniffnet,Arbitrary extraction 1,7269,67,53,3,0,,,\cmark,\cmark,,1.031
+sniffnet,Arbitrary extraction 2,7269,98,98,4,0,,,,\cmark,,0.955
+sniffnet,Arbitrary extraction 3,7269,189,28,2,0,,,,,,1.016
+sniffnet,Arbitrary extraction 4,7270,190,66,2,0,,,\cmark,,,1.052
+sniffnet,Arbitrary extraction 5,7269,339,47,5,0,,,,,,1.126
+sniffnet,Arbitrary extraction 6,7269,339,25,2,0,,,,\cmark,,1.075
+sniffnet,Arbitrary extraction 7,7270,340,84,1,0,,,,,,0.982
+beerus,Developer extraction 1,302,63,27,0,0,,,,,,1.049

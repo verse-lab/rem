@@ -1,0 +1,50 @@
+\begin{table}[]
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrrrrrrrrrrrr}
+\hline
+\textit{\textbf{Project}}& \multicolumn{1}{l}{\textit{\textbf{Example}}}& \multicolumn{1}{l}{\textit{\textbf{Module Size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Source file size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Caller size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Callee input count}}}& \multicolumn{1}{l}{\textit{\textbf{Repair count}}}& \multicolumn{1}{l}{\textit{\textbf{Non local loop}}}& \multicolumn{1}{l}{\textit{\textbf{Non local return}}}& \multicolumn{1}{l}{\textit{\textbf{Immutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Mutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Non elidible lifetimes}}}& \multicolumn{1}{l}{\textit{\textbf{Extraction duration(s)}}}\\ \hline
+petgraph & \textit{Arbitrary extraction 1} & \textit{20114} & \textit{89} & \textit{27} & \textit{2} & \textit{0} & & & & & & \textit{0.385} \\
+petgraph & \textit{Arbitrary extraction 2} & \textit{20115} & \textit{921} & \textit{20} & \textit{3} & \textit{0} & & & & & & \textit{1.015} \\
+petgraph & \textit{Arbitrary extraction 3} & \textit{20115} & \textit{921} & \textit{8} & \textit{2} & \textit{1} & & & & & \cmark & \textit{1.576} \\
+petgraph & \textit{Arbitrary extraction 4} & \textit{20113} & \textit{264} & \textit{54} & \textit{4} & \textit{0} & & & \cmark & & & \textit{1.751} \\
+petgraph & \textit{Arbitrary extraction 5} & \textit{20113} & \textit{55} & \textit{122} & \textit{2} & \textit{0} & & & \cmark & \cmark & & \textit{0.907} \\
+petgraph & \textit{Arbitrary extraction 6} & \textit{20113} & \textit{815} & \textit{22} & \textit{2} & \textit{0} & & & \cmark & & & \textit{1.033} \\
+petgraph & \textit{Inline and extract 1} & \textit{20157} & \textit{308} & \textit{54} & \textit{4} & \textit{1} & & & \cmark & & \cmark & \textit{0.536} \\
+gitoxide & \textit{Arbitrary extraction 1} & \textit{9131} & \textit{56} & \textit{9} & \textit{1} & \textit{0} & & & & & & \textit{0.887} \\
+gitoxide & \textit{Arbitrary extraction 2} & \textit{771} & \textit{109} & \textit{53} & \textit{6} & \textit{1} & & \cmark & & & \cmark & \textit{1.251} \\
+gitoxide & \textit{Arbitrary extraction 3} & \textit{800} & \textit{178} & \textit{19} & \textit{1} & \textit{0} & & & & & & \textit{0.622} \\
+gitoxide & \textit{Arbitrary extraction 4} & \textit{8966} & \textit{134} & \textit{18} & \textit{1} & \textit{0} & & & & & & \textit{0.777} \\
+gitoxide & \textit{Arbitrary extraction 5} & \textit{8966} & \textit{134} & \textit{60} & \textit{1} & \textit{0} & & & & & \cmark & \textit{0.827} \\
+gitoxide & \textit{Arbitrary extraction 6} & \textit{8966} & \textit{134} & \textit{15} & \textit{0} & \textit{0} & & & & & & \textit{0.811} \\
+gitoxide & \textit{Arbitrary extraction 7} & \textit{1027} & \textit{73} & \textit{31} & \textit{4} & \textit{0} & & & & \cmark & & \textit{0.59} \\
+gitoxide & \textit{Arbitrary extraction 8} & \textit{1026} & \textit{121} & \textit{41} & \textit{1} & \textit{0} & & & & & & \textit{0.653} \\
+gitoxide & \textit{Developer extraction 1} & \textit{574} & \textit{84} & \textit{47} & \textit{1} & \textit{0} & & \cmark & & & & \textit{0.529} \\
+gitoxide & \textit{Developer extraction 2} & \textit{6761} & \textit{192} & \textit{73} & \textit{3} & \textit{1} & & & \cmark & \cmark & \cmark & \textit{1.238} \\
+gitoxide & \textit{Inline and extract 1} & \textit{375} & \textit{86} & \textit{32} & \textit{1} & \textit{1} & & \cmark & & & \cmark & \textit{0.928} \\
+gitoxide & \textit{Inline and extract 2} & \textit{3759} & \textit{122} & \textit{60} & \textit{1} & \textit{3} & & & & & \cmark & \textit{2.297} \\
+gitoxide & \textit{Inline and extract 3} & \textit{20211} & \textit{216} & \textit{121} & \textit{1} & \textit{1} & & & & \cmark & \cmark & \textit{1.088} \\
+gitoxide & \textit{Inline and extract 4} & \textit{630} & \textit{154} & \textit{52} & \textit{1} & \textit{0} & & & & & & \textit{0.684} \\
+gitoxide & \textit{Inline and extract 5} & \textit{625} & \textit{149} & \textit{49} & \textit{1} & \textit{0} & & & & & & \textit{0.632} \\
+gitoxide & \textit{Inline and extract 6} & \textit{1428} & \textit{143} & \textit{144} & \textit{1} & \textit{0} & & & & & & \textit{0.643} \\
+gitoxide & \textit{Inline and extract 7} & \textit{1026} & \textit{72} & \textit{43} & \textit{1} & \textit{0} & & & \cmark & & & \textit{0.673} \\
+gitoxide & \textit{Inline and extract 8} & \textit{1304} & \textit{368} & \textit{65} & \textit{2} & \textit{0} & & & \cmark & & & \textit{0.707} \\
+kickoff & \textit{Inline and extract 1} & \textit{1502} & \textit{324} & \textit{56} & \textit{2} & \textit{0} & & & \cmark & \cmark & & \textit{1.049} \\
+kickoff & \textit{Arbitrary extraction 1} & \textit{1486} & \textit{123} & \textit{53} & \textit{3} & \textit{0} & \cmark & & & & & \textit{0.947} \\
+kickoff & \textit{Arbitrary extraction 2} & \textit{1487} & \textit{94} & \textit{51} & \textit{2} & \textit{0} & & & & & & \textit{0.975} \\
+kickoff & \textit{Arbitrary extraction 3} & \textit{1487} & \textit{124} & \textit{34} & \textit{2} & \textit{0} & & & & & & \textit{0.996} \\
+kickoff & \textit{Arbitrary extraction 4} & \textit{1486} & \textit{123} & \textit{21} & \textit{3} & \textit{0} & & & \cmark & \cmark & & \textit{0.809} \\
+sniffnet & \textit{Inline and extract 1} & \textit{7283} & \textit{352} & \textit{72} & \textit{3} & \textit{0} & & & \cmark & & & \textit{1.044} \\
+sniffnet & \textit{Inline and extract 2} & \textit{7304} & \textit{179} & \textit{182} & \textit{6} & \textit{1} & & & \cmark & & \cmark & \textit{0.777} \\
+sniffnet & \textit{Arbitrary extraction 1} & \textit{7269} & \textit{67} & \textit{53} & \textit{3} & \textit{0} & & & \cmark & \cmark & & \textit{1.031} \\
+sniffnet & \textit{Arbitrary extraction 2} & \textit{7269} & \textit{98} & \textit{98} & \textit{4} & \textit{0} & & & & \cmark & & \textit{0.955} \\
+sniffnet & \textit{Arbitrary extraction 3} & \textit{7269} & \textit{189} & \textit{28} & \textit{2} & \textit{0} & & & & & & \textit{1.016} \\
+sniffnet & \textit{Arbitrary extraction 4} & \textit{7270} & \textit{190} & \textit{66} & \textit{2} & \textit{0} & & & \cmark & & & \textit{1.052} \\
+sniffnet & \textit{Arbitrary extraction 5} & \textit{7269} & \textit{339} & \textit{47} & \textit{5} & \textit{0} & & & & & & \textit{1.126} \\
+sniffnet & \textit{Arbitrary extraction 6} & \textit{7269} & \textit{339} & \textit{25} & \textit{2} & \textit{0} & & & & \cmark & & \textit{1.075} \\
+sniffnet & \textit{Arbitrary extraction 7} & \textit{7270} & \textit{340} & \textit{84} & \textit{1} & \textit{0} & & & & & & \textit{0.982} \\
+beerus & \textit{Developer extraction 1} & \textit{302} & \textit{63} & \textit{27} & \textit{0} & \textit{0} & & & & & & \textit{1.049} \\ \hline
+\end{tabular}%
+}
+\caption{\tool efficiency on overall project}
+\label{table:effoverall}
+\end{table}
