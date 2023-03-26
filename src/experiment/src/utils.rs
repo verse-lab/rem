@@ -2,12 +2,12 @@ use jwt_simple::prelude::*;
 use log::{debug, info, warn};
 use regex::Regex;
 use reqwest::blocking::Client;
-use std::{fs, mem};
+use std::{fs};
 
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
-use serde::Serializer;
+
 
 use crate::projects::Extraction;
 use crate::utils::ExtractionFeature::{
@@ -348,6 +348,8 @@ pub struct ExtractionResult {
     pub src_size: i32,
     pub caller_size: i32,
     pub features: String,
+    #[serde(skip_serializing)]
+    pub features_inner: Vec<ExtractionFeature>,
     pub notes: Option<String>,
 }
 
@@ -436,10 +438,10 @@ pub fn run_controller(
             extraction.caller.as_str(),
         );
         if res.has_break || res.has_continue {
-            extraction_result.features.push_str(serde_json::to_string(&NonLocalLoop).unwrap().as_str());
+            extraction_result.features_inner.push(NonLocalLoop);
         }
         if res.has_return {
-            extraction_result.features.push_str(serde_json::to_string(&NonLocalReturn).unwrap().as_str());
+            extraction_result.features_inner.push(NonLocalReturn);
         }
         res.success
     };
@@ -471,11 +473,11 @@ pub fn run_borrower(
             .filter(|x| !res.make_mut.contains(x))
             .collect();
         if make_ref.len() > 0 {
-            extraction_result.features.push_str(serde_json::to_string(&Borrow).unwrap().as_str());
+            extraction_result.features_inner.push(Borrow);
         }
 
         if res.make_mut.len() > 0 {
-            extraction_result.features.push_str(serde_json::to_string(&MutableBorrow).unwrap().as_str());
+            extraction_result.features_inner.push(MutableBorrow);
         }
         res.success
     };
@@ -502,7 +504,7 @@ pub fn run_repairer(
         debug!("cargo repair counted: {}", count);
         extraction_result.cargo_cycles = count;
         if count > 0 {
-            extraction_result.features.push_str(serde_json::to_string(&NonElidibleLifetimes).unwrap().as_str());
+            extraction_result.features_inner.push(NonElidibleLifetimes);
         }
         success
     };
@@ -547,6 +549,7 @@ pub fn run_extraction(
     extraction_result.success = success;
     extraction_result.total_duration_ms = duration.as_millis();
     extraction_result.total_duration_s = duration.as_millis() as f64 * 0.001;
+    extraction_result.features = serde_json::to_string(&extraction_result.features_inner).unwrap();
 
     if success {
         assert!(time_exec("final_check", &mut check).0); // in case elision or other optimization failed
