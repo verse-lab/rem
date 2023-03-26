@@ -9,10 +9,7 @@ use syn::{
     TypeParamBound,
 };
 
-use crate::common::{
-    callee_renamer, elide_lifetimes_annotations, repair_bounds_help, repair_iteration,
-    repair_iteration_project, RepairSystem, RustcError,
-};
+use crate::common::{callee_renamer, elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project, RepairResult, RepairSystem, RustcError};
 use crate::repair_lifetime_simple;
 use utils::{check_project, compile_file, format_source};
 
@@ -23,7 +20,7 @@ impl RepairSystem for Repairer {
         "_loosest_bounds_first_repairer"
     }
 
-    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> (bool, i32) {
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> RepairResult {
         annotate_loose_named_lifetime(src_path, fn_name);
         // println!("annotated: {}", fs::read_to_string(&src_path).unwrap());
         let mut compile_cmd = check_project(manifest_path, &vec![]);
@@ -31,21 +28,25 @@ impl RepairSystem for Repairer {
             |ce: &RustcError| repair_bounds_help(ce.rendered.as_str(), src_path, fn_name);
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
-            (true, count) => {
+            RepairResult { success: true, repair_count, .. } => {
                 debug!("pre elision: {}", fs::read_to_string(&src_path).unwrap());
-                elide_lifetimes_annotations(src_path, fn_name);
+                let elide_res = elide_lifetimes_annotations(src_path, fn_name);
                 callee_renamer(src_path, fn_name);
-                (true, count)
+                RepairResult {
+                    success: true,
+                    repair_count,
+                    has_non_elidible_lifetime: elide_res.annotations_left,
+                }
             }
-            (false, count) => (false, count),
+            result => result,
         }
     }
 
-    fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32) {
+    fn repair_file(&self, file_name: &str, new_file_name: &str) -> RepairResult {
         repair_lifetime_simple::Repairer {}.repair_file(file_name, new_file_name)
     }
 
-    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> (bool, i32) {
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> RepairResult {
         fs::copy(file_name, &new_file_name).unwrap();
         annotate_loose_named_lifetime(&new_file_name, fn_name);
         // println!("annotated: {}", fs::read_to_string(&new_file_name).unwrap());
@@ -56,12 +57,16 @@ impl RepairSystem for Repairer {
         let process_errors = |stderr: &str| repair_bounds_help(stderr, new_file_name, fn_name);
 
         match repair_iteration(&mut compile_cmd, &process_errors, true, Some(50)) {
-            (true, count) => {
+            RepairResult { success: true, repair_count, .. } => {
                 // println!("repaired: {}", fs::read_to_string(&new_file_name).unwrap());
-                elide_lifetimes_annotations(new_file_name, fn_name);
-                (true, count)
+                let elide_res = elide_lifetimes_annotations(new_file_name, fn_name);
+                RepairResult {
+                    success: true,
+                    repair_count,
+                    has_non_elidible_lifetime: elide_res.annotations_left,
+                }
             }
-            (false, count) => (false, count),
+            result => result,
         }
     }
 }

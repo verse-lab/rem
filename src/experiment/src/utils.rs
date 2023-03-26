@@ -347,6 +347,7 @@ pub struct ExtractionResult {
     pub project_size: i32,
     pub src_size: i32,
     pub caller_size: i32,
+    pub num_inputs: usize,
     pub features: String,
     #[serde(skip_serializing)]
     pub features_inner: Vec<ExtractionFeature>,
@@ -437,6 +438,8 @@ pub fn run_controller(
             CALLEE_NAME,
             extraction.caller.as_str(),
         );
+        extraction_result.num_inputs = res.num_inputs;
+
         if res.has_break || res.has_continue {
             extraction_result.features_inner.push(NonLocalLoop);
         }
@@ -496,17 +499,17 @@ pub fn run_repairer(
 ) -> (bool, Duration) {
     let repairer = Repairer {};
     let mut f = || {
-        let (success, count) = repairer.repair_project(
+        let res = repairer.repair_project(
             extraction.src_path.as_str(),
             extraction.cargo_path.as_str(),
             CALLEE_NAME,
         );
-        debug!("cargo repair counted: {}", count);
-        extraction_result.cargo_cycles = count;
-        if count > 0 {
+        debug!("cargo repair counted: {}", res.repair_count);
+        extraction_result.cargo_cycles = res.repair_count;
+        if res.has_non_elidible_lifetime || res.repair_count > 0 {
             extraction_result.features_inner.push(NonElidibleLifetimes);
         }
-        success
+        res.success
     };
 
     let (success, duration) = time_exec("cargo", &mut f);

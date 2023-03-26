@@ -207,6 +207,7 @@ struct CalleeCheckNCF<'a> {
     has_break: bool,
     has_continue: bool,
     has_return: bool,
+    num_inputs: usize,
 }
 
 impl VisitMut for CalleeCheckNCF<'_> {
@@ -214,7 +215,7 @@ impl VisitMut for CalleeCheckNCF<'_> {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
             false => (),
-            true => self.callee_check_ncf(&mut i.block),
+            true => self.callee_check_ncf(i.sig.clone(), &mut i.block),
         }
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
@@ -223,7 +224,7 @@ impl VisitMut for CalleeCheckNCF<'_> {
         let id = i.sig.ident.to_string();
         match id == self.callee_fn_name {
             false => (),
-            true => self.callee_check_ncf(&mut i.block),
+            true => self.callee_check_ncf(i.sig.clone(), &mut i.block),
         }
     }
 
@@ -235,7 +236,7 @@ impl VisitMut for CalleeCheckNCF<'_> {
                 let _ = i
                     .default
                     .as_mut()
-                    .and_then(|block| Some(self.callee_check_ncf(block)));
+                    .and_then(|block| Some(self.callee_check_ncf(i.sig.clone(), block)));
             }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
@@ -243,8 +244,9 @@ impl VisitMut for CalleeCheckNCF<'_> {
 }
 
 impl CalleeCheckNCF<'_> {
-    fn callee_check_ncf(&mut self, block: &mut Block) {
+    fn callee_check_ncf(&mut self, sig: Signature, block: &mut Block) {
         self.found = true;
+        self.num_inputs = sig.inputs.len();
         let mut check_return = CalleeCheckReturn {
             has_return: self.has_return,
         };
@@ -648,6 +650,7 @@ pub struct NonLocalControlFlowResult {
     pub has_return: bool,
     pub has_continue: bool,
     pub has_break: bool,
+    pub num_inputs: usize,
 }
 
 pub fn inner_make_controls(
@@ -688,6 +691,7 @@ pub fn inner_make_controls(
             has_return: false,
             has_continue: false,
             has_break: false,
+            num_inputs: 0,
         };
     }
 
@@ -698,6 +702,7 @@ pub fn inner_make_controls(
         has_break: false,
         has_continue: false,
         has_return: false,
+        num_inputs: 0,
     };
     callee_visitor.visit_file_mut(&mut file);
 
@@ -708,6 +713,7 @@ pub fn inner_make_controls(
             has_return: false,
             has_continue: false,
             has_break: false,
+            num_inputs: 0,
         };
     }
 
@@ -788,6 +794,7 @@ pub fn inner_make_controls(
         has_return: callee_visitor.has_return,
         has_continue: callee_visitor.has_continue,
         has_break: callee_visitor.has_break,
+        num_inputs: callee_visitor.num_inputs,
     }
 }
 

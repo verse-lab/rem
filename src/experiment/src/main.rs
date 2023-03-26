@@ -64,6 +64,7 @@ fn main() {
                     project_size: get_project_size(extraction),
                     src_size: get_src_size(extraction),
                     caller_size: get_caller_size(extraction),
+                    num_inputs: 0,
                     features: String::new(),
                     features_inner: vec![],
                     notes: extraction.notes.clone(),

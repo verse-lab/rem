@@ -1,4 +1,4 @@
-use crate::common::{repair_iteration, RepairSystem};
+use crate::common::{repair_iteration, RepairResult, RepairSystem};
 
 use std::collections::HashSet;
 use std::fs;
@@ -11,11 +11,15 @@ impl RepairSystem for Repairer {
         "_rustfix_repairer"
     }
 
-    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> (bool, i32) {
-        (false, 0)
+    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> RepairResult {
+        RepairResult {
+            success: false,
+            repair_count: 0,
+            has_non_elidible_lifetime: false,
+        }
     }
 
-    fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32) {
+    fn repair_file(&self, file_name: &str, new_file_name: &str) -> RepairResult {
         fs::copy(file_name, &new_file_name).unwrap();
         let args = vec!["--error-format=json"];
 
@@ -43,7 +47,7 @@ impl RepairSystem for Repairer {
         repair_iteration(&mut compile_cmd, &process_errors, true, None)
     }
 
-    fn repair_function(&self, file_name: &str, new_file_name: &str, _: &str) -> (bool, i32) {
+    fn repair_function(&self, file_name: &str, new_file_name: &str, _: &str) -> RepairResult {
         self.repair_file(file_name, new_file_name)
     }
 }

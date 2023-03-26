@@ -17,3 +17,5 @@ Cargo.lock
 target/
 secrets.json
 venv
+**/#*#
+**/.#*

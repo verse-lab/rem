@@ -18,12 +18,17 @@ use utils::format_source;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+pub struct RepairResult {
+    pub success: bool,
+    pub repair_count: i32,
+    pub has_non_elidible_lifetime: bool,
+}
 
 pub trait RepairSystem {
     fn name(&self) -> &str;
-    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> (bool, i32);
-    fn repair_file(&self, file_name: &str, new_file_name: &str) -> (bool, i32);
-    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> (bool, i32);
+    fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> RepairResult;
+    fn repair_file(&self, file_name: &str, new_file_name: &str) -> RepairResult;
+    fn repair_function(&self, file_name: &str, new_file_name: &str, fn_name: &str) -> RepairResult;
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -200,10 +205,16 @@ pub fn repair_iteration(
     process_errors: &dyn Fn(&str) -> bool,
     print_stats: bool,
     max_iterations: Option<i32>,
-) -> (bool, i32) {
+) -> RepairResult {
     let mut count = 0;
     let max_iterations = max_iterations.unwrap_or(25);
-    let result = loop {
+    let mut repair_result = RepairResult {
+        success: false,
+        repair_count: 0,
+        has_non_elidible_lifetime: false,
+    };
+
+    let success = loop {
         let out = compile_cmd.output().unwrap();
         let stderr = String::from_utf8_lossy(&out.stderr);
         if out.status.success() {
@@ -222,10 +233,12 @@ pub fn repair_iteration(
 
     if print_stats {
         info!("repair count: {}", count);
-        info!("status: {}", result);
+        info!("status: {}", success);
     }
 
-    (result, count)
+    repair_result.success = success;
+    repair_result.repair_count = count;
+    repair_result
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -301,6 +314,7 @@ impl VisitMut for FnLifetimeEliderArgHelper<'_> {
 
 struct FnLifetimeElider<'a> {
     fn_name: &'a str,
+    annotations_left: bool,
 }
 
 struct LtGetterElider<'a> {
@@ -481,11 +495,13 @@ impl FnLifetimeElider<'_> {
                         _ => true,
                     })
                     .collect();
+
                 let mut lt_count = 0;
                 let mut new_lts = HashMap::new();
                 gen.params.iter_mut().for_each(|gp| match gp {
                     GenericParam::Lifetime(lt) => {
                         let id = lt.lifetime.to_string();
+                        self.annotations_left = true;
                         new_lts.insert(id, format!("'lt{}", lt_count));
                         lt.lifetime =
                             Lifetime::new(format!("'lt{}", lt_count).as_str(), Span::call_site());
@@ -543,6 +559,12 @@ impl FnLifetimeElider<'_> {
         }
     }
 }
+
+pub struct ElideLifetimeResult {
+    pub success: bool,
+    pub annotations_left: bool,
+}
+
 /**
 Elide lifetimes that are only used once in the inputs and not used in output(s)/bound(s)
 
@@ -550,15 +572,19 @@ Do not elide lifetimes when receiver (self) is in the input
 
 Elision rules are here: https://doc.rust-lang.org/nomicon/lifetime-elision.htm
 */
-pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) {
+pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) -> ElideLifetimeResult {
     let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
         .unwrap();
-    let mut visit = FnLifetimeElider { fn_name };
+    let mut visit = FnLifetimeElider {
+        fn_name,
+        annotations_left: false,
+    };
     visit.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
-    fs::write(new_file_name.to_string(), format_source(&file)).unwrap()
+    fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
+    ElideLifetimeResult { success: true, annotations_left: visit.annotations_left }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -656,10 +682,15 @@ pub fn repair_iteration_project(
     process_errors: &dyn Fn(&RustcError) -> bool,
     print_stats: bool,
     max_iterations: Option<i32>,
-) -> (bool, i32) {
+) -> RepairResult {
     let mut count = 0;
     let max_iterations = max_iterations.unwrap_or(25);
-    let result = loop {
+    let mut repair_result = RepairResult {
+        success: false,
+        repair_count: 0,
+        has_non_elidible_lifetime: false,
+    };
+    let success = loop {
         let out = compile_cmd.output().unwrap();
         if out.status.success() {
             info!("repair succeeded");
@@ -712,8 +743,10 @@ pub fn repair_iteration_project(
 
     if print_stats {
         info!("repair count: {}", count);
-        info!("status: {}", result);
+        info!("status: {}", success);
     }
 
-    (result, count)
+    repair_result.success = success;
+    repair_result.repair_count = count;
+    repair_result
 }
