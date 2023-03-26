@@ -2,8 +2,8 @@ mod borrow;
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use std::{env, fs};
 use std::time::SystemTime;
+use std::{env, fs};
 use utils::compile_file;
 
 #[derive(Parser)]

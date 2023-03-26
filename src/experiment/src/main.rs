@@ -1,3 +1,5 @@
+#![feature(variant_count)]
+
 mod projects;
 mod utils;
 
@@ -62,6 +64,7 @@ fn main() {
                     project_size: get_project_size(extraction),
                     src_size: get_src_size(extraction),
                     caller_size: get_caller_size(extraction),
+                    features: String::new(),
                     notes: extraction.notes.clone(),
                 };
 

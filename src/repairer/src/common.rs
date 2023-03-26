@@ -9,9 +9,8 @@ use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
 use syn::{
-    visit_mut::VisitMut, AngleBracketedGenericArguments, Expr, ExprCall, ExprForLoop,
-    ExprMethodCall, FnArg, GenericArgument, GenericParam, ImplItemMethod, ItemFn, Lifetime,
-    LifetimeDef, PatType, PredicateLifetime, ReturnType, Signature, TraitItemMethod, TypePath,
+    visit_mut::VisitMut, ExprCall,
+    ExprMethodCall, FnArg, GenericArgument, GenericParam, ImplItemMethod, ItemFn, Lifetime, PredicateLifetime, ReturnType, Signature, TraitItemMethod,
     TypeReference, WhereClause, WherePredicate,
 };
 use utils::format_source;
@@ -525,14 +524,12 @@ impl FnLifetimeElider<'_> {
                         _ => (),
                     }),
                 }
-                inputs.iter_mut().for_each(|fn_arg| {
-                    match fn_arg {
-                        FnArg::Receiver(_) => (),
-                        FnArg::Typed(t) => {
-                            let mut change_lt = ChangeLtHelperElider { map: &new_lts };
-                            debug!("debugging input: {:?}", t);
-                            change_lt.visit_pat_type_mut(t);
-                        }
+                inputs.iter_mut().for_each(|fn_arg| match fn_arg {
+                    FnArg::Receiver(_) => (),
+                    FnArg::Typed(t) => {
+                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                        debug!("debugging input: {:?}", t);
+                        change_lt.visit_pat_type_mut(t);
                     }
                 });
                 match sig.output.borrow_mut() {

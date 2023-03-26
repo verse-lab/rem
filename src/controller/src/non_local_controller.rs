@@ -1,7 +1,7 @@
 use std::fs;
 
 use convert_case::{Case, Casing};
-use log::{debug};
+use log::debug;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
@@ -14,7 +14,10 @@ use utils::{format_source, FindCallee};
 const ENUM_NAME: &str = "Ret";
 
 fn make_pascal_case(s: &str) -> String {
-    s.to_case(Case::Pascal).strip_suffix("ExtractThis").unwrap().to_string()
+    s.to_case(Case::Pascal)
+        .strip_suffix("ExtractThis")
+        .unwrap()
+        .to_string()
 }
 
 struct CheckCalleeWithinLoopHelper<'a> {
@@ -640,12 +643,19 @@ impl MatchCallSite<'_> {
     }
 }
 
-pub fn make_controls(
+pub struct NonLocalControlFlowResult {
+    pub success: bool,
+    pub has_return: bool,
+    pub has_continue: bool,
+    pub has_break: bool,
+}
+
+pub fn inner_make_controls(
     file_name: &str,
     new_file_name: &str,
     callee_fn_name: &str,
     caller_fn_name: &str,
-) -> bool {
+) -> NonLocalControlFlowResult {
     let mut success = true;
     debug!("debugging controller...");
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
@@ -673,7 +683,12 @@ pub fn make_controls(
     caller_visitor.visit_file_mut(&mut file);
     if !caller_visitor.found {
         debug!("did not find caller");
-        return false;
+        return NonLocalControlFlowResult {
+            success: false,
+            has_return: false,
+            has_continue: false,
+            has_break: false,
+        };
     }
 
     let mut callee_visitor = CalleeCheckNCF {
@@ -688,7 +703,12 @@ pub fn make_controls(
 
     if !callee_visitor.found {
         debug!("did not find callee");
-        return false;
+        return NonLocalControlFlowResult {
+            success: false,
+            has_return: false,
+            has_continue: false,
+            has_break: false,
+        };
     }
 
     if callee_visitor.has_return || callee_visitor.has_continue || callee_visitor.has_break {
@@ -763,5 +783,19 @@ pub fn make_controls(
     }
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
-    success
+    NonLocalControlFlowResult {
+        success,
+        has_return: callee_visitor.has_return,
+        has_continue: callee_visitor.has_continue,
+        has_break: callee_visitor.has_break,
+    }
+}
+
+pub fn make_controls(
+    file_name: &str,
+    new_file_name: &str,
+    callee_fn_name: &str,
+    caller_fn_name: &str,
+) -> bool {
+    inner_make_controls(file_name, new_file_name, callee_fn_name, caller_fn_name).success
 }

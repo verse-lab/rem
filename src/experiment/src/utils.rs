@@ -2,15 +2,19 @@ use jwt_simple::prelude::*;
 use log::{debug, info, warn};
 use regex::Regex;
 use reqwest::blocking::Client;
-use std::fs;
+use std::{fs, mem};
 
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
+use serde::Serializer;
 
 use crate::projects::Extraction;
-use borrower::borrow::make_borrows;
-use controller::non_local_controller::make_controls;
+use crate::utils::ExtractionFeature::{
+    Borrow, MutableBorrow, NonElidibleLifetimes, NonLocalLoop, NonLocalReturn,
+};
+use borrower::borrow::{inner_make_borrows};
+use controller::non_local_controller::{inner_make_controls};
 use repairer::common::RepairSystem;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
 use utils::{check_project, find_caller};
@@ -316,6 +320,16 @@ pub fn rename_callee(
 
 /*************************************** Extraction Related ************************************/
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExtractionFeature {
+    NonLocalReturn,
+    NonLocalLoop,
+    Borrow,
+    MutableBorrow,
+    NonElidibleLifetimes,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct ExtractionResult {
     pub success: bool,
@@ -333,6 +347,7 @@ pub struct ExtractionResult {
     pub project_size: i32,
     pub src_size: i32,
     pub caller_size: i32,
+    pub features: String,
     pub notes: Option<String>,
 }
 
@@ -414,12 +429,19 @@ pub fn run_controller(
     extraction_result: &mut ExtractionResult,
 ) -> (bool, Duration) {
     let mut f = || {
-        make_controls(
+        let res = inner_make_controls(
             extraction.src_path.as_str(),
             extraction.src_path.as_str(),
             CALLEE_NAME,
             extraction.caller.as_str(),
-        )
+        );
+        if res.has_break || res.has_continue {
+            extraction_result.features.push_str(serde_json::to_string(&NonLocalLoop).unwrap().as_str());
+        }
+        if res.has_return {
+            extraction_result.features.push_str(serde_json::to_string(&NonLocalReturn).unwrap().as_str());
+        }
+        res.success
     };
     let (success, duration) = time_exec("controller", &mut f);
     either!(
@@ -435,14 +457,27 @@ pub fn run_borrower(
     extraction_result: &mut ExtractionResult,
 ) -> (bool, Duration) {
     let mut f = || {
-        make_borrows(
+        let res = inner_make_borrows(
             extraction.src_path.as_str(),
             extraction.src_path.as_str(),
             extraction.mut_methods_path.as_str(),
             CALLEE_NAME,
             extraction.caller.as_str(),
             extraction.original_path.as_str(),
-        )
+        );
+
+        let make_ref : Vec<String> = res.make_ref
+            .into_iter()
+            .filter(|x| !res.make_mut.contains(x))
+            .collect();
+        if make_ref.len() > 0 {
+            extraction_result.features.push_str(serde_json::to_string(&Borrow).unwrap().as_str());
+        }
+
+        if res.make_mut.len() > 0 {
+            extraction_result.features.push_str(serde_json::to_string(&MutableBorrow).unwrap().as_str());
+        }
+        res.success
     };
     let (success, duration) = time_exec("borrower", &mut f);
     either!(
@@ -466,8 +501,12 @@ pub fn run_repairer(
         );
         debug!("cargo repair counted: {}", count);
         extraction_result.cargo_cycles = count;
+        if count > 0 {
+            extraction_result.features.push_str(serde_json::to_string(&NonElidibleLifetimes).unwrap().as_str());
+        }
         success
     };
+
     let (success, duration) = time_exec("cargo", &mut f);
     either!(
         success,

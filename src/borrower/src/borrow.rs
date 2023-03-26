@@ -1,7 +1,6 @@
 use quote::ToTokens;
 use std::collections::HashMap;
 
-
 use proc_macro2::Ident;
 use std::fs;
 
@@ -10,7 +9,11 @@ use constraint::ConstraintManager;
 use itertools::Itertools;
 use regex::Regex;
 use syn::punctuated::Punctuated;
-use syn::{visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall, ExprReference, ExprReturn, FnArg, ImplItemMethod, ItemFn, Local, Macro, Pat, Signature, Stmt, Token, TraitItemMethod, Type, TypeReference, PathSegment};
+use syn::{
+    visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall,
+    ExprReference, ExprReturn, FnArg, ImplItemMethod, ItemFn, Local, Macro, Pat,
+    Signature, Stmt, Token, TraitItemMethod, Type, TypeReference,
+};
 
 use log::debug;
 use utils::{format_source, FindCallee};
@@ -565,7 +568,7 @@ impl VisitMut for ReceiverHelper<'_> {
             true => {
                 self.found = true;
                 self.exprs.push(id);
-            },
+            }
         }
     }
 }
@@ -1074,14 +1077,20 @@ impl VisitMut for PreExtracter<'_> {
     }
 }
 
-pub fn make_borrows(
+pub struct BorrowResult {
+    pub success: bool,
+    pub make_mut: Vec<String>,
+    pub make_ref: Vec<String>,
+}
+
+pub fn inner_make_borrows(
     file_name: &str,
     new_file_name: &str,
     mut_method_call_expr_file: &str,
     callee_fn_name: &str,
     caller_fn_name: &str,
     pre_extract_file_name: &str,
-) -> bool {
+) -> BorrowResult {
     let pre_extract: String = fs::read_to_string(&pre_extract_file_name)
         .unwrap()
         .parse()
@@ -1122,7 +1131,12 @@ pub fn make_borrows(
     callee_input_helper.visit_file_mut(&mut file);
 
     if !callee_input_helper.found {
-        return false;
+        debug!("no callee found!");
+        return BorrowResult {
+            success: false,
+            make_mut: vec![],
+            make_ref: vec![],
+        };
     }
 
     let mut use_after = vec![];
@@ -1140,7 +1154,12 @@ pub fn make_borrows(
     caller_helper.visit_file_mut(&mut file);
 
     if !caller_helper.found {
-        return false;
+        debug!("no caller found!");
+        return BorrowResult {
+            success: false,
+            make_mut: vec![],
+            make_ref: vec![],
+        };
     }
 
     let mut callee_finder = FindCallee {
@@ -1157,10 +1176,6 @@ pub fn make_borrows(
         use_after: &use_after,
     };
     constraint_visitor.visit_file_mut(&mut pre_extract_file);
-
-    for _s in &decl_mut {
-        // // println!("decl {} mut", s);
-    }
 
     let mut make_mut = vec![];
     let mut mut_borrower = MutableBorrower {
@@ -1207,5 +1222,28 @@ pub fn make_borrows(
     caller_assigner.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
-    true
+    BorrowResult {
+        success: true,
+        make_mut,
+        make_ref,
+    }
+}
+
+pub fn make_borrows(
+    file_name: &str,
+    new_file_name: &str,
+    mut_method_call_expr_file: &str,
+    callee_fn_name: &str,
+    caller_fn_name: &str,
+    pre_extract_file_name: &str,
+) -> bool {
+    inner_make_borrows(
+        file_name,
+        new_file_name,
+        mut_method_call_expr_file,
+        callee_fn_name,
+        caller_fn_name,
+        pre_extract_file_name,
+    )
+    .success
 }

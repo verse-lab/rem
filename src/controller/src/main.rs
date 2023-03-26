@@ -1,9 +1,9 @@
 mod non_local_controller;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use std::{env, fs};
 use std::process::exit;
 use std::time::SystemTime;
+use std::{env, fs};
 use utils::compile_file;
 
 #[derive(Parser)]

@@ -22,9 +22,9 @@ pub mod parser;
 pub mod typ;
 pub mod wrappers;
 
-use std::fs;
 use log::debug;
 use quote::ToTokens;
+use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -215,13 +215,25 @@ impl VisitMut for FindFn<'_> {
     }
 }
 
-pub fn find_caller(file_name: &str, caller_name: &str, callee_name: &str) -> (bool, String, String) {
+pub fn find_caller(
+    file_name: &str,
+    caller_name: &str,
+    callee_name: &str,
+) -> (bool, String, String) {
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
         .unwrap();
 
-    let mut visit = FindCaller { caller_fn_name:caller_name, callee_finder: &mut FindCallee { found: false, callee_fn_name: callee_name}, found: false, caller: String::new()};
+    let mut visit = FindCaller {
+        caller_fn_name: caller_name,
+        callee_finder: &mut FindCallee {
+            found: false,
+            callee_fn_name: callee_name,
+        },
+        found: false,
+        caller: String::new(),
+    };
     visit.visit_file_mut(&mut file);
 
     let mut callee = FindFn {
@@ -232,7 +244,11 @@ pub fn find_caller(file_name: &str, caller_name: &str, callee_name: &str) -> (bo
 
     callee.visit_file_mut(&mut file);
 
-    (visit.found && callee.found, format_source(visit.caller.as_str()), format_source(callee.fn_txt.as_str()))
+    (
+        visit.found && callee.found,
+        format_source(visit.caller.as_str()),
+        format_source(callee.fn_txt.as_str()),
+    )
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
