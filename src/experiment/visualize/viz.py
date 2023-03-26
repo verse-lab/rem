@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import json
 import sys, os, subprocess
 
 load_dotenv()
@@ -21,17 +22,22 @@ def copy_to_paper(fig_path):
     except:
         print('errored cp-ing')
 
-### Initial overall view
+
 def overall(df):
     fig_path = 'figs/src-size-duration.pdf'
     fig, ax = plt.subplots(figsize=(8,5))
     plt.title('Extraction duration against source file size', fontsize=15, fontweight="bold")
     line = sns.scatterplot(x='SRC_SIZE',
                            y='TOTAL_DURATION_S',
+                           size='NUM_INPUTS',
+                           sizes=(20,100),
+                           hue='NUM_INPUTS',
+                           hue_norm=(0,7),
                            marker='o',
                            data=df)
     ax.set_xlabel('Source file size (lines)', fontweight='bold')
     ax.set_ylabel('Duration (s)', fontweight='bold')
+    plt.legend(loc='center left', title='Extracted inputs size', bbox_to_anchor=(1,0.5))
     plt.tight_layout()
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
@@ -69,20 +75,122 @@ def cargo_cycle_plot(df):
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
 
-def picked_examples_by_project(df):
-    
+
+def features_table_by_project(df, show=False):
+    df['FEATURES_JSON'] = df.FEATURES.apply(json.loads)
+
+    def get_unique_features(df):
+        features = df.FEATURES.unique()
+        feat_cols = {}
+        for f in features:
+            feats = json.loads(f)
+            for f in feats:
+                feat_cols[f] = f[0].upper() + ' '.join(f[1:].split('_'))
+        return feat_cols
+
+    def better_example_name(branch):
+        x = branch.rstrip('-expr-active')
+        rename = {'ext-com': 'Developer extraction', 'ext': 'Arbitrary extraction', 'inline-ext': 'Inline and extract'}
+        for r in rename:
+            if x.startswith(r):
+                n = x.lstrip(r)
+                return f"{rename[r]} {n}"
+
+    def make_latex_table(df, project):
+        replace_txt = r'{{{REPLACE_ME}}}'
+        fmt = lambda x, y: x.replace(replace_txt, str(y))
+        alignment = 'r' * (df.shape[1] - 1)
+        preamble = r'''\begin{table}[]
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{l{{{REPLACE_ME}}}}
+\hline'''
+        preamble = fmt(preamble, alignment)
+        example = df.columns[0]
+        header = fmt(r'\textit{\textbf{{{{REPLACE_ME}}}}}', example)
+        next_headers_template = r'& \multicolumn{1}{l}{\textit{\textbf{{{{REPLACE_ME}}}}}}'
+        for h in df.columns[1:]:
+            header += fmt(next_headers_template, h)
+        header += r'\\ \hline' + '\n'
+        footer = r''' \hline
+\end{tabular}%
+}
+\caption{\tool efficiency on {{{REPLACE_ME}}} project}
+\label{table:eff{{{REPLACE_ME}}}}
+\end{table}'''
+        footer = fmt(footer, project)
+        body = ''
+        row_template = r' & \textit{{{{REPLACE_ME}}}}'
+        for (_,row) in df.iterrows():
+            body += row[example]
+            for r in df.columns[1:]:
+                h = row[r]
+                if h == '':
+                    body += ' &'
+                elif str(h).startswith('\\'):
+                    body += f' & {h}'
+                else:
+                    body += fmt(row_template, h)
+            body += r' \\' + '\n'
+        body = body.rstrip('\n')
+        latex = preamble + '\n' + header + body + footer
+        return latex
+
+    def sort_feat_col(x):
+        if 'non local' in x.lower():
+            return '1' + x
+        elif 'borrow' in x.lower():
+            return '2' + x
+        elif 'lifetime' in x.lower():
+            return '3' + x
+        return 0
+
+    projects = df.PROJECT.unique()
+    projects_with_features = {}
+    for project in projects:
+        project_df = df[df.PROJECT == project]
+        project_df = project_df[project_df.FEATURES_JSON.apply(lambda l: len(l) > 0)]
+        if len(project_df) == 0:
+            continue
+
+        project_df['BRANCH'] = project_df.BRANCH.apply(better_example_name)
+
+        feat_cols = get_unique_features(project_df)
+        for col in feat_cols.keys():
+            project_df[feat_cols[col]] = project_df.FEATURES_JSON.apply(lambda feats: '\cmark' if col in feats else '')
+        sel = ['BRANCH', 'PROJECT_SIZE', 'CALLER_SIZE', 'NUM_INPUTS']
+        sel.extend(sorted(feat_cols.values(), key=sort_feat_col))
+        sel.extend(['TOTAL_DURATION_S'])
+        out = project_df[sel]
+        projects_with_features[project] = out
+        out = out.rename(columns={'BRANCH': f'{project} examples', 'PROJECT_SIZE' : 'Module Size(LOC)', 'CALLER_SIZE': 'Caller size(LOC)', 'NUM_INPUTS': 'Extracted input size', 'TOTAL_DURATION_S': 'Extraction duration(s)'})
+        out.to_csv(f'tables/{project}StatsTbl.csv', index=False, encoding='utf-8')
+        latex = make_latex_table(out, project)
+        with open(f'tables/{project}StatsTbl.tex', 'w') as f:
+            f.write(latex)
+            f.flush()
+        copy_to_paper(f'tables/{project}StatsTbl.tex')
+    if show:
+        for p in projects_with_features:
+            print(p)
+            print(projects_with_features[p].head())
+            print('\n\n')
+            print(latex)
+            print('\n\n')
 
 def inner_handler(csv_path, show=False):
     csv_name = csv_path.split('/')[-1]
     df = pd.read_csv(csv_path)
     overall(df)
     # cargo_cycle_plot(df)
+    features_table_by_project(df, show)
     if show:
         plt.show()
+
 
 def main():
     csv_path = sys.argv[1]
     inner_handler(csv_path, show=True)
+
 
 if __name__ == '__main__':
     main()

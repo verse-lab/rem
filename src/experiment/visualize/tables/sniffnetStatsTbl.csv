@@ -1,0 +1,7 @@
+sniffnet examples,Module Size(LOC),Caller size(LOC),Extracted input size,Immutable borrow,Mutable borrow,Non elidible lifetimes,Extraction duration(s)
+Inline and extract 1,7283,72,3,\cmark,,,1.67
+Inline and extract 2,7304,182,6,\cmark,,\cmark,1.096
+Arbitrary extraction 1,7269,53,3,\cmark,\cmark,,1.418
+Arbitrary extraction 2,7269,98,4,,\cmark,,1.465
+Arbitrary extraction 4,7270,66,2,\cmark,,,1.447
+Arbitrary extraction 6,7269,25,2,,\cmark,,1.334

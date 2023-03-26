@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::projects::Extraction;
 use crate::utils::ExtractionFeature::{
-    Borrow, MutableBorrow, NonElidibleLifetimes, NonLocalLoop, NonLocalReturn,
+    ImmutableBorrow, MutableBorrow, NonElidibleLifetimes, NonLocalLoop, NonLocalReturn,
 };
 use borrower::borrow::{inner_make_borrows};
 use controller::non_local_controller::{inner_make_controls};
@@ -324,7 +324,7 @@ pub fn rename_callee(
 pub enum ExtractionFeature {
     NonLocalReturn,
     NonLocalLoop,
-    Borrow,
+    ImmutableBorrow,
     MutableBorrow,
     NonElidibleLifetimes,
 }
@@ -476,7 +476,7 @@ pub fn run_borrower(
             .filter(|x| !res.make_mut.contains(x))
             .collect();
         if make_ref.len() > 0 {
-            extraction_result.features_inner.push(Borrow);
+            extraction_result.features_inner.push(ImmutableBorrow);
         }
 
         if res.make_mut.len() > 0 {

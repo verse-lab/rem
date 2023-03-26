@@ -1,0 +1,15 @@
+\begin{table}[]
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\hline
+\textit{\textbf{petgraph examples}}& \multicolumn{1}{l}{\textit{\textbf{Module Size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Caller size(LOC)}}}& \multicolumn{1}{l}{\textit{\textbf{Extracted input size}}}& \multicolumn{1}{l}{\textit{\textbf{Immutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Mutable borrow}}}& \multicolumn{1}{l}{\textit{\textbf{Non elidible lifetimes}}}& \multicolumn{1}{l}{\textit{\textbf{Extraction duration(s)}}}\\ \hline
+Arbitrary extraction 3 & \textit{20115} & \textit{8} & \textit{2} & & & \cmark & \textit{2.28} \\
+Arbitrary extraction 4 & \textit{20113} & \textit{54} & \textit{4} & \cmark & & & \textit{2.512} \\
+Arbitrary extraction 5 & \textit{20113} & \textit{122} & \textit{2} & \cmark & \cmark & & \textit{1.296} \\
+Arbitrary extraction 6 & \textit{20113} & \textit{22} & \textit{2} & \cmark & & & \textit{1.496} \\
+Inline and extract 1 & \textit{20157} & \textit{54} & \textit{4} & \cmark & & \cmark & \textit{0.805} \\ \hline
+\end{tabular}%
+}
+\caption{\tool efficiency on petgraph project}
+\label{table:effpetgraph}
+\end{table}
