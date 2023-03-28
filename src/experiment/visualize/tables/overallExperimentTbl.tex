@@ -1,90 +1,52 @@
+\begin{landscape}
 \begin{table}[]
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lrrrrrrrrrr}
 \hline
-\textit{\textbf{PROJECT}}& \multicolumn{1}{l}{\textit{\textbf{BRANCH}}}& \multicolumn{1}{l}{\textit{\textbf{FIX_NLCF_DURATION_MS}}}& \multicolumn{1}{l}{\textit{\textbf{FIX_BORROW_DURATION_MS}}}& \multicolumn{1}{l}{\textit{\textbf{FIX_LIFETIME_CARGO_MS}}}& \multicolumn{1}{l}{\textit{\textbf{CARGO_CYCLES}}}& \multicolumn{1}{l}{\textit{\textbf{TOTAL_DURATION_MS}}}& \multicolumn{1}{l}{\textit{\textbf{COMMIT_URL}}}& \multicolumn{1}{l}{\textit{\textbf{SUCCESS}}}& \multicolumn{1}{l}{\textit{\textbf{FAILED_AT}}}& \multicolumn{1}{l}{\textit{\textbf{FEATURES}}}\\ \hline
-petgraph & \textit{Arbitrary extraction 1} & \textit{54} & \textit{56} & \textit{275} & \textit{0} & \textit{385} & \textit{https://github.com/sewenthy/petgraph/commit/d19f4b889ce284c0f7112a1ca353e0f70a1732e6
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-petgraph & \textit{Arbitrary extraction 2} & \textit{67} & \textit{113} & \textit{834} & \textit{0} & \textit{1015} & \textit{https://github.com/sewenthy/petgraph/commit/c8195698758d90f8436bda1ed1148b39b05fd850
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-petgraph & \textit{Arbitrary extraction 3} & \textit{97} & \textit{106} & \textit{1372} & \textit{1} & \textit{1576} & \textit{https://github.com/sewenthy/petgraph/commit/c6ba1d11d84664fe0932f822becd17cc9722d5da
-} & \textit{True} & \textit{nan} & \textit{["non_elidible_lifetimes"]} \\
-petgraph & \textit{Arbitrary extraction 4} & \textit{78} & \textit{81} & \textit{1591} & \textit{0} & \textit{1751} & \textit{https://github.com/sewenthy/petgraph/commit/c6751666bb725e3f2e4affb679f7c4796f8e490f
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow"]} \\
-petgraph & \textit{Arbitrary extraction 5} & \textit{74} & \textit{55} & \textit{776} & \textit{0} & \textit{907} & \textit{https://github.com/sewenthy/petgraph/commit/66dd8edfed39d8a2eb8148233b80a76d9b3b4ec4
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow","mutable_borrow"]} \\
-petgraph & \textit{Arbitrary extraction 6} & \textit{94} & \textit{75} & \textit{863} & \textit{0} & \textit{1033} & \textit{https://github.com/sewenthy/petgraph/commit/014cfac307ca18f5a8d863b9f4e23148a5a6a6ef
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow"]} \\
-petgraph & \textit{Inline and extract 1} & \textit{80} & \textit{83} & \textit{372} & \textit{1} & \textit{536} & \textit{https://github.com/sewenthy/petgraph/commit/33181351cdf000d34da364c498f502d9ff544488
-} & \textit{False} & \textit{cargo} & \textit{["immutable_borrow","non_elidible_lifetimes"]} \\
-gitoxide & \textit{Arbitrary extraction 1} & \textit{44} & \textit{73} & \textit{769} & \textit{0} & \textit{887} & \textit{https://github.com/sewenthy/gitoxide/commit/4d6124558f37524f926cd638b23f9faaf171d5e9
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Arbitrary extraction 2} & \textit{76} & \textit{47} & \textit{1126} & \textit{1} & \textit{1251} & \textit{https://github.com/sewenthy/gitoxide/commit/8c5135b28c17a6211a8b9aeadbae439d4df612bc
-} & \textit{True} & \textit{nan} & \textit{["non_local_return","non_elidible_lifetimes"]} \\
-gitoxide & \textit{Arbitrary extraction 3} & \textit{45} & \textit{71} & \textit{505} & \textit{0} & \textit{622} & \textit{https://github.com/sewenthy/gitoxide/commit/99aac94ce0b48e89d9ca748866222189553b91fe
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Arbitrary extraction 4} & \textit{55} & \textit{78} & \textit{642} & \textit{0} & \textit{777} & \textit{https://github.com/sewenthy/gitoxide/commit/3c9c5898707874ddd851198af24739c046fde769
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Arbitrary extraction 5} & \textit{73} & \textit{79} & \textit{674} & \textit{0} & \textit{827} & \textit{https://github.com/sewenthy/gitoxide/commit/61a75065000c4cff611526e7be60db735139a401
-} & \textit{True} & \textit{nan} & \textit{["non_elidible_lifetimes"]} \\
-gitoxide & \textit{Arbitrary extraction 6} & \textit{58} & \textit{80} & \textit{672} & \textit{0} & \textit{811} & \textit{https://github.com/sewenthy/gitoxide/commit/1a88d0369a3adf48d8db76f6b2120c7f8752247f
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Arbitrary extraction 7} & \textit{45} & \textit{75} & \textit{468} & \textit{0} & \textit{590} & \textit{https://github.com/sewenthy/gitoxide/commit/dd78bffba943b243f933dcccac2bdd357dda8684
-} & \textit{True} & \textit{nan} & \textit{["mutable_borrow"]} \\
-gitoxide & \textit{Arbitrary extraction 8} & \textit{44} & \textit{76} & \textit{532} & \textit{0} & \textit{653} & \textit{https://github.com/sewenthy/gitoxide/commit/38306c6fddb5ba611b7c23877d671d3a7bb96e66
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Developer extraction 1} & \textit{44} & \textit{63} & \textit{421} & \textit{0} & \textit{529} & \textit{https://github.com/sewenthy/gitoxide/commit/e9569ee458b22a1e5cf950be2388919ba816c9b3
-} & \textit{True} & \textit{nan} & \textit{["non_local_return"]} \\
-gitoxide & \textit{Developer extraction 2} & \textit{77} & \textit{80} & \textit{1080} & \textit{1} & \textit{1238} & \textit{https://github.com/sewenthy/gitoxide/commit/60e89d0dda1a64a6686b23e86ca4a43fde40a9b4
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow","mutable_borrow","non_elidible_lifetimes"]} \\
-gitoxide & \textit{Inline and extract 1} & \textit{66} & \textit{75} & \textit{786} & \textit{1} & \textit{928} & \textit{https://github.com/sewenthy/gitoxide/commit/32fe3168ea803a48637d117b16305f710ca2bfc2
-} & \textit{True} & \textit{nan} & \textit{["non_local_return","non_elidible_lifetimes"]} \\
-gitoxide & \textit{Inline and extract 2} & \textit{78} & \textit{79} & \textit{2139} & \textit{3} & \textit{2297} & \textit{https://github.com/sewenthy/gitoxide/commit/da391639100d460fa96df2af44a4663f376b4c98
-} & \textit{True} & \textit{nan} & \textit{["non_elidible_lifetimes"]} \\
-gitoxide & \textit{Inline and extract 3} & \textit{48} & \textit{82} & \textit{956} & \textit{1} & \textit{1088} & \textit{https://github.com/sewenthy/gitoxide/commit/15b6a0c88c751f443349ffe2d4549353f12a5364
-} & \textit{False} & \textit{cargo} & \textit{["mutable_borrow","non_elidible_lifetimes"]} \\
-gitoxide & \textit{Inline and extract 4} & \textit{57} & \textit{79} & \textit{548} & \textit{0} & \textit{684} & \textit{https://github.com/sewenthy/gitoxide/commit/d630d12326b0a5c6ab328a318b16558f1ea95a0c
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Inline and extract 5} & \textit{58} & \textit{78} & \textit{496} & \textit{0} & \textit{632} & \textit{https://github.com/sewenthy/gitoxide/commit/b079e69a317c8785e0b453757a51bc59b3f569ef
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Inline and extract 6} & \textit{76} & \textit{79} & \textit{487} & \textit{0} & \textit{643} & \textit{https://github.com/sewenthy/gitoxide/commit/fbbcd9c54bca07ff041755d0213f6e076ba07d9f
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-gitoxide & \textit{Inline and extract 7} & \textit{74} & \textit{74} & \textit{524} & \textit{0} & \textit{673} & \textit{https://github.com/sewenthy/gitoxide/commit/7422f7ecc3c1cde513a866cf013348597903cab9
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow"]} \\
-gitoxide & \textit{Inline and extract 8} & \textit{86} & \textit{62} & \textit{558} & \textit{0} & \textit{707} & \textit{https://github.com/sewenthy/gitoxide/commit/957e09661fd3f20850ed9fc8fd9eaa3e50a2861d
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow"]} \\
-kickoff & \textit{Inline and extract 1} & \textit{80} & \textit{55} & \textit{913} & \textit{0} & \textit{1049} & \textit{https://github.com/sewenthy/kickoff/commit/adf76d1f50ecc7477a9cf9989135fd5d3bd74ec2
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow","mutable_borrow"]} \\
-kickoff & \textit{Arbitrary extraction 1} & \textit{46} & \textit{81} & \textit{819} & \textit{0} & \textit{947} & \textit{https://github.com/sewenthy/kickoff/commit/d7d1649eacf3d5b53249cf4a70af077f62bb6250
-} & \textit{True} & \textit{nan} & \textit{["non_local_loop"]} \\
-kickoff & \textit{Arbitrary extraction 2} & \textit{44} & \textit{76} & \textit{854} & \textit{0} & \textit{975} & \textit{https://github.com/sewenthy/kickoff/commit/a75d6c2225a4f7093c39faafba7717b8873cd272
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-kickoff & \textit{Arbitrary extraction 3} & \textit{74} & \textit{74} & \textit{846} & \textit{0} & \textit{996} & \textit{https://github.com/sewenthy/kickoff/commit/1fb7eb64df7d226d64647479f8008965beb739b2
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-kickoff & \textit{Arbitrary extraction 4} & \textit{75} & \textit{75} & \textit{658} & \textit{0} & \textit{809} & \textit{https://github.com/sewenthy/kickoff/commit/4f0ad0d16f9b2b927c1db3dc901eaa8c4f1d7bff
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow","mutable_borrow"]} \\
-sniffnet & \textit{Inline and extract 1} & \textit{82} & \textit{57} & \textit{904} & \textit{0} & \textit{1044} & \textit{https://github.com/sewenthy/sniffnet/commit/a55742900f809c7a22ea3db82d3318aaed061dcb
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow"]} \\
-sniffnet & \textit{Inline and extract 2} & \textit{76} & \textit{80} & \textit{620} & \textit{1} & \textit{777} & \textit{https://github.com/sewenthy/sniffnet/commit/8f0ad074365b5fb4397e1909a04b350932f7d14e
-} & \textit{False} & \textit{cargo} & \textit{["immutable_borrow","non_elidible_lifetimes"]} \\
-sniffnet & \textit{Arbitrary extraction 1} & \textit{74} & \textit{76} & \textit{881} & \textit{0} & \textit{1031} & \textit{https://github.com/sewenthy/sniffnet/commit/118a625105226017ce42abfa04652c1a1ca43c70
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow","mutable_borrow"]} \\
-sniffnet & \textit{Arbitrary extraction 2} & \textit{74} & \textit{57} & \textit{823} & \textit{0} & \textit{955} & \textit{https://github.com/sewenthy/sniffnet/commit/ef046ccfd692a85f62a0be28bac44e6f1fc68f57
-} & \textit{True} & \textit{nan} & \textit{["mutable_borrow"]} \\
-sniffnet & \textit{Arbitrary extraction 3} & \textit{73} & \textit{80} & \textit{862} & \textit{0} & \textit{1016} & \textit{https://github.com/sewenthy/sniffnet/commit/1cc82ccb0fd0971a073878e14ff1d27f60326d95
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-sniffnet & \textit{Arbitrary extraction 4} & \textit{75} & \textit{79} & \textit{897} & \textit{0} & \textit{1052} & \textit{https://github.com/sewenthy/sniffnet/commit/5416d9e49c482b15e3795b439765d11bf11ad377
-} & \textit{True} & \textit{nan} & \textit{["immutable_borrow"]} \\
-sniffnet & \textit{Arbitrary extraction 5} & \textit{81} & \textit{84} & \textit{960} & \textit{0} & \textit{1126} & \textit{https://github.com/sewenthy/sniffnet/commit/0b7394cadd0cff2d36d63f5b1679865e79f5cc07
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-sniffnet & \textit{Arbitrary extraction 6} & \textit{82} & \textit{86} & \textit{907} & \textit{0} & \textit{1075} & \textit{https://github.com/sewenthy/sniffnet/commit/72890f9c19d34974cb8c006dda81fdf2856f3725
-} & \textit{True} & \textit{nan} & \textit{["mutable_borrow"]} \\
-sniffnet & \textit{Arbitrary extraction 7} & \textit{81} & \textit{57} & \textit{844} & \textit{0} & \textit{982} & \textit{https://github.com/sewenthy/sniffnet/commit/86c2501896bce7645217fe2caf1be6fab6720652
-} & \textit{True} & \textit{nan} & \textit{[]} \\
-beerus & \textit{Developer extraction 1} & \textit{72} & \textit{75} & \textit{900} & \textit{0} & \textit{1049} & \textit{https://github.com/sewenthy/beerus/commit/c94dce6f5edd5a10040b138112cfab8d05588cfd
-} & \textit{True} & \textit{nan} & \textit{[]} \\ \hline
+\textit{\textbf{PROJECT}}& \multicolumn{1}{l}{\textit{\textbf{BRANCH}}}& \multicolumn{1}{l}{\textit{\textbf{FIX\_NLCF\_DURATION\_MS}}}& \multicolumn{1}{l}{\textit{\textbf{FIX\_BORROW\_DURATION\_MS}}}& \multicolumn{1}{l}{\textit{\textbf{FIX\_LIFETIME\_CARGO\_MS}}}& \multicolumn{1}{l}{\textit{\textbf{CARGO\_CYCLES}}}& \multicolumn{1}{l}{\textit{\textbf{TOTAL\_DURATION\_MS}}}& \multicolumn{1}{l}{\textit{\textbf{COMMIT\_URL}}}& \multicolumn{1}{l}{\textit{\textbf{SUCCESS}}}& \multicolumn{1}{l}{\textit{\textbf{FAILED\_AT}}}& \multicolumn{1}{l}{\textit{\textbf{FEATURES}}}\\ \hline
+petgraph & \textit{Arbitrary extraction 1} & \textit{54} & \textit{56} & \textit{275} & \textit{0} & \textit{385} & \textit{https://github.com/sewenthy/petgraph/commit/d19f4b889ce284c0f7112a1ca353e0f70a1732e6} & \textit{True} & \textit{nan} & \textit{[]} \\
+petgraph & \textit{Arbitrary extraction 2} & \textit{67} & \textit{113} & \textit{834} & \textit{0} & \textit{1015} & \textit{https://github.com/sewenthy/petgraph/commit/c8195698758d90f8436bda1ed1148b39b05fd850} & \textit{True} & \textit{nan} & \textit{[]} \\
+petgraph & \textit{Arbitrary extraction 3} & \textit{97} & \textit{106} & \textit{1372} & \textit{1} & \textit{1576} & \textit{https://github.com/sewenthy/petgraph/commit/c6ba1d11d84664fe0932f822becd17cc9722d5da} & \textit{True} & \textit{nan} & \textit{["non\_elidible\_lifetimes"]} \\
+petgraph & \textit{Arbitrary extraction 4} & \textit{78} & \textit{81} & \textit{1591} & \textit{0} & \textit{1751} & \textit{https://github.com/sewenthy/petgraph/commit/c6751666bb725e3f2e4affb679f7c4796f8e490f} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow"]} \\
+petgraph & \textit{Arbitrary extraction 5} & \textit{74} & \textit{55} & \textit{776} & \textit{0} & \textit{907} & \textit{https://github.com/sewenthy/petgraph/commit/66dd8edfed39d8a2eb8148233b80a76d9b3b4ec4} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow","mutable\_borrow"]} \\
+petgraph & \textit{Arbitrary extraction 6} & \textit{94} & \textit{75} & \textit{863} & \textit{0} & \textit{1033} & \textit{https://github.com/sewenthy/petgraph/commit/014cfac307ca18f5a8d863b9f4e23148a5a6a6ef} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow"]} \\
+petgraph & \textit{Inline and extract 1} & \textit{80} & \textit{83} & \textit{372} & \textit{1} & \textit{536} & \textit{https://github.com/sewenthy/petgraph/commit/33181351cdf000d34da364c498f502d9ff544488} & \textit{False} & \textit{cargo} & \textit{["immutable\_borrow","non\_elidible\_lifetimes"]} \\
+gitoxide & \textit{Arbitrary extraction 1} & \textit{44} & \textit{73} & \textit{769} & \textit{0} & \textit{887} & \textit{https://github.com/sewenthy/gitoxide/commit/4d6124558f37524f926cd638b23f9faaf171d5e9} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Arbitrary extraction 2} & \textit{76} & \textit{47} & \textit{1126} & \textit{1} & \textit{1251} & \textit{https://github.com/sewenthy/gitoxide/commit/8c5135b28c17a6211a8b9aeadbae439d4df612bc} & \textit{True} & \textit{nan} & \textit{["non\_local\_return","non\_elidible\_lifetimes"]} \\
+gitoxide & \textit{Arbitrary extraction 3} & \textit{45} & \textit{71} & \textit{505} & \textit{0} & \textit{622} & \textit{https://github.com/sewenthy/gitoxide/commit/99aac94ce0b48e89d9ca748866222189553b91fe} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Arbitrary extraction 4} & \textit{55} & \textit{78} & \textit{642} & \textit{0} & \textit{777} & \textit{https://github.com/sewenthy/gitoxide/commit/3c9c5898707874ddd851198af24739c046fde769} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Arbitrary extraction 5} & \textit{73} & \textit{79} & \textit{674} & \textit{0} & \textit{827} & \textit{https://github.com/sewenthy/gitoxide/commit/61a75065000c4cff611526e7be60db735139a401} & \textit{True} & \textit{nan} & \textit{["non\_elidible\_lifetimes"]} \\
+gitoxide & \textit{Arbitrary extraction 6} & \textit{58} & \textit{80} & \textit{672} & \textit{0} & \textit{811} & \textit{https://github.com/sewenthy/gitoxide/commit/1a88d0369a3adf48d8db76f6b2120c7f8752247f} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Arbitrary extraction 7} & \textit{45} & \textit{75} & \textit{468} & \textit{0} & \textit{590} & \textit{https://github.com/sewenthy/gitoxide/commit/dd78bffba943b243f933dcccac2bdd357dda8684} & \textit{True} & \textit{nan} & \textit{["mutable\_borrow"]} \\
+gitoxide & \textit{Arbitrary extraction 8} & \textit{44} & \textit{76} & \textit{532} & \textit{0} & \textit{653} & \textit{https://github.com/sewenthy/gitoxide/commit/38306c6fddb5ba611b7c23877d671d3a7bb96e66} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Developer extraction 1} & \textit{44} & \textit{63} & \textit{421} & \textit{0} & \textit{529} & \textit{https://github.com/sewenthy/gitoxide/commit/e9569ee458b22a1e5cf950be2388919ba816c9b3} & \textit{True} & \textit{nan} & \textit{["non\_local\_return"]} \\
+gitoxide & \textit{Developer extraction 2} & \textit{77} & \textit{80} & \textit{1080} & \textit{1} & \textit{1238} & \textit{https://github.com/sewenthy/gitoxide/commit/60e89d0dda1a64a6686b23e86ca4a43fde40a9b4} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow","mutable\_borrow","non\_elidible\_lifetimes"]} \\
+gitoxide & \textit{Inline and extract 1} & \textit{66} & \textit{75} & \textit{786} & \textit{1} & \textit{928} & \textit{https://github.com/sewenthy/gitoxide/commit/32fe3168ea803a48637d117b16305f710ca2bfc2} & \textit{True} & \textit{nan} & \textit{["non\_local\_return","non\_elidible\_lifetimes"]} \\
+gitoxide & \textit{Inline and extract 2} & \textit{78} & \textit{79} & \textit{2139} & \textit{3} & \textit{2297} & \textit{https://github.com/sewenthy/gitoxide/commit/da391639100d460fa96df2af44a4663f376b4c98} & \textit{True} & \textit{nan} & \textit{["non\_elidible\_lifetimes"]} \\
+gitoxide & \textit{Inline and extract 3} & \textit{48} & \textit{82} & \textit{956} & \textit{1} & \textit{1088} & \textit{https://github.com/sewenthy/gitoxide/commit/15b6a0c88c751f443349ffe2d4549353f12a5364} & \textit{False} & \textit{cargo} & \textit{["mutable\_borrow","non\_elidible\_lifetimes"]} \\
+gitoxide & \textit{Inline and extract 4} & \textit{57} & \textit{79} & \textit{548} & \textit{0} & \textit{684} & \textit{https://github.com/sewenthy/gitoxide/commit/d630d12326b0a5c6ab328a318b16558f1ea95a0c} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Inline and extract 5} & \textit{58} & \textit{78} & \textit{496} & \textit{0} & \textit{632} & \textit{https://github.com/sewenthy/gitoxide/commit/b079e69a317c8785e0b453757a51bc59b3f569ef} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Inline and extract 6} & \textit{76} & \textit{79} & \textit{487} & \textit{0} & \textit{643} & \textit{https://github.com/sewenthy/gitoxide/commit/fbbcd9c54bca07ff041755d0213f6e076ba07d9f} & \textit{True} & \textit{nan} & \textit{[]} \\
+gitoxide & \textit{Inline and extract 7} & \textit{74} & \textit{74} & \textit{524} & \textit{0} & \textit{673} & \textit{https://github.com/sewenthy/gitoxide/commit/7422f7ecc3c1cde513a866cf013348597903cab9} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow"]} \\
+gitoxide & \textit{Inline and extract 8} & \textit{86} & \textit{62} & \textit{558} & \textit{0} & \textit{707} & \textit{https://github.com/sewenthy/gitoxide/commit/957e09661fd3f20850ed9fc8fd9eaa3e50a2861d} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow"]} \\
+kickoff & \textit{Inline and extract 1} & \textit{80} & \textit{55} & \textit{913} & \textit{0} & \textit{1049} & \textit{https://github.com/sewenthy/kickoff/commit/adf76d1f50ecc7477a9cf9989135fd5d3bd74ec2} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow","mutable\_borrow"]} \\
+kickoff & \textit{Arbitrary extraction 1} & \textit{46} & \textit{81} & \textit{819} & \textit{0} & \textit{947} & \textit{https://github.com/sewenthy/kickoff/commit/d7d1649eacf3d5b53249cf4a70af077f62bb6250} & \textit{True} & \textit{nan} & \textit{["non\_local\_loop"]} \\
+kickoff & \textit{Arbitrary extraction 2} & \textit{44} & \textit{76} & \textit{854} & \textit{0} & \textit{975} & \textit{https://github.com/sewenthy/kickoff/commit/a75d6c2225a4f7093c39faafba7717b8873cd272} & \textit{True} & \textit{nan} & \textit{[]} \\
+kickoff & \textit{Arbitrary extraction 3} & \textit{74} & \textit{74} & \textit{846} & \textit{0} & \textit{996} & \textit{https://github.com/sewenthy/kickoff/commit/1fb7eb64df7d226d64647479f8008965beb739b2} & \textit{True} & \textit{nan} & \textit{[]} \\
+kickoff & \textit{Arbitrary extraction 4} & \textit{75} & \textit{75} & \textit{658} & \textit{0} & \textit{809} & \textit{https://github.com/sewenthy/kickoff/commit/4f0ad0d16f9b2b927c1db3dc901eaa8c4f1d7bff} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow","mutable\_borrow"]} \\
+sniffnet & \textit{Inline and extract 1} & \textit{82} & \textit{57} & \textit{904} & \textit{0} & \textit{1044} & \textit{https://github.com/sewenthy/sniffnet/commit/a55742900f809c7a22ea3db82d3318aaed061dcb} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow"]} \\
+sniffnet & \textit{Inline and extract 2} & \textit{76} & \textit{80} & \textit{620} & \textit{1} & \textit{777} & \textit{https://github.com/sewenthy/sniffnet/commit/8f0ad074365b5fb4397e1909a04b350932f7d14e} & \textit{False} & \textit{cargo} & \textit{["immutable\_borrow","non\_elidible\_lifetimes"]} \\
+sniffnet & \textit{Arbitrary extraction 1} & \textit{74} & \textit{76} & \textit{881} & \textit{0} & \textit{1031} & \textit{https://github.com/sewenthy/sniffnet/commit/118a625105226017ce42abfa04652c1a1ca43c70} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow","mutable\_borrow"]} \\
+sniffnet & \textit{Arbitrary extraction 2} & \textit{74} & \textit{57} & \textit{823} & \textit{0} & \textit{955} & \textit{https://github.com/sewenthy/sniffnet/commit/ef046ccfd692a85f62a0be28bac44e6f1fc68f57} & \textit{True} & \textit{nan} & \textit{["mutable\_borrow"]} \\
+sniffnet & \textit{Arbitrary extraction 3} & \textit{73} & \textit{80} & \textit{862} & \textit{0} & \textit{1016} & \textit{https://github.com/sewenthy/sniffnet/commit/1cc82ccb0fd0971a073878e14ff1d27f60326d95} & \textit{True} & \textit{nan} & \textit{[]} \\
+sniffnet & \textit{Arbitrary extraction 4} & \textit{75} & \textit{79} & \textit{897} & \textit{0} & \textit{1052} & \textit{https://github.com/sewenthy/sniffnet/commit/5416d9e49c482b15e3795b439765d11bf11ad377} & \textit{True} & \textit{nan} & \textit{["immutable\_borrow"]} \\
+sniffnet & \textit{Arbitrary extraction 5} & \textit{81} & \textit{84} & \textit{960} & \textit{0} & \textit{1126} & \textit{https://github.com/sewenthy/sniffnet/commit/0b7394cadd0cff2d36d63f5b1679865e79f5cc07} & \textit{True} & \textit{nan} & \textit{[]} \\
+sniffnet & \textit{Arbitrary extraction 6} & \textit{82} & \textit{86} & \textit{907} & \textit{0} & \textit{1075} & \textit{https://github.com/sewenthy/sniffnet/commit/72890f9c19d34974cb8c006dda81fdf2856f3725} & \textit{True} & \textit{nan} & \textit{["mutable\_borrow"]} \\
+sniffnet & \textit{Arbitrary extraction 7} & \textit{81} & \textit{57} & \textit{844} & \textit{0} & \textit{982} & \textit{https://github.com/sewenthy/sniffnet/commit/86c2501896bce7645217fe2caf1be6fab6720652} & \textit{True} & \textit{nan} & \textit{[]} \\
+beerus & \textit{Developer extraction 1} & \textit{72} & \textit{75} & \textit{900} & \textit{0} & \textit{1049} & \textit{https://github.com/sewenthy/beerus/commit/c94dce6f5edd5a10040b138112cfab8d05588cfd} & \textit{True} & \textit{nan} & \textit{[]} \\ \hline
 \end{tabular}%
 }
 \caption{\tool overall experiment result}
 \label{table:overallExprResult}
 \end{table}
+\end{landscape}

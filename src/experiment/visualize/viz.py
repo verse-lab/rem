@@ -11,16 +11,19 @@ from glob import glob
 load_dotenv()
 
 PAPER_FIG_DIR = os.environ.get('PAPER_FIG_DIR')
+CAPSTONE_FIG_DIR = os.environ.get('CAPSTONE_FIG_DIR')
 
 sns.set(rc={'figure.figsize':(15, 6)})
 sns.set_style('white')
 
 def copy_to_paper(fig_path):
     try:
-        argv = ['cp', fig_path, f'{PAPER_FIG_DIR}/']
-        p = subprocess.run(argv)
-        if p.returncode != 0:
-            print('cp to paper dir did not succeed')
+        ds = [PAPER_FIG_DIR, CAPSTONE_FIG_DIR]
+        for d in ds:
+            argv = ['cp', fig_path, d]
+            p = subprocess.run(argv)
+            if p.returncode != 0:
+                print('cp to paper dir did not succeed')
     except:
         print('errored cp-ing')
 
@@ -77,7 +80,7 @@ def cargo_cycle_plot(df):
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
 
-def features_table(df, name, headers, renames, show=False):
+def features_table(df, name, headers, renames, landscape=False, show=False):
     def get_unique_features(df):
         features = df.FEATURES.unique()
         feat_cols = {}
@@ -97,12 +100,14 @@ def features_table(df, name, headers, renames, show=False):
 
     def make_latex_table(df, name):
         replace_txt = r'{{{REPLACE_ME}}}'
-        fmt = lambda x, y: x.replace(replace_txt, str(y))
+        fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
         alignment = 'r' * (df.shape[1] - 1)
         preamble = r'''\begin{table}[]
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{l{{{REPLACE_ME}}}}
 \hline'''
+        if landscape:
+            preamble = r'\begin{landscape}' + '\n' + preamble
         preamble = fmt(preamble, alignment)
         example = df.columns[0]
         header = fmt(r'\textit{\textbf{{{{REPLACE_ME}}}}}', example)
@@ -116,11 +121,13 @@ def features_table(df, name, headers, renames, show=False):
 \caption{\tool efficiency on {{{REPLACE_ME}}} project}
 \label{table:eff{{{REPLACE_ME}}}}
 \end{table}'''
+        if landscape:
+            footer += '\n' + r'\end{landscape}'
         footer = fmt(footer, name)
         body = ''
         row_template = r' & \textit{{{{REPLACE_ME}}}}'
         for (_,row) in df.iterrows():
-            body += row[example]
+            body += row[example].strip('\n')
             for r in df.columns[1:]:
                 h = row[r]
                 if h == '':
@@ -128,7 +135,7 @@ def features_table(df, name, headers, renames, show=False):
                 elif str(h).startswith('\\'):
                     body += f' & {h}'
                 else:
-                    body += fmt(row_template, h)
+                    body += fmt(row_template, str(h).strip('\n'))
             body += r' \\' + '\n'
         body = body.rstrip('\n')
         latex = preamble + '\n' + header + body + footer
@@ -186,9 +193,10 @@ def features_table_by_project(df, show=False):
 def appendix_table_all_experiment(df, show=False):
     def make_latex_table(df):
         replace_txt = r'{{{REPLACE_ME}}}'
-        fmt = lambda x, y: x.replace(replace_txt, str(y))
+        fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
         alignment = 'r' * (df.shape[1] - 1)
-        preamble = r'''\begin{table}[]
+        preamble = r'''\begin{landscape}
+\begin{table}[]
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{l{{{REPLACE_ME}}}}
 \hline'''
@@ -197,18 +205,19 @@ def appendix_table_all_experiment(df, show=False):
         header = fmt(r'\textit{\textbf{{{{REPLACE_ME}}}}}', example)
         next_headers_template = r'& \multicolumn{1}{l}{\textit{\textbf{{{{REPLACE_ME}}}}}}'
         for h in df.columns[1:]:
-            header += fmt(next_headers_template, h)
+            header += fmt(next_headers_template, str(h).strip('\n'))
         header += r'\\ \hline' + '\n'
         footer = r''' \hline
 \end{tabular}%
 }
 \caption{\tool overall experiment result}
 \label{table:overallExprResult}
-\end{table}'''
+\end{table}
+\end{landscape}'''
         body = ''
         row_template = r' & \textit{{{{REPLACE_ME}}}}'
         for (_,row) in df.iterrows():
-            body += row[example]
+            body += row[example].strip('\n')
             for r in df.columns[1:]:
                 h = row[r]
                 if h == '':
@@ -216,7 +225,7 @@ def appendix_table_all_experiment(df, show=False):
                 elif str(h).startswith('\\'):
                     body += f' & {h}'
                 else:
-                    body += fmt(row_template, h)
+                    body += fmt(row_template, str(h).strip('\n'))
             body += r' \\' + '\n'
         body = body.rstrip('\n')
         latex = preamble + '\n' + header + body + footer
@@ -241,7 +250,7 @@ def inner_handler(csv_path, show=False):
     features_table_by_project(df, show)
     sel = ['PROJECT', 'BRANCH', 'PROJECT_SIZE', 'SRC_SIZE', 'CALLER_SIZE', 'NUM_INPUTS', 'CARGO_CYCLES']
     renames = {'PROJECT': 'Project', 'BRANCH': 'Example', 'PROJECT_SIZE' : 'Module Size(LOC)', 'SRC_SIZE': 'Source file size(LOC)', 'CALLER_SIZE': 'Caller size(LOC)', 'NUM_INPUTS':'Callee input count','CARGO_CYCLES': 'Repair count'}
-    features_table(df, "overall", sel, renames, show)
+    features_table(df, "overall", sel, renames, landscape=True, show=show)
 
     appendix_table_all_experiment(df, show)
     if show:
