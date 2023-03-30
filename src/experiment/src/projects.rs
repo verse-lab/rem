@@ -3,6 +3,13 @@ use std::path::Path;
 
 pub const PATH_TO_EXPERIMENT_PROJECTS: &str = "/home/sewen/class/Capstone/sample_projects";
 
+pub enum ExtractionResultOld {
+    NotRan,
+    Success,
+    Failure,
+    RefusedToExtract,
+}
+
 pub struct Extraction {
     pub src_name: String,
     pub src_path: String,
@@ -11,6 +18,8 @@ pub struct Extraction {
     pub original_path: String,
     pub mut_methods_path: String,
     pub notes: Option<String>,
+    pub intellij_old_rust: ExtractionResultOld,
+    pub rust_analyzer: ExtractionResultOld,
 }
 
 impl Extraction {
@@ -20,6 +29,8 @@ impl Extraction {
         caller: &str,
         cargo_path: &str,
         notes: Option<&str>,
+        intellij_old_rust: ExtractionResultOld,
+        rust_analyzer: ExtractionResultOld,
     ) -> Self {
         let src_name = match src_path.split("/").last() {
             None => panic!("invalid path maybe"),
@@ -44,6 +55,8 @@ impl Extraction {
             original_path,
             mut_methods_path,
             notes: notes.map(|s| s.to_string()),
+            intellij_old_rust,
+            rust_analyzer,
         }
     }
 
@@ -111,6 +124,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "fan",
                         "gix-pack/Cargo.toml",
                         None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Success,
                     ),
                     Extraction::new(
                         &project_path,
@@ -118,13 +133,17 @@ pub fn gitoxide() -> ExperimentProject {
                         "parse_line",
                         "gix-mailmap/Cargo.toml",
                         Some("complex lifetime + bounds + nlcf--used in paper"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
                         "gix-hash/src/object_id.rs",
                         "from_hex",
                         "gix-hash/Cargo.toml",
-                        Some("extracted within impl + invoc Self::bar"),
+                        Some("extracted within impl + invoc Self::bar, RA will also failed even after helping with import"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
@@ -132,20 +151,26 @@ pub fn gitoxide() -> ExperimentProject {
                         "sources",
                         "gix-config/Cargo.toml",
                         Some("extracted within impl + invoc self.bar with non-elidible lifetime"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
                         "gix-config/src/source.rs",
                         "storage_location",
                         "gix-config/Cargo.toml",
-                        Some("extracted within impl + invoc Self::bar"),
+                        Some("extracted within impl + invoc Self::bar nel"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
                         "gix-config/src/source.rs",
                         "install_config_path",
                         "gix-config/Cargo.toml",
-                        Some("within closure"),
+                        Some("within closure, RA failed due to ? but works if unwraps"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Success,
                     ),
                     Extraction::new(
                         &project_path,
@@ -153,6 +178,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "truncate_non_escaped_trailing_spaces",
                         "gix-glob/Cargo.toml",
                         Some("loop"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
@@ -160,6 +187,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "matches_repo_relative_path",
                         "gix-glob/Cargo.toml",
                         Some("some unrelated syntax feature |"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Success,
                     ),
                 ],
             },
@@ -172,6 +201,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "streaming",
                         "git-protocol/Cargo.toml",
                         Some("nclf"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Success,
                     ),
                     Extraction::new(
                         &project_path,
@@ -179,6 +210,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "resolve_includes_recursive",
                         "git-config/Cargo.toml",
                         Some("2 lifetimes usage + good elision"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                 ],
             },
@@ -191,6 +224,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "name",
                         "gix-validate/Cargo.toml",
                         Some("nclf + lifetime within traits + some non-elidibles"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
@@ -198,6 +233,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "signature",
                         "gix-object/Cargo.toml",
                         Some("generic has lifetimes + very complex boundings--good to show"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
@@ -205,6 +242,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "into",
                         "gix/Cargo.toml",
                         Some("failed due to cargo check"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Failure,
                     ),
                     Extraction::new(
                         &project_path,
@@ -212,6 +251,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "lock_with_mode",
                         "gix-lock/Cargo.toml",
                         None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Success,
                     ), // diff from above (different function extracted)
                     Extraction::new(
                         &project_path,
@@ -219,6 +260,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "lock_with_mode",
                         "gix-lock/Cargo.toml",
                         None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Success,
                     ),
                     Extraction::new(
                         &project_path,
@@ -226,6 +269,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "git",
                         "gix-discover/Cargo.toml",
                         None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::Success,
                     ),
                     Extraction::new(
                         &project_path,
@@ -233,6 +278,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "pattern",
                         "gix-glob/Cargo.toml",
                         None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::NotRan,
                     ),
                     Extraction::new(
                         &project_path,
@@ -240,6 +287,8 @@ pub fn gitoxide() -> ExperimentProject {
                         "catchup_rhs_with_lhs",
                         "gix-diff/Cargo.toml",
                         Some("elide even more than author"),
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::NotRan,
                     ),
                 ],
             },
@@ -265,6 +314,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "modify_or_insert_in_map",
                     "Cargo.toml",
                     Some("all elidible lifetimes"),
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
                 Extraction::new(
                     &project_path,
@@ -272,6 +323,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "parse_packets_loop",
                     "Cargo.toml",
                     Some("technial; need to introduce A{x=*x} if taken x as reference and init struct"),
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
             ],
         }, Experiment {
@@ -283,6 +336,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "update_charts_data",
                     "Cargo.toml",
                     None,
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
                 Extraction::new(
                     &project_path,
@@ -290,6 +345,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "notify_and_log",
                     "Cargo.toml",
                     Some("path-ed receiver"),
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
                 Extraction::new(
                     &project_path,
@@ -297,6 +354,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "get_active_filters_string",
                     "Cargo.toml",
                     None,
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
                 Extraction::new(
                     &project_path,
@@ -304,6 +363,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "get_app_count_string",
                     "Cargo.toml",
                     None,
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
                 Extraction::new(
                     &project_path,
@@ -311,6 +372,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "analyze_transport_header",
                     "Cargo.toml",
                     Some("lots of references but all elidible"),
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
                 Extraction::new(
                     &project_path,
@@ -318,6 +381,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "is_broadcast_address",
                     "Cargo.toml",
                     None,
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
                 Extraction::new(
                     &project_path,
@@ -325,6 +390,8 @@ pub fn sniffnet() -> ExperimentProject {
                     "ipv6_from_long_dec_to_short_hex",
                     "Cargo.toml",
                     None,
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
             ],
         }, ],
@@ -349,20 +416,48 @@ pub fn kickoff() -> ExperimentProject {
                     "register_inputs",
                     "Cargo.toml",
                     Some("all elidible lifetimes"),
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 )],
             },
             Experiment {
                 expr_type: "ext".to_string(),
                 extractions: vec![
-                    Extraction::new(&project_path, "src/font.rs", "render", "Cargo.toml", None),
-                    Extraction::new(&project_path, "src/history.rs", "load", "Cargo.toml", None),
-                    Extraction::new(&project_path, "src/font.rs", "new", "Cargo.toml", None),
+                    Extraction::new(
+                        &project_path,
+                        "src/font.rs",
+                        "render",
+                        "Cargo.toml",
+                        None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::NotRan,
+                    ),
+                    Extraction::new(
+                        &project_path,
+                        "src/history.rs",
+                        "load",
+                        "Cargo.toml",
+                        None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::NotRan,
+                    ),
+                    Extraction::new(
+                        &project_path,
+                        "src/font.rs",
+                        "new",
+                        "Cargo.toml",
+                        None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::NotRan,
+                    ),
                     Extraction::new(
                         &project_path,
                         "src/font.rs",
                         "render_glyph",
                         "Cargo.toml",
                         None,
+                        ExtractionResultOld::NotRan, 
+                        ExtractionResultOld::NotRan,
                     ),
                 ],
             },
@@ -387,6 +482,8 @@ pub fn beerus() -> ExperimentProject {
                 "rocket",
                 "beerus_rest_api/Cargo.toml",
                 Some("small use of async"),
+                ExtractionResultOld::NotRan, 
+                ExtractionResultOld::NotRan,
             )],
         }],
     }
@@ -401,23 +498,37 @@ pub fn petgraph() -> ExperimentProject {
     ExperimentProject {
         project,
         project_url,
-        experiments: vec![Experiment {
-            expr_type: "ext".to_string(),
-            extractions: vec![
-                Extraction::new(&project_path, "src/generate.rs", "all", "Cargo.toml", Some("within impl")),
-                Extraction::new(&project_path, "src/graphmap.rs", "next", "Cargo.toml", Some("new impl with generics annotated + invoc using self.bar")),
-                Extraction::new(&project_path, "src/graphmap.rs", "nth", "Cargo.toml", Some("new impl + invoc using self.bar + lt bound needed between genrics and output")),
-                Extraction::new(&project_path, "src/dot.rs", "graph_fmt", "Cargo.toml", None),
-                Extraction::new(&project_path, "src/algo/floyd_warshall.rs", "floyd_warshall", "Cargo.toml", None),
-                Extraction::new(&project_path, "src/algo/isomorphism.rs", "push_mapping", "Cargo.toml", Some("has self so smart not elide")),
+        experiments: vec![
+            Experiment {
+                expr_type: "ext".to_string(),
+                extractions: vec![
+                Extraction::new(&project_path, "src/generate.rs", "all", "Cargo.toml", Some("within impl"),                         ExtractionResultOld::NotRan, 
+                                ExtractionResultOld::NotRan),
+                Extraction::new(&project_path, "src/graphmap.rs", "next", "Cargo.toml", Some("new impl with generics annotated + invoc using self.bar"),                         ExtractionResultOld::NotRan, 
+                                ExtractionResultOld::NotRan),
+                Extraction::new(&project_path, "src/graphmap.rs", "nth", "Cargo.toml", Some("new impl + invoc using self.bar + lt bound needed between genrics and output"),                         ExtractionResultOld::NotRan, 
+                                ExtractionResultOld::NotRan),
+                Extraction::new(&project_path, "src/dot.rs", "graph_fmt", "Cargo.toml", None,                         ExtractionResultOld::NotRan, 
+                                ExtractionResultOld::NotRan),
+                Extraction::new(&project_path, "src/algo/floyd_warshall.rs", "floyd_warshall", "Cargo.toml", None,                         ExtractionResultOld::NotRan, 
+                                ExtractionResultOld::NotRan),
+                Extraction::new(&project_path, "src/algo/isomorphism.rs", "push_mapping", "Cargo.toml", Some("has self so smart not elide"),                         ExtractionResultOld::NotRan, 
+                                ExtractionResultOld::NotRan),
             ],
-        },
-                          Experiment {
-                              expr_type: "inline-ext".to_string(),
-                              extractions: vec![
-                                  Extraction::new(&project_path, "src/dot.rs", "fmt", "Cargo.toml", Some("failed due to type inference on generics")),
-                              ],
-                          }],
+            },
+            Experiment {
+                expr_type: "inline-ext".to_string(),
+                extractions: vec![Extraction::new(
+                    &project_path,
+                    "src/dot.rs",
+                    "fmt",
+                    "Cargo.toml",
+                    Some("failed due to type inference on generics"),
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
+                )],
+            },
+        ],
     }
 }
 
@@ -440,8 +551,18 @@ pub fn demo() -> ExperimentProject {
                     "trait_function",
                     "Cargo.toml",
                     None,
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
                 ),
-                Extraction::new(&project_path, "src/main.rs", "test", "Cargo.toml", None),
+                Extraction::new(
+                    &project_path,
+                    "src/main.rs",
+                    "test",
+                    "Cargo.toml",
+                    None,
+                    ExtractionResultOld::NotRan, 
+                    ExtractionResultOld::NotRan,
+                ),
             ],
         }],
     }

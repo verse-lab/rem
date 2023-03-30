@@ -80,7 +80,7 @@ def cargo_cycle_plot(df):
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
 
-def features_table(df, name, renames, landscape=False, show=False):
+def features_table(df, name, renames, longTable=False, landscape=False, show=False):
     def get_unique_features(df):
         features = df.FEATURES.unique()
         feat_cols = {}
@@ -194,7 +194,7 @@ def features_table(df, name, renames, landscape=False, show=False):
     for col in feat_cols.keys():
         df[feat_cols[col]] = df.FEATURES_JSON.apply(lambda feats: '\cmark' if col in feats else '')
     features = sorted(feat_cols.values(), key=sort_feat_col)
-    default_renames = {'PROJECT':'Project', 'BRANCH': 'ET', 'TOTAL_DURATION_S': 't(s)'}
+    default_renames = {'PROJECT':'Project', 'BRANCH': 'ET'}
     default_renames.update(renames)
     out = df.rename(columns=default_renames)
     out.to_csv(f'tables/{name}StatsTbl.csv', index=False, encoding='utf-8')

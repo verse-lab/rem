@@ -1,6 +1,8 @@
 use std::fs;
 
-use crate::common::{repair_bounds_help, repair_iteration, repair_standard_help, RepairResult, RepairSystem};
+use crate::common::{
+    repair_bounds_help, repair_iteration, repair_standard_help, RepairResult, RepairSystem,
+};
 use utils::compile_file;
 
 pub struct Repairer {}
@@ -10,7 +12,12 @@ impl RepairSystem for Repairer {
         "_simple_repairer"
     }
 
-    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> RepairResult {
+    fn repair_project(
+        &self,
+        _src_path: &str,
+        _manifest_path: &str,
+        _fn_name: &str,
+    ) -> RepairResult {
         RepairResult {
             success: false,
             repair_count: 0,

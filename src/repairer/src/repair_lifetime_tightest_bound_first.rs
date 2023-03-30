@@ -2,11 +2,14 @@ use proc_macro2::Span;
 use quote::ToTokens;
 use regex::Regex;
 
-use std::fs;
 use log::debug;
+use std::fs;
 use syn::{visit_mut::VisitMut, FnArg, Lifetime, LifetimeDef, Type};
 
-use crate::common::{callee_renamer, elide_lifetimes_annotations, repair_bounds_help, repair_iteration, repair_iteration_project, RepairResult, RepairSystem, RustcError};
+use crate::common::{
+    callee_renamer, elide_lifetimes_annotations, repair_bounds_help, repair_iteration,
+    repair_iteration_project, RepairResult, RepairSystem, RustcError,
+};
 use crate::repair_lifetime_simple;
 use utils::{check_project, compile_file, format_source};
 
@@ -29,7 +32,11 @@ impl RepairSystem for Repairer {
         };
         match repair_iteration_project(&mut compile_cmd, src_path, &process_errors, true, Some(50))
         {
-            RepairResult { success: true, repair_count, .. } => {
+            RepairResult {
+                success: true,
+                repair_count,
+                ..
+            } => {
                 debug!("pre elision: {}", fs::read_to_string(&src_path).unwrap());
                 let elide_res = elide_lifetimes_annotations(src_path, fn_name);
                 callee_renamer(src_path, fn_name);
@@ -64,7 +71,11 @@ impl RepairSystem for Repairer {
         };
 
         match repair_iteration(&mut compile_cmd, &process_errors, true, Some(50)) {
-            RepairResult { success: true, repair_count, .. } => {
+            RepairResult {
+                success: true,
+                repair_count,
+                ..
+            } => {
                 // println!("repaired: {}", fs::read_to_string(&new_file_name).unwrap());
                 let elide_res = elide_lifetimes_annotations(new_file_name, fn_name);
                 RepairResult {

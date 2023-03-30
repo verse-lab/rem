@@ -11,8 +11,8 @@ use regex::Regex;
 use syn::punctuated::Punctuated;
 use syn::{
     visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall,
-    ExprReference, ExprReturn, FnArg, ImplItemMethod, ItemFn, Local, Macro, Pat,
-    Signature, Stmt, Token, TraitItemMethod, Type, TypeReference,
+    ExprReference, ExprReturn, FnArg, ImplItemMethod, ItemFn, Local, Macro, Pat, Signature, Stmt,
+    Token, TraitItemMethod, Type, TypeReference,
 };
 
 use log::debug;

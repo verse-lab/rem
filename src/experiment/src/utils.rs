@@ -2,19 +2,18 @@ use jwt_simple::prelude::*;
 use log::{debug, info, warn};
 use regex::Regex;
 use reqwest::blocking::Client;
-use std::{fs};
+use std::fs;
 
 use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 
-
 use crate::projects::Extraction;
 use crate::utils::ExtractionFeature::{
     ImmutableBorrow, MutableBorrow, NonElidibleLifetimes, NonLocalLoop, NonLocalReturn,
 };
-use borrower::borrow::{inner_make_borrows};
-use controller::non_local_controller::{inner_make_controls};
+use borrower::borrow::inner_make_borrows;
+use controller::non_local_controller::inner_make_controls;
 use repairer::common::RepairSystem;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
 use utils::{check_project, find_caller};
@@ -471,7 +470,8 @@ pub fn run_borrower(
             extraction.original_path.as_str(),
         );
 
-        let make_ref : Vec<String> = res.make_ref
+        let make_ref: Vec<String> = res
+            .make_ref
             .into_iter()
             .filter(|x| !res.make_mut.contains(x))
             .collect();

@@ -9,8 +9,8 @@ use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
 use syn::{
-    visit_mut::VisitMut, ExprCall,
-    ExprMethodCall, FnArg, GenericArgument, GenericParam, ImplItemMethod, ItemFn, Lifetime, PredicateLifetime, ReturnType, Signature, TraitItemMethod,
+    visit_mut::VisitMut, ExprCall, ExprMethodCall, FnArg, GenericArgument, GenericParam,
+    ImplItemMethod, ItemFn, Lifetime, PredicateLifetime, ReturnType, Signature, TraitItemMethod,
     TypeReference, WhereClause, WherePredicate,
 };
 use utils::format_source;
@@ -584,7 +584,10 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) -> ElideL
     visit.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
-    ElideLifetimeResult { success: true, annotations_left: visit.annotations_left }
+    ElideLifetimeResult {
+        success: true,
+        annotations_left: visit.annotations_left,
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -11,7 +11,12 @@ impl RepairSystem for Repairer {
         "_rustfix_repairer"
     }
 
-    fn repair_project(&self, _src_path: &str, _manifest_path: &str, _fn_name: &str) -> RepairResult {
+    fn repair_project(
+        &self,
+        _src_path: &str,
+        _manifest_path: &str,
+        _fn_name: &str,
+    ) -> RepairResult {
         RepairResult {
             success: false,
             repair_count: 0,
