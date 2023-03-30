@@ -1,6 +1,16 @@
-petgraph examples,Module Size(LOC),Repair count,Immutable borrow,Mutable borrow,Non elidible lifetimes,Extraction duration(s)
-Arbitrary extraction 3,20115,1,,,\cmark,1.576
-Arbitrary extraction 4,20113,0,\cmark,,,1.751
-Arbitrary extraction 5,20113,0,\cmark,\cmark,,0.907
-Arbitrary extraction 6,20113,0,\cmark,,,1.033
-Inline and extract 1,20157,1,\cmark,,\cmark,0.536
+SUCCESS,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CARGO_MS,Repair count,TOTAL_DURATION_MS,t(s),COMMIT,COMMIT_URL,FAILED_AT,Project,petgraph examples,Module Size(LOC),SRC_SIZE,CALLER_SIZE,NUM_INPUTS,FEATURES,NOTES,FEATURES_JSON,Non elidible lifetimes,Immutable borrow,Mutable borrow
+True,97,106,1372,1,1576,1.576,"c6ba1d11d84664fe0932f822becd17cc9722d5da
+","https://github.com/sewenthy/petgraph/commit/c6ba1d11d84664fe0932f822becd17cc9722d5da
+",,petgraph,AE,20115,921,8,2,"[""non_elidible_lifetimes""]",new impl + invoc using self.bar + lt bound needed between genrics and output,['non_elidible_lifetimes'],\cmark,,
+True,78,81,1591,0,1751,1.751,"c6751666bb725e3f2e4affb679f7c4796f8e490f
+","https://github.com/sewenthy/petgraph/commit/c6751666bb725e3f2e4affb679f7c4796f8e490f
+",,petgraph,AE,20113,264,54,4,"[""immutable_borrow""]",,['immutable_borrow'],,\cmark,
+True,74,55,776,0,907,0.907,"66dd8edfed39d8a2eb8148233b80a76d9b3b4ec4
+","https://github.com/sewenthy/petgraph/commit/66dd8edfed39d8a2eb8148233b80a76d9b3b4ec4
+",,petgraph,AE,20113,55,122,2,"[""immutable_borrow"",""mutable_borrow""]",,"['immutable_borrow', 'mutable_borrow']",,\cmark,\cmark
+True,94,75,863,0,1033,1.033,"014cfac307ca18f5a8d863b9f4e23148a5a6a6ef
+","https://github.com/sewenthy/petgraph/commit/014cfac307ca18f5a8d863b9f4e23148a5a6a6ef
+",,petgraph,AE,20113,815,22,2,"[""immutable_borrow""]",has self so smart not elide,['immutable_borrow'],,\cmark,
+False,80,83,372,1,536,0.536,"33181351cdf000d34da364c498f502d9ff544488
+","https://github.com/sewenthy/petgraph/commit/33181351cdf000d34da364c498f502d9ff544488
+",cargo,petgraph,IE,20157,308,54,4,"[""immutable_borrow"",""non_elidible_lifetimes""]",failed due to type inference on generics,"['immutable_borrow', 'non_elidible_lifetimes']",\cmark,\cmark,

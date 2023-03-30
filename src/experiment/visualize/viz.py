@@ -80,7 +80,7 @@ def cargo_cycle_plot(df):
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
 
-def features_table(df, name, headers, renames, landscape=False, show=False):
+def features_table(df, name, renames, landscape=False, show=False):
     def get_unique_features(df):
         features = df.FEATURES.unique()
         feat_cols = {}
@@ -92,43 +92,81 @@ def features_table(df, name, headers, renames, landscape=False, show=False):
 
     def better_example_name(branch):
         x = branch.rstrip('-expr-active')
-        rename = {'ext-com': 'Developer extraction', 'ext': 'Arbitrary extraction', 'inline-ext': 'Inline and extract'}
+        #rename = {'ext-com': 'Developer extraction', 'ext': 'Arbitrary extraction', 'inline-ext': 'Inline and extract'}
+        rename = {'ext-com': 'DE', 'ext': 'AE', 'inline-ext': 'IE'}
         for r in rename:
             if x.startswith(r):
-                n = x.lstrip(r)
-                return f"{rename[r]} {n}"
+                # n = x.lstrip(r)
+                return f"{rename[r]}"
 
-    def make_latex_table(df, name):
-        replace_txt = r'{{{REPLACE_ME}}}'
+    def make_latex_table(df, name, features):
+        project_inner_merged = {}
+        projects = df.Project.unique()
+        df['ID'] = [(i + 1) for i in range(df.shape[0])]
+
+        for project in projects:
+            project_df = df[df.Project == project]
+            project_inner_merged[project] = {'row': project_df.shape[0]}
+
+        merged = {'Project': {'row':2}, 'ET': {'row':2}, 'Feature': {'col':len(features)}}
+        replace_txt = r'[[[REPLACE_ME]]]'
         fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
-        alignment = 'r' * (df.shape[1] - 1)
+        fmt1 = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'), 1)
+        features_starts_at = 4
+        alignment = ('r' * ((features_starts_at - 1) + len(features) - 1)).replace('r','r|',2)
         preamble = r'''\begin{table}[]
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{l{{{REPLACE_ME}}}}
+\begin{tabular}{l|[[[REPLACE_ME]]]}
 \hline'''
         if landscape:
             preamble = r'\begin{landscape}' + '\n' + preamble
         preamble = fmt(preamble, alignment)
-        example = df.columns[0]
-        header = fmt(r'\textit{\textbf{{{{REPLACE_ME}}}}}', example)
-        next_headers_template = r'& \multicolumn{1}{l}{\textit{\textbf{{{{REPLACE_ME}}}}}}'
-        for h in df.columns[1:]:
-            header += fmt(next_headers_template, h)
+        header = r'\multirow{2}{*}{\textit{\textbf{\#}}}'
+        next_headers_template = r'& [[[REPLACE_ME]]]{\textit{\textbf{[[[REPLACE_ME]]]}}}'
+        for h in merged:
+            tmp = next_headers_template
+            if 'col' in merged[h]:
+                if h == 'Feature':
+                    tmp = fmt1(tmp, r'\multicolumn{'+str(merged[h]['col'])+r'}{c}') #c| if line
+                else:
+                    tmp = fmt1(tmp, r'\multicolumn{'+str(merged[h]['col'])+r'}{l}')
+            elif 'row' in merged[h]:
+                tmp = fmt1(tmp, r'\multirow{'+str(merged[h]['row'])+r'}{*}')
+            header += fmt1(tmp, h)
+        # header += r'& \multirow{2}{*}{\textit{\textbf{Time(s)}}}'
+        header += r'\\ \cline{'+str(features_starts_at)+'-' + str(features_starts_at+len(features) - 1) + '}\n'
+        features_header = ' &' * (features_starts_at - 2)
+        features_abbr = lambda i: ''.join([j[0] for j in i.split(' ')]).upper()
+        for f in features:
+            features_header += fmt(r' & \textit{\textbf{[[[REPLACE_ME]]]}}', features_abbr(f))
+        # features_header += '& '
+        header += features_header
         header += r'\\ \hline' + '\n'
         footer = r''' \hline
 \end{tabular}%
 }
-\caption{\tool efficiency on {{{REPLACE_ME}}} project}
-\label{table:eff{{{REPLACE_ME}}}}
+\caption{\tool . }
+\label{table:eff[[[REPLACE_ME]]]}
 \end{table}'''
         if landscape:
             footer += '\n' + r'\end{landscape}'
         footer = fmt(footer, name)
+        current_project = ''
         body = ''
-        row_template = r' & \textit{{{{REPLACE_ME}}}}'
+        row_template = r' & \textit{[[[REPLACE_ME]]]}'
+        project_template = r' & \multirow{[[[REPLACE_ME]]]}{*}{\textit{[[[REPLACE_ME]]]}}'
         for (_,row) in df.iterrows():
-            body += row[example].strip('\n')
-            for r in df.columns[1:]:
+            if current_project == row['Project']:
+                body += str(row['ID'])
+                body += ' &'
+            else:
+                if current_project != '':
+                    body = body[:-1] + r' \hline' + '\n'
+                body += str(row['ID'])
+                current_project = row['Project']
+                body += fmt1(fmt1(project_template, project_inner_merged[row['Project']]['row']), current_project)
+            body += fmt(row_template, row['ET'])
+            for r in features:
                 h = row[r]
                 if h == '':
                     body += ' &'
@@ -136,6 +174,7 @@ def features_table(df, name, headers, renames, landscape=False, show=False):
                     body += f' & {h}'
                 else:
                     body += fmt(row_template, str(h).strip('\n'))
+            # body += fmt(row_template, row['t(s)'])
             body += r' \\' + '\n'
         body = body.rstrip('\n')
         latex = preamble + '\n' + header + body + footer
@@ -154,15 +193,12 @@ def features_table(df, name, headers, renames, landscape=False, show=False):
     feat_cols = get_unique_features(df)
     for col in feat_cols.keys():
         df[feat_cols[col]] = df.FEATURES_JSON.apply(lambda feats: '\cmark' if col in feats else '')
-    sel = [h for h in headers]
-    sel.extend(sorted(feat_cols.values(), key=sort_feat_col))
-    sel.extend(['TOTAL_DURATION_S'])
-    out = df[sel]
-    default_renames = {'BRANCH': 'Examples', 'PROJECT_SIZE' : 'Module Size(LOC)', 'TOTAL_DURATION_S': 'Extraction duration(s)', 'CARGO_CYCLES': 'Repair count'}
+    features = sorted(feat_cols.values(), key=sort_feat_col)
+    default_renames = {'PROJECT':'Project', 'BRANCH': 'ET', 'TOTAL_DURATION_S': 't(s)'}
     default_renames.update(renames)
-    out = out.rename(columns=default_renames)
+    out = df.rename(columns=default_renames)
     out.to_csv(f'tables/{name}StatsTbl.csv', index=False, encoding='utf-8')
-    latex = make_latex_table(out, name)
+    latex = make_latex_table(out, name, features)
     with open(f'tables/{name}StatsTbl.tex', 'w') as f:
         f.write(latex)
         f.flush()
@@ -190,47 +226,6 @@ def features_table_by_project(df, show=False):
             print(latex)
             print('\n\n')
 
-def appendix_table_all_experiment(df, show=False):
-    def make_latex_table(df):
-        replace_txt = r'{{{REPLACE_ME}}}'
-        fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
-        alignment = 'r' * (df.shape[1] - 1)
-        preamble = r'''\begin{landscape}
-\begin{table}[]
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{l{{{REPLACE_ME}}}}
-\hline'''
-        preamble = fmt(preamble, alignment)
-        example = df.columns[0]
-        header = fmt(r'\textit{\textbf{{{{REPLACE_ME}}}}}', example)
-        next_headers_template = r'& \multicolumn{1}{l}{\textit{\textbf{{{{REPLACE_ME}}}}}}'
-        for h in df.columns[1:]:
-            header += fmt(next_headers_template, str(h).strip('\n'))
-        header += r'\\ \hline' + '\n'
-        footer = r''' \hline
-\end{tabular}%
-}
-\caption{\tool overall experiment result}
-\label{table:overallExprResult}
-\end{table}
-\end{landscape}'''
-        body = ''
-        row_template = r' & \textit{{{{REPLACE_ME}}}}'
-        for (_,row) in df.iterrows():
-            body += row[example].strip('\n')
-            for r in df.columns[1:]:
-                h = row[r]
-                if h == '':
-                    body += ' &'
-                elif str(h).startswith('\\'):
-                    body += f' & {h}'
-                else:
-                    body += fmt(row_template, str(h).strip('\n'))
-            body += r' \\' + '\n'
-        body = body.rstrip('\n')
-        latex = preamble + '\n' + header + body + footer
-        return latex
-
     sel = ['PROJECT', 'BRANCH', 'FIX_NLCF_DURATION_MS', 'FIX_BORROW_DURATION_MS', 'FIX_LIFETIME_CARGO_MS', 'CARGO_CYCLES', 'TOTAL_DURATION_MS',	'COMMIT_URL', 'SUCCESS','FAILED_AT', 'FEATURES']
     out = df[sel]
     latex = make_latex_table(out)
@@ -247,12 +242,11 @@ def inner_handler(csv_path, show=False):
     df['FEATURES_JSON'] = df.FEATURES.apply(json.loads)
     overall(df)
     # cargo_cycle_plot(df)
-    features_table_by_project(df, show)
-    sel = ['PROJECT', 'BRANCH', 'PROJECT_SIZE', 'SRC_SIZE', 'CALLER_SIZE', 'NUM_INPUTS', 'CARGO_CYCLES']
-    renames = {'PROJECT': 'Project', 'BRANCH': 'Example', 'PROJECT_SIZE' : 'Module Size(LOC)', 'SRC_SIZE': 'Source file size(LOC)', 'CALLER_SIZE': 'Caller size(LOC)', 'NUM_INPUTS':'Callee input count','CARGO_CYCLES': 'Repair count'}
-    features_table(df, "overall", sel, renames, landscape=True, show=show)
+    #features_table_by_project(df, show)
+    renames = {'PROJECT': 'Project', 'BRANCH': 'ET', 'TOTAL_DURATION_S': 't(s)'}
+    features_table(df, "overall", renames, landscape=False, show=show)
 
-    appendix_table_all_experiment(df, show)
+    #appendix_table_all_experiment(df, show)
     if show:
         plt.show()
 
