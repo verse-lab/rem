@@ -119,12 +119,12 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
                 m = ''.join(tmp[::-1][1:])
             project_sizes[project] = m
 
-        merged = {'Project': {'row':2}, 'Type': {'row':2}, 'Code Features': {'col':len(features), 'align': 'c|'}, 'Outcome': {'col':3, 'align':'c'}}
+        merged = {'Project': {'row':2}, 'Type': {'row':2}, 'Size': {'col':2, 'align':'c|'}, 'Code Features': {'col':len(features), 'align': 'c|'}, 'Outcome': {'col':3, 'align':'c'}}
         replace_txt = r'[[[REPLACE_ME]]]'
         fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
         fmt1 = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'), 1)
-        features_starts_at = 4
-        alignment = r'c|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c'
+        features_starts_at = 6
+        alignment = r'c|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c'
         #('r' * ((features_starts_at - 1) + len(features) - 1)).replace('r','r|',2) + '|rrr'
         preamble = r'''\begin{table}[]
 \begin{minipage}{\textwidth}
@@ -151,14 +151,17 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
             header += fmt1(tmp, h)
         header += r'\\[2pt]' + '\n'
         # header += r'\\ \cline{'+str(features_starts_at)+'-' + str(features_starts_at+len(features) - 1) + '}\n'
-        features_header = ' &' * (features_starts_at - 2)
+        empty_header = ' & ' * 2
+        sizes_header = r'& \textbf{SRC}'
+        sizes_header += r'& \textbf{SNP}'
         features_abbr = lambda i: ''.join([j[0] for j in i.split(' ')]).upper()[:3]
-        for f in features:
-            features_header += fmt(r' & \textbf{[[[REPLACE_ME]]]}', features_abbr(f))
-        snd_header = r'& \textbf{IJR}'
-        snd_header += r'& \textbf{VSC}'
-        snd_header += r'& \textbf{\tool}'
-        header += features_header + snd_header
+        features_header = ""
+        for ff in features:
+            features_header += fmt(r' & \textbf{[[[REPLACE_ME]]]}', features_abbr(ff))
+        outcome_header = r'& \textbf{IJR}'
+        outcome_header += r'& \textbf{VSC}'
+        outcome_header += r'& \textbf{\tool}'
+        header += empty_header + sizes_header + features_header + outcome_header
         header += r'\\ \midrule' + '\n'
         footer = r''' \bottomrule
 \end{tabular}%'''
@@ -175,6 +178,8 @@ The types of case studies include
 reproducing refactoring from a commit by a human developer (\smiley{}),
 inlining an existing function and extracting it again ($\leftrightarrows$), and
 arbitrary extraction of a code fragment ($\circlearrowleft$).
+%
+The sizes of these cases in lines of code for the source file (SRC), and extracted snippet (SNP).
 %
 The types of refactoring outcomes for IntelliJ IDEA Rust plug-in (IJR), VSCode Rust Analyzer (VSC), and \tool include: 
 %
@@ -216,6 +221,8 @@ The code features of the refactoring contains:
                     project_line = project_line.replace(r'\\','')
                 body += project_line
             body += fmt(row_template, row['Type'])
+            body += fmt(row_template, row['SRC_SIZE'])
+            body += fmt(row_template, row['CALLER_SIZE'])
             for r in features:
                 h = row[r]
                 if h == '':
@@ -283,7 +290,7 @@ def inner_handler(csv_path, show=False):
     overall(df)
     # cargo_cycle_plot(df)
     #features_table_by_project(df, show)
-    features_table(df, "overall", landscape=False, show=show)
+    features_table(df, "overall", landscape=False, resize_to_width=False, show=show)
     if show:
         plt.show()
 
