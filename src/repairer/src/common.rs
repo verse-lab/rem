@@ -22,6 +22,7 @@ pub struct RepairResult {
     pub success: bool,
     pub repair_count: i32,
     pub has_non_elidible_lifetime: bool,
+    pub has_struct_lt: bool,
 }
 
 pub trait RepairSystem {
@@ -212,6 +213,7 @@ pub fn repair_iteration(
         success: false,
         repair_count: 0,
         has_non_elidible_lifetime: false,
+        has_struct_lt: false,
     };
 
     let success = loop {
@@ -315,6 +317,7 @@ impl VisitMut for FnLifetimeEliderArgHelper<'_> {
 struct FnLifetimeElider<'a> {
     fn_name: &'a str,
     annotations_left: bool,
+    has_struct_lt: bool,
 }
 
 struct LtGetterElider<'a> {
@@ -330,6 +333,7 @@ impl VisitMut for LtGetterElider<'_> {
 
 struct ChangeLtHelperElider<'a> {
     map: &'a HashMap<String, String>,
+    has_struct_lt: bool,
 }
 
 impl VisitMut for ChangeLtHelperElider<'_> {
@@ -340,7 +344,10 @@ impl VisitMut for ChangeLtHelperElider<'_> {
                 let id = l.to_string();
                 debug!("generic lt: {:?}", &id);
                 match self.map.get(&id) {
-                    Some(new_lt) => *l = Lifetime::new(new_lt.as_str(), Span::call_site()),
+                    Some(new_lt) => {
+                        self.has_struct_lt = true;
+                        *l = Lifetime::new(new_lt.as_str(), Span::call_site())
+                    },
                     None => *l = Lifetime::new("'_", Span::call_site()),
                 }
             }
@@ -512,7 +519,10 @@ impl FnLifetimeElider<'_> {
                 gen.params.iter_mut().for_each(|gp| match gp {
                     GenericParam::Lifetime(_) => (),
                     gp => {
-                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                        let mut change_lt = ChangeLtHelperElider { map: &new_lts, has_struct_lt: false };
+                        if change_lt.has_struct_lt {
+                            self.has_struct_lt = true;
+                        }
                         change_lt.visit_generic_param_mut(gp);
                     }
                 });
@@ -543,7 +553,10 @@ impl FnLifetimeElider<'_> {
                 inputs.iter_mut().for_each(|fn_arg| match fn_arg {
                     FnArg::Receiver(_) => (),
                     FnArg::Typed(t) => {
-                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                        let mut change_lt = ChangeLtHelperElider { map: &new_lts, has_struct_lt: false };
+                        if change_lt.has_struct_lt {
+                            self.has_struct_lt = true;
+                        }
                         debug!("debugging input: {:?}", t);
                         change_lt.visit_pat_type_mut(t);
                     }
@@ -551,7 +564,10 @@ impl FnLifetimeElider<'_> {
                 match sig.output.borrow_mut() {
                     ReturnType::Default => (),
                     ReturnType::Type(_, ty) => {
-                        let mut change_lt = ChangeLtHelperElider { map: &new_lts };
+                        let mut change_lt = ChangeLtHelperElider { map: &new_lts, has_struct_lt: false };
+                        if change_lt.has_struct_lt {
+                            self.has_struct_lt = true;
+                        }
                         change_lt.visit_type_mut(ty.as_mut());
                     }
                 }
@@ -563,6 +579,7 @@ impl FnLifetimeElider<'_> {
 pub struct ElideLifetimeResult {
     pub success: bool,
     pub annotations_left: bool,
+    pub has_struct_lt: bool,
 }
 
 /**
@@ -580,6 +597,7 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) -> ElideL
     let mut visit = FnLifetimeElider {
         fn_name,
         annotations_left: false,
+        has_struct_lt: false,
     };
     visit.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
@@ -587,6 +605,7 @@ pub fn elide_lifetimes_annotations(new_file_name: &str, fn_name: &str) -> ElideL
     ElideLifetimeResult {
         success: true,
         annotations_left: visit.annotations_left,
+        has_struct_lt: visit.has_struct_lt,
     }
 }
 
@@ -692,6 +711,7 @@ pub fn repair_iteration_project(
         success: false,
         repair_count: 0,
         has_non_elidible_lifetime: false,
+        has_struct_lt: false,
     };
     let success = loop {
         let out = compile_cmd.output().unwrap();

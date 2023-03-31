@@ -44,6 +44,7 @@ impl RepairSystem for Repairer {
                     success: true,
                     repair_count,
                     has_non_elidible_lifetime: elide_res.annotations_left,
+                    has_struct_lt: elide_res.has_struct_lt,
                 }
             }
             result => result,
@@ -82,6 +83,7 @@ impl RepairSystem for Repairer {
                     success: true,
                     repair_count,
                     has_non_elidible_lifetime: elide_res.annotations_left,
+                    has_struct_lt: elide_res.has_struct_lt,
                 }
             }
             result => result,

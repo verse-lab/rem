@@ -11,6 +11,7 @@ use std::time::{Duration, SystemTime};
 use crate::projects::Extraction;
 use crate::utils::ExtractionFeature::{
     ImmutableBorrow, MutableBorrow, NonElidibleLifetimes, NonLocalLoop, NonLocalReturn,
+    StructHasLifetimeSlot,
 };
 use borrower::borrow::inner_make_borrows;
 use controller::non_local_controller::inner_make_controls;
@@ -325,6 +326,7 @@ pub enum ExtractionFeature {
     NonLocalLoop,
     ImmutableBorrow,
     MutableBorrow,
+    StructHasLifetimeSlot,
     NonElidibleLifetimes,
 }
 
@@ -508,6 +510,10 @@ pub fn run_repairer(
         extraction_result.cargo_cycles = res.repair_count;
         if res.has_non_elidible_lifetime || res.repair_count > 0 {
             extraction_result.features_inner.push(NonElidibleLifetimes);
+        }
+
+        if res.has_struct_lt {
+            extraction_result.features_inner.push(StructHasLifetimeSlot);
         }
         res.success
     };

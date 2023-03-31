@@ -21,6 +21,7 @@ impl RepairSystem for Repairer {
             success: false,
             repair_count: 0,
             has_non_elidible_lifetime: false,
+            has_struct_lt: false,
         }
     }
 
