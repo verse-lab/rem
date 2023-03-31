@@ -108,19 +108,29 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
         for project in projects:
             project_df = df[df.Project == project]
             project_inner_merged[project] = {'row': project_df.shape[0]}
-            project_sizes[project] = project_df.PROJECT_SIZE.max()
+            m = project_df.PROJECT_SIZE.max()
+            if m > 1000:
+                x = str(m)[::-1]
+                i = 0
+                tmp = ''
+                while i < len(x):
+                    tmp += x[i:i+3]+','
+                    i += 3
+                m = ''.join(tmp[::-1][1:])
+            project_sizes[project] = m
 
-        merged = {'Project': {'row':2}, 'LOC': {'row':2}, 'Type': {'row':2}, 'Code Features': {'col':len(features), 'align': 'c|'}, 'Outcome': {'col':3, 'align':'c'}}
+        merged = {'Project': {'row':2}, 'Type': {'row':2}, 'Code Features': {'col':len(features), 'align': 'c|'}, 'Outcome': {'col':3, 'align':'c'}}
         replace_txt = r'[[[REPLACE_ME]]]'
         fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
         fmt1 = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'), 1)
-        features_starts_at = 5
-        alignment = r'c|@{\ \ }c@{\ \ }@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c'
+        features_starts_at = 4
+        alignment = r'c|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c'
         #('r' * ((features_starts_at - 1) + len(features) - 1)).replace('r','r|',2) + '|rrr'
         preamble = r'''\begin{table}[]
 \begin{minipage}{\textwidth}
-{\scriptsize{
-\centering'''
+\centering
+\scriptsize{
+'''
         if resize_to_width:
             preamble += '\n' + r'\resizebox{\columnwidth}{!}{%'
         preamble += r'''
@@ -155,10 +165,10 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
         if resize_to_width:
             footer += '\n' + r'}'
         footer += r'''
-}}
+}
 \end{minipage}
 \caption{
-Statistics for the case studies on five projects.
+Statistics for the case studies on five projects with its size in lines of code.
 %
 The types of case studies include 
 %
@@ -166,33 +176,45 @@ reproducing refactoring from a commit by a human developer (\smiley{}),
 inlining an existing function and extracting it again ($\leftrightarrows$), and
 arbitrary extraction of a code fragment ($\circlearrowleft$).
 %
-The types of refactoring outcomes for IntelliJ IDEA Rust plug-in (\textbf{IJR}), VSCode Rust Analyzer (\textbf{VSC}), and \tool include: 
+The types of refactoring outcomes for IntelliJ IDEA Rust plug-in (IJR), VSCode Rust Analyzer (VSC), and \tool include: 
 %
-producing well-typed code (\cmark), producing ill-typed code (\xmark), and refusing to perform the refactoring (\Stopsign).  
+producing well-typed code (\cmark), producing ill-typed code (\xmark), and refusing to perform the refactoring (\small{\Stopsign}).  
 %
-\todo{Explain the rest of the legend}.
+The code features of the refactoring contains:
+%
+[[[REPLACE_ME]]].
+%
 }
 \label{table:eff[[[REPLACE_ME]]]}
 \end{table}'''
         if landscape:
             footer += '\n' + r'\end{landscape}'
-        footer = fmt(footer, name)
+        features_footer = ""
+        for f in features:
+            if f == 'Struct has lifetime slot':
+                x = 'structs having lifetime generics'
+            else:
+                x = f
+            features_footer += f'{f.lower()} ({features_abbr(f)}), '
+        footer = fmt1(footer, features_footer[:-2])
+        footer = fmt1(footer, name)
         current_project = ''
         body = ''
         row_template = r' & [[[REPLACE_ME]]]'
-        project_template = r' & \multirow{[[[REPLACE_ME]]]}{*}{\textsf{[[[REPLACE_ME]]]}}'
-        project_size_template = r' & \multirow{[[[REPLACE_ME]]]}{*}{\textit{[[[REPLACE_ME]]]}}'
+        project_template = r' & \multirow{[[[REPLACE_ME]]]}{*}{\makecell{\textsf{[[[REPLACE_ME]]]} \\ ([[[REPLACE_ME]]])}}'
         for (_,row) in df.iterrows():
             if current_project == row['Project']:
                 body += str(row['ID'])
-                body += ' &' * 2
+                body += ' &'
             else:
                 if current_project != '':
                     body = body[:-1] + r' \midrule' + '\n'
                 body += str(row['ID'])
                 current_project = row['Project']
-                body += fmt1(fmt1(project_template, project_inner_merged[row['Project']]['row']), current_project)
-                body += fmt1(fmt1(project_size_template, project_inner_merged[row['Project']]['row']), project_sizes[current_project])
+                project_line = fmt1(fmt1(fmt1(project_template, project_inner_merged[row['Project']]['row']), current_project), project_sizes[current_project])
+                if current_project == 'beerus':
+                    project_line = project_line.replace(r'\\','')
+                body += project_line
             body += fmt(row_template, row['Type'])
             for r in features:
                 h = row[r]
@@ -231,7 +253,7 @@ producing well-typed code (\cmark), producing ill-typed code (\xmark), and refus
         if x:
             return r'\cmark'
         else:
-            return r'\xmark'
+            return r'\small{\Stopsign}'
 
     df['BRANCH'] = df.BRANCH.apply(better_example_name)
 

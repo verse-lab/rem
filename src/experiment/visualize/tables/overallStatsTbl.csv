@@ -17,7 +17,7 @@ SUCCESS,Project,Type,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CA
 \cmark,petgraph,$\circlearrowleft$,63,75,841,0,980,0.98,"05437ce2242f673ddfda071a2fba7fc913056713
 ","https://github.com/sewenthy/petgraph/commit/05437ce2242f673ddfda071a2fba7fc913056713
 ",,20113,815,22,2,"[""immutable_borrow""]",\cmark,\cmark,has self so smart not elide,['immutable_borrow'],,\cmark,,,,
-\xmark,petgraph,$\leftrightarrows$,80,55,412,1,547,0.547,"aae8fe875467c356a2d49cb26704cd26bcb006ad
+\small{\Stopsign},petgraph,$\leftrightarrows$,80,55,412,1,547,0.547,"aae8fe875467c356a2d49cb26704cd26bcb006ad
 ","https://github.com/sewenthy/petgraph/commit/aae8fe875467c356a2d49cb26704cd26bcb006ad
 ",cargo,20157,308,54,4,"[""immutable_borrow"",""non_elidible_lifetimes""]",\xmark,\xmark,"failed due to type inference on generics, RA & IJ also failed generics inferences","['immutable_borrow', 'non_elidible_lifetimes']",\cmark,\cmark,,,,
 \cmark,gitoxide,$\circlearrowleft$,73,75,779,0,928,0.928,"7f64152b129f7c9a6d20576229088e100e1173fb
@@ -56,7 +56,7 @@ SUCCESS,Project,Type,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CA
 \cmark,gitoxide,$\leftrightarrows$,73,84,2166,3,2324,2.324,"dfc1509d531f088cf3630be58189b91d3bc5d140
 ","https://github.com/sewenthy/gitoxide/commit/dfc1509d531f088cf3630be58189b91d3bc5d140
 ",,3759,122,60,1,"[""non_elidible_lifetimes"",""struct_has_lifetime_slot""]",\xmark,\xmark,generic has lifetimes + very complex boundings--good to show,"['non_elidible_lifetimes', 'struct_has_lifetime_slot']",\cmark,,\cmark,,,
-\xmark,gitoxide,$\leftrightarrows$,79,79,993,1,1151,1.151,"1f01ee77a0bd81770fe9bf849bcb444551c171b5
+\small{\Stopsign},gitoxide,$\leftrightarrows$,79,79,993,1,1151,1.151,"1f01ee77a0bd81770fe9bf849bcb444551c171b5
 ","https://github.com/sewenthy/gitoxide/commit/1f01ee77a0bd81770fe9bf849bcb444551c171b5
 ",cargo,20211,216,121,1,"[""mutable_borrow"",""non_elidible_lifetimes""]",\xmark,\xmark,"failed due to cargo check, RA type inference","['mutable_borrow', 'non_elidible_lifetimes']",\cmark,,,\cmark,,
 \cmark,gitoxide,$\leftrightarrows$,57,77,553,0,687,0.687,"200a8c6ffbb279fe1465cb048ee9ba16506183f9
@@ -92,7 +92,7 @@ SUCCESS,Project,Type,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CA
 \cmark,sniffnet,$\leftrightarrows$,52,87,904,0,1044,1.044,"510107c19fd0aab20ba639cecce98f07218018bc
 ","https://github.com/sewenthy/sniffnet/commit/510107c19fd0aab20ba639cecce98f07218018bc
 ",,7283,352,72,3,"[""immutable_borrow""]",\cmark,\cmark,all elidible lifetimes,['immutable_borrow'],,\cmark,,,,
-\xmark,sniffnet,$\leftrightarrows$,47,79,630,1,757,0.757,"206cd709013f13299a03bee3e3168039d0b40ba1
+\small{\Stopsign},sniffnet,$\leftrightarrows$,47,79,630,1,757,0.757,"206cd709013f13299a03bee3e3168039d0b40ba1
 ","https://github.com/sewenthy/sniffnet/commit/206cd709013f13299a03bee3e3168039d0b40ba1
 ",cargo,7304,179,182,6,"[""immutable_borrow"",""non_elidible_lifetimes""]",\xmark,\cmark,"technial; need to introduce A{x=*x} if taken x as reference and init struct, IJ failed borrowing, RA figured out Copy","['immutable_borrow', 'non_elidible_lifetimes']",\cmark,\cmark,,,,
 \cmark,sniffnet,$\circlearrowleft$,60,77,875,0,1013,1.013,"f4c476727cbc464c4e41b26ffe677619e99b6819
