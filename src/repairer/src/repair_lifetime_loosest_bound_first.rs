@@ -24,7 +24,15 @@ impl RepairSystem for Repairer {
     }
 
     fn repair_project(&self, src_path: &str, manifest_path: &str, fn_name: &str) -> RepairResult {
-        annotate_loose_named_lifetime(src_path, fn_name);
+        let annot_res = annotate_loose_named_lifetime(src_path, fn_name);
+        if !annot_res.success {
+            return RepairResult {
+                success: false,
+                repair_count: 0,
+                has_non_elidible_lifetime: false,
+                has_struct_lt: false,
+            };
+        }
         // println!("annotated: {}", fs::read_to_string(&src_path).unwrap());
         let mut compile_cmd = check_project(manifest_path, &vec![]);
         let process_errors =
@@ -43,7 +51,7 @@ impl RepairSystem for Repairer {
                     success: true,
                     repair_count,
                     has_non_elidible_lifetime: elide_res.annotations_left,
-                    has_struct_lt: elide_res.has_struct_lt,
+                    has_struct_lt: elide_res.has_struct_lt || annot_res.has_struct_lt,
                 }
             }
             result => result,
@@ -86,6 +94,7 @@ impl RepairSystem for Repairer {
 
 struct LooseLifetimeAnnotatorTypeHelper {
     lt_num: i32,
+    has_struct_lt: bool,
 }
 
 impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
@@ -131,6 +140,7 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                                 Span::call_site(),
                             );
                             self.lt_num += 1;
+                            self.has_struct_lt = true;
                         }
                     }
                 });
@@ -150,6 +160,7 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
                                             Span::call_site(),
                                         );
                                         self.lt_num += 1;
+                                        self.has_struct_lt = true;
                                     }
                                 }
                                 _ => syn::visit_mut::visit_generic_argument_mut(self, arg),
@@ -166,6 +177,7 @@ impl VisitMut for LooseLifetimeAnnotatorTypeHelper {
 
 struct LooseLifetimeAnnotatorFnArgHelper {
     lt_num: i32,
+    has_struct_lt: bool,
 }
 
 impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
@@ -175,9 +187,13 @@ impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
             FnArg::Typed(t) => {
                 let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
                     lt_num: self.lt_num,
+                    has_struct_lt: false,
                 };
                 type_helper.visit_type_mut(t.ty.as_mut());
-                self.lt_num = type_helper.lt_num
+                self.lt_num = type_helper.lt_num;
+                if !self.has_struct_lt {
+                    self.has_struct_lt = type_helper.has_struct_lt
+                }
             }
         }
     }
@@ -191,14 +207,19 @@ impl VisitMut for LooseLifetimeAnnotatorFnArgHelper {
                 if !lt.clone().ident.to_string().starts_with("lt") {
                     *lt = Lifetime::new(format!("'lt{}", self.lt_num).as_str(), Span::call_site());
                     self.lt_num += 1;
+                    self.has_struct_lt = true;
                 }
             }
             gen => {
                 let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
                     lt_num: self.lt_num,
+                    has_struct_lt: false,
                 };
                 type_helper.visit_generic_argument_mut(gen);
-                self.lt_num = type_helper.lt_num
+                self.lt_num = type_helper.lt_num;
+                if !self.has_struct_lt {
+                    self.has_struct_lt = type_helper.has_struct_lt
+                }
             }
         });
         syn::visit_mut::visit_angle_bracketed_generic_arguments_mut(self, i);
@@ -209,6 +230,7 @@ struct LooseLifetimeAnnotator<'a> {
     fn_name: &'a str,
     lt_num: i32,
     success: bool,
+    has_struct_lt: bool,
 }
 
 impl VisitMut for LooseLifetimeAnnotator<'_> {
@@ -249,24 +271,36 @@ impl LooseLifetimeAnnotator<'_> {
                 inputs.iter_mut().for_each(|arg| {
                     let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
                         lt_num: self.lt_num,
+                        has_struct_lt: false,
                     };
                     fn_arg_helper.visit_fn_arg_mut(arg);
-                    self.lt_num = fn_arg_helper.lt_num
+                    self.lt_num = fn_arg_helper.lt_num;
+                    if !self.has_struct_lt {
+                        self.has_struct_lt = fn_arg_helper.has_struct_lt
+                    }
                 });
                 gen.params.iter_mut().for_each(|param| {
                     let mut fn_arg_helper = LooseLifetimeAnnotatorFnArgHelper {
                         lt_num: self.lt_num,
+                        has_struct_lt: false,
                     };
                     fn_arg_helper.visit_generic_param_mut(param);
-                    self.lt_num = fn_arg_helper.lt_num
+                    self.lt_num = fn_arg_helper.lt_num;
+                    if !self.has_struct_lt {
+                        self.has_struct_lt = fn_arg_helper.has_struct_lt
+                    }
                 });
                 match out {
                     ReturnType::Type(_, ty) => {
                         let mut type_helper = LooseLifetimeAnnotatorTypeHelper {
                             lt_num: self.lt_num,
+                            has_struct_lt: false,
                         };
                         type_helper.visit_type_mut(ty.as_mut());
-                        self.lt_num = type_helper.lt_num
+                        self.lt_num = type_helper.lt_num;
+                        if !self.has_struct_lt {
+                            self.has_struct_lt = type_helper.has_struct_lt
+                        }
                     }
                     ReturnType::Default => {}
                 };
@@ -285,7 +319,12 @@ impl LooseLifetimeAnnotator<'_> {
     }
 }
 
-pub fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> bool {
+struct AnnotationResult {
+    success: bool,
+    has_struct_lt: bool,
+}
+
+fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> AnnotationResult {
     let file_content: String = fs::read_to_string(&new_file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<syn::File>(file_content.as_str())
         .map_err(|e| format!("{:?}", e))
@@ -293,15 +332,21 @@ pub fn annotate_loose_named_lifetime(new_file_name: &str, fn_name: &str) -> bool
     let mut visit = LooseLifetimeAnnotator {
         fn_name,
         success: false,
+        has_struct_lt: false,
         lt_num: 0,
     };
     visit.visit_file_mut(&mut file);
     let file = file.into_token_stream().to_string();
-    match visit.success {
+    let success = match visit.success {
         true => {
             fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
             true
         }
         false => false,
+    };
+
+    AnnotationResult {
+        success,
+        has_struct_lt: visit.has_struct_lt,
     }
 }

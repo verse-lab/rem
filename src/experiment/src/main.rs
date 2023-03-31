@@ -3,7 +3,7 @@
 mod projects;
 mod utils;
 
-use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
+use crate::projects::{ExtractionResultOld, PATH_TO_EXPERIMENT_PROJECTS};
 use crate::utils::{
     get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch,
     run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets,
@@ -67,6 +67,8 @@ fn main() {
                     num_inputs: 0,
                     features: String::new(),
                     features_inner: vec![],
+                    intellij_rust_old: extraction.intellij_old_rust,
+                    rust_analyzer: extraction.rust_analyzer,
                     notes: extraction.notes.clone(),
                 };
 

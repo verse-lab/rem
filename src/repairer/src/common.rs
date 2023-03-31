@@ -343,9 +343,9 @@ impl VisitMut for ChangeLtHelperElider<'_> {
             GenericArgument::Lifetime(l) => {
                 let id = l.to_string();
                 debug!("generic lt: {:?}", &id);
+                self.has_struct_lt = true;
                 match self.map.get(&id) {
                     Some(new_lt) => {
-                        self.has_struct_lt = true;
                         *l = Lifetime::new(new_lt.as_str(), Span::call_site())
                     },
                     None => *l = Lifetime::new("'_", Span::call_site()),

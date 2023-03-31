@@ -3,6 +3,8 @@ use std::path::Path;
 
 pub const PATH_TO_EXPERIMENT_PROJECTS: &str = "/home/sewen/class/Capstone/sample_projects";
 
+#[derive(Debug, serde::Deserialize, serde::Serialize, Copy, Clone)]
+#[serde(rename_all = "snake_case")]
 pub enum ExtractionResultOld {
     NotRan,
     Success,

@@ -8,7 +8,7 @@ use std::ops::Add;
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 
-use crate::projects::Extraction;
+use crate::projects::{Extraction, ExtractionResultOld};
 use crate::utils::ExtractionFeature::{
     ImmutableBorrow, MutableBorrow, NonElidibleLifetimes, NonLocalLoop, NonLocalReturn,
     StructHasLifetimeSlot,
@@ -334,6 +334,8 @@ pub enum ExtractionFeature {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct ExtractionResult {
     pub success: bool,
+    pub project: String,
+    pub branch: String,
     pub fix_nlcf_duration_ms: u128,
     pub fix_borrow_duration_ms: u128,
     pub fix_lifetime_cargo_ms: u128,
@@ -343,8 +345,6 @@ pub struct ExtractionResult {
     pub commit: String,
     pub commit_url: String,
     pub failed_at: Option<String>,
-    pub project: String,
-    pub branch: String,
     pub project_size: i32,
     pub src_size: i32,
     pub caller_size: i32,
@@ -352,6 +352,8 @@ pub struct ExtractionResult {
     pub features: String,
     #[serde(skip_serializing)]
     pub features_inner: Vec<ExtractionFeature>,
+    pub intellij_rust_old: ExtractionResultOld,
+    pub rust_analyzer: ExtractionResultOld,
     pub notes: Option<String>,
 }
 
