@@ -80,7 +80,7 @@ def cargo_cycle_plot(df):
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
 
-def features_table(df, name, renames, longTable=False, landscape=False, show=False, resize_to_width=False):
+def features_table(df, name, longTable=False, landscape=False, show=False, resize_to_width=False):
     def get_unique_features(df):
         features = df.FEATURES.unique()
         feat_cols = {}
@@ -93,7 +93,7 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
     def better_example_name(branch):
         x = branch.rstrip('-expr-active')
         #rename = {'ext-com': 'Developer extraction', 'ext': 'Arbitrary extraction', 'inline-ext': 'Inline and extract'}
-        rename = {'ext-com': 'DE', 'ext': 'AE', 'inline-ext': 'IE'}
+        rename = {'ext-com': r'\small{\smiley{}}', 'ext': r'$\circlearrowleft$', 'inline-ext': r'$\leftrightarrows$'}
         for r in rename:
             if x.startswith(r):
                 # n = x.lstrip(r)
@@ -101,53 +101,77 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
 
     def make_latex_table(df, name, features, resize_to_width):
         project_inner_merged = {}
+        project_sizes = {}
         projects = df.Project.unique()
         df['ID'] = [(i + 1) for i in range(df.shape[0])]
 
         for project in projects:
             project_df = df[df.Project == project]
             project_inner_merged[project] = {'row': project_df.shape[0]}
+            project_sizes[project] = project_df.PROJECT_SIZE.max()
 
-        merged = {'Project': {'row':2}, 'ET': {'row':2}, 'Feature': {'col':len(features)}}
+        merged = {'Project': {'row':2}, 'LOC': {'row':2}, 'Type': {'row':2}, 'Code Features': {'col':len(features), 'align': 'c|'}, 'Outcome': {'col':3, 'align':'c'}}
         replace_txt = r'[[[REPLACE_ME]]]'
         fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
         fmt1 = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'), 1)
-        features_starts_at = 4
-        alignment = ('r' * ((features_starts_at - 1) + len(features) - 1)).replace('r','r|',2)
-        preamble = r'\begin{table}[]'+'\n'+r'\centering'
+        features_starts_at = 5
+        alignment = r'c|@{\ \ }c@{\ \ }@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c'
+        #('r' * ((features_starts_at - 1) + len(features) - 1)).replace('r','r|',2) + '|rrr'
+        preamble = r'''\begin{table}[]
+\begin{minipage}{\textwidth}
+{\scriptsize{
+\centering'''
         if resize_to_width:
             preamble += '\n' + r'\resizebox{\columnwidth}{!}{%'
-        preamble += '\n' + r'''\begin{tabular}{l|[[[REPLACE_ME]]]}
-\hline'''
+        preamble += r'''
+\begin{tabular}{[[[REPLACE_ME]]]}
+\toprule
+'''
         if landscape:
             preamble = r'\begin{landscape}' + '\n' + preamble
         preamble = fmt(preamble, alignment)
-        header = r'\multirow{2}{*}{\textit{\textbf{\#}}}'
-        next_headers_template = r'& [[[REPLACE_ME]]]{\textit{\textbf{[[[REPLACE_ME]]]}}}'
+        header = r'\multirow{2}{*}{\textbf{\#}}'
+        next_headers_template = r'& [[[REPLACE_ME]]]{\textbf{[[[REPLACE_ME]]]}}'
         for h in merged:
             tmp = next_headers_template
             if 'col' in merged[h]:
-                if h == 'Feature':
-                    tmp = fmt1(tmp, r'\multicolumn{'+str(merged[h]['col'])+r'}{c}') #c| if line
-                else:
-                    tmp = fmt1(tmp, r'\multicolumn{'+str(merged[h]['col'])+r'}{l}')
+                tmp = fmt1(tmp, r'\multicolumn{'+str(merged[h]['col'])+r'}{'+merged[h]['align']+'}')
             elif 'row' in merged[h]:
                 tmp = fmt1(tmp, r'\multirow{'+str(merged[h]['row'])+r'}{*}')
             header += fmt1(tmp, h)
-        # header += r'& \multirow{2}{*}{\textit{\textbf{Time(s)}}}'
-        header += r'\\ \cline{'+str(features_starts_at)+'-' + str(features_starts_at+len(features) - 1) + '}\n'
+        header += r'\\[2pt]' + '\n'
+        # header += r'\\ \cline{'+str(features_starts_at)+'-' + str(features_starts_at+len(features) - 1) + '}\n'
         features_header = ' &' * (features_starts_at - 2)
-        features_abbr = lambda i: ''.join([j[0] for j in i.split(' ')]).upper()
+        features_abbr = lambda i: ''.join([j[0] for j in i.split(' ')]).upper()[:3]
         for f in features:
-            features_header += fmt(r' & \textit{\textbf{[[[REPLACE_ME]]]}}', features_abbr(f))
-        # features_header += '& '
-        header += features_header
-        header += r'\\ \hline' + '\n'
-        footer = r''' \hline
+            features_header += fmt(r' & \textbf{[[[REPLACE_ME]]]}', features_abbr(f))
+        snd_header = r'& \textbf{IJR}'
+        snd_header += r'& \textbf{VSC}'
+        snd_header += r'& \textbf{\tool}'
+        header += features_header + snd_header
+        header += r'\\ \midrule' + '\n'
+        footer = r''' \bottomrule
 \end{tabular}%'''
         if resize_to_width:
             footer += '\n' + r'}'
-        footer += '\n' + r'''\caption{\tool . }
+        footer += r'''
+}}
+\end{minipage}
+\caption{
+Statistics for the case studies on five projects.
+%
+The types of case studies include 
+%
+reproducing refactoring from a commit by a human developer (\smiley{}),
+inlining an existing function and extracting it again ($\leftrightarrows$), and
+arbitrary extraction of a code fragment ($\circlearrowleft$).
+%
+The types of refactoring outcomes for IntelliJ IDEA Rust plug-in (\textbf{IJR}), VSCode Rust Analyzer (\textbf{VSC}), and \tool include: 
+%
+producing well-typed code (\cmark), producing ill-typed code (\xmark), and refusing to perform the refactoring (\Stopsign).  
+%
+\todo{Explain the rest of the legend}.
+}
 \label{table:eff[[[REPLACE_ME]]]}
 \end{table}'''
         if landscape:
@@ -155,19 +179,21 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
         footer = fmt(footer, name)
         current_project = ''
         body = ''
-        row_template = r' & \textit{[[[REPLACE_ME]]]}'
-        project_template = r' & \multirow{[[[REPLACE_ME]]]}{*}{\textit{[[[REPLACE_ME]]]}}'
+        row_template = r' & [[[REPLACE_ME]]]'
+        project_template = r' & \multirow{[[[REPLACE_ME]]]}{*}{\textsf{[[[REPLACE_ME]]]}}'
+        project_size_template = r' & \multirow{[[[REPLACE_ME]]]}{*}{\textit{[[[REPLACE_ME]]]}}'
         for (_,row) in df.iterrows():
             if current_project == row['Project']:
                 body += str(row['ID'])
-                body += ' &'
+                body += ' &' * 2
             else:
                 if current_project != '':
-                    body = body[:-1] + r' \hline' + '\n'
+                    body = body[:-1] + r' \midrule' + '\n'
                 body += str(row['ID'])
                 current_project = row['Project']
                 body += fmt1(fmt1(project_template, project_inner_merged[row['Project']]['row']), current_project)
-            body += fmt(row_template, row['ET'])
+                body += fmt1(fmt1(project_size_template, project_inner_merged[row['Project']]['row']), project_sizes[current_project])
+            body += fmt(row_template, row['Type'])
             for r in features:
                 h = row[r]
                 if h == '':
@@ -176,7 +202,9 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
                     body += f' & {h}'
                 else:
                     body += fmt(row_template, str(h).strip('\n'))
-            # body += fmt(row_template, row['t(s)'])
+            body += fmt(row_template, row['IJ'])
+            body += fmt(row_template, row['RA'])
+            body += fmt(row_template, row['SUCCESS'])
             body += r' \\' + '\n'
         body = body.rstrip('\n')
         latex = preamble + '\n' + header + body + footer
@@ -190,14 +218,32 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
         elif 'lifetime' in x.lower():
             return '3' + x
         return 0
+
+    def check_old_outcome(x):
+        if x == 'success':
+            return r'\cmark'
+        elif x == 'failure':
+            return r'\xmark'
+        elif x == 'refused_to_extract':
+            return r'\small{\Stopsign}'
+
+    def check_new_outcome(x):
+        if x:
+            return r'\cmark'
+        else:
+            return r'\xmark'
+
     df['BRANCH'] = df.BRANCH.apply(better_example_name)
+
+    df['INTELLIJ_RUST_OLD'] = df.INTELLIJ_RUST_OLD.apply(check_old_outcome)
+    df['RUST_ANALYZER'] = df.RUST_ANALYZER.apply(check_old_outcome)
+    df['SUCCESS'] = df.SUCCESS.apply(check_new_outcome)
 
     feat_cols = get_unique_features(df)
     for col in feat_cols.keys():
         df[feat_cols[col]] = df.FEATURES_JSON.apply(lambda feats: '\cmark' if col in feats else '')
     features = sorted(feat_cols.values(), key=sort_feat_col)
-    default_renames = {'PROJECT':'Project', 'BRANCH': 'ET'}
-    default_renames.update(renames)
+    default_renames = {'PROJECT':'Project', 'BRANCH': 'Type', 'INTELLIJ_RUST_OLD':'IJ', 'RUST_ANALYZER': 'RA'}
     out = df.rename(columns=default_renames)
     out.to_csv(f'tables/{name}StatsTbl.csv', index=False, encoding='utf-8')
     latex = make_latex_table(out, name, features, resize_to_width)
@@ -215,8 +261,7 @@ def inner_handler(csv_path, show=False):
     overall(df)
     # cargo_cycle_plot(df)
     #features_table_by_project(df, show)
-    renames = {'PROJECT': 'Project', 'BRANCH': 'ET', 'TOTAL_DURATION_S': 't(s)'}
-    features_table(df, "overall", renames, landscape=False, show=show)
+    features_table(df, "overall", landscape=False, show=show)
     if show:
         plt.show()
 

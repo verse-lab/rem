@@ -1,50 +1,69 @@
 \begin{table}[]
+\begin{minipage}{\textwidth}
+{\scriptsize{
 \centering
-\begin{tabular}{l|r|r|rrrrr}
-\hline
-\multirow{2}{*}{\textit{\textbf{\#}}}& \multirow{2}{*}{\textit{\textbf{Project}}}& \multirow{2}{*}{\textit{\textbf{ET}}}& \multicolumn{5}{c}{\textit{\textbf{Feature}}}\\ \cline{4-8}
- & & & \textit{\textbf{NLL}} & \textit{\textbf{NLR}} & \textit{\textbf{IB}} & \textit{\textbf{MB}} & \textit{\textbf{NEL}}\\ \hline
-1 & \multirow{7}{*}{\textit{petgraph}} & \textit{AE} & & & & & \\
-2 & & \textit{AE} & & & & & \\
-3 & & \textit{AE} & & & & & \cmark \\
-4 & & \textit{AE} & & & \cmark & & \\
-5 & & \textit{AE} & & & \cmark & \cmark & \\
-6 & & \textit{AE} & & & \cmark & & \\
-7 & & \textit{IE} & & & \cmark & & \cmark \\ \hline
-8 & \multirow{18}{*}{\textit{gitoxide}} & \textit{AE} & & & & & \\
-9 & & \textit{AE} & & \cmark & & & \cmark \\
-10 & & \textit{AE} & & & & & \\
-11 & & \textit{AE} & & & & & \\
-12 & & \textit{AE} & & & & & \cmark \\
-13 & & \textit{AE} & & & & & \\
-14 & & \textit{AE} & & & & \cmark & \\
-15 & & \textit{AE} & & & & & \\
-16 & & \textit{DE} & & \cmark & & & \\
-17 & & \textit{DE} & & & \cmark & \cmark & \cmark \\
-18 & & \textit{IE} & & \cmark & & & \cmark \\
-19 & & \textit{IE} & & & & & \cmark \\
-20 & & \textit{IE} & & & & \cmark & \cmark \\
-21 & & \textit{IE} & & & & & \\
-22 & & \textit{IE} & & & & & \\
-23 & & \textit{IE} & & & & & \\
-24 & & \textit{IE} & & & \cmark & & \\
-25 & & \textit{IE} & & & \cmark & & \\ \hline
-26 & \multirow{5}{*}{\textit{kickoff}} & \textit{IE} & & & \cmark & \cmark & \\
-27 & & \textit{AE} & \cmark & & & & \\
-28 & & \textit{AE} & & & & & \\
-29 & & \textit{AE} & & & & & \\
-30 & & \textit{AE} & & & \cmark & \cmark & \\ \hline
-31 & \multirow{9}{*}{\textit{sniffnet}} & \textit{IE} & & & \cmark & & \\
-32 & & \textit{IE} & & & \cmark & & \cmark \\
-33 & & \textit{AE} & & & \cmark & \cmark & \\
-34 & & \textit{AE} & & & & \cmark & \\
-35 & & \textit{AE} & & & & & \\
-36 & & \textit{AE} & & & \cmark & & \\
-37 & & \textit{AE} & & & & & \\
-38 & & \textit{AE} & & & & \cmark & \\
-39 & & \textit{AE} & & & & & \\ \hline
-40 & \multirow{1}{*}{\textit{beerus}} & \textit{DE} & & & & & \\ \hline
+\begin{tabular}{c|@{\ \ }c@{\ \ }@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c}
+\toprule
+
+\multirow{2}{*}{\textbf{\#}}& \multirow{2}{*}{\textbf{Project}}& \multirow{2}{*}{\textbf{LOC}}& \multirow{2}{*}{\textbf{Type}}& \multicolumn{6}{c|}{\textbf{Code Features}}& \multicolumn{3}{c}{\textbf{Outcome}}\\[2pt]
+ & & & & \textbf{NLL} & \textbf{NLR} & \textbf{IB} & \textbf{MB} & \textbf{NEL} & \textbf{SHL}& \textbf{IJR}& \textbf{VSC}& \textbf{\tool}\\ \midrule
+1 & \multirow{7}{*}{\textsf{petgraph}} & \multirow{7}{*}{\textit{20157}} & $\circlearrowleft$ & & & & & & & \cmark & \small{\Stopsign} & \cmark \\
+2 & & & $\circlearrowleft$ & & & & & & & \cmark & \xmark & \cmark \\
+3 & & & $\circlearrowleft$ & & & & & \cmark & & \xmark & \xmark & \cmark \\
+4 & & & $\circlearrowleft$ & & & \cmark & & & \cmark & \cmark & \xmark & \cmark \\
+5 & & & $\circlearrowleft$ & & & \cmark & \cmark & & & \cmark & \xmark & \cmark \\
+6 & & & $\circlearrowleft$ & & & \cmark & & & & \cmark & \cmark & \cmark \\
+7 & & & $\leftrightarrows$ & & & \cmark & & \cmark & & \xmark & \xmark & \xmark \\ \midrule
+8 & \multirow{18}{*}{\textsf{gitoxide}} & \multirow{18}{*}{\textit{20211}} & $\circlearrowleft$ & & & & & & & \xmark & \cmark & \cmark \\
+9 & & & $\circlearrowleft$ & & \cmark & & & \cmark & \cmark & \xmark & \xmark & \cmark \\
+10 & & & $\circlearrowleft$ & & & & & & & \cmark & \xmark & \cmark \\
+11 & & & $\circlearrowleft$ & & & & & & & \xmark & \xmark & \cmark \\
+12 & & & $\circlearrowleft$ & & & & & \cmark & \cmark & \xmark & \xmark & \cmark \\
+13 & & & $\circlearrowleft$ & & & & & & & \xmark & \xmark & \cmark \\
+14 & & & $\circlearrowleft$ & & & & \cmark & & \cmark & \xmark & \xmark & \cmark \\
+15 & & & $\circlearrowleft$ & & & & & & & \xmark & \cmark & \cmark \\
+16 & & & \small{\smiley{}} & & \cmark & & & & & \xmark & \cmark & \cmark \\
+17 & & & \small{\smiley{}} & & & \cmark & \cmark & \cmark & \cmark & \xmark & \xmark & \cmark \\
+18 & & & $\leftrightarrows$ & & \cmark & & & \cmark & & \cmark & \xmark & \cmark \\
+19 & & & $\leftrightarrows$ & & & & & \cmark & \cmark & \xmark & \xmark & \cmark \\
+20 & & & $\leftrightarrows$ & & & & \cmark & \cmark & & \xmark & \xmark & \xmark \\
+21 & & & $\leftrightarrows$ & & & & & & & \cmark & \cmark & \cmark \\
+22 & & & $\leftrightarrows$ & & & & & & & \cmark & \cmark & \cmark \\
+23 & & & $\leftrightarrows$ & & & & & & & \cmark & \cmark & \cmark \\
+24 & & & $\leftrightarrows$ & & & \cmark & & & & \cmark & \cmark & \cmark \\
+25 & & & $\leftrightarrows$ & & & \cmark & & & \cmark & \xmark & \xmark & \cmark \\ \midrule
+26 & \multirow{5}{*}{\textsf{kickoff}} & \multirow{5}{*}{\textit{1502}} & $\leftrightarrows$ & & & \cmark & \cmark & & \cmark & \cmark & \cmark & \cmark \\
+27 & & & $\circlearrowleft$ & \cmark & & & & & & \xmark & \cmark & \cmark \\
+28 & & & $\circlearrowleft$ & & & & & & & \cmark & \cmark & \cmark \\
+29 & & & $\circlearrowleft$ & & & & & & & \cmark & \cmark & \cmark \\
+30 & & & $\circlearrowleft$ & & & \cmark & \cmark & & \cmark & \xmark & \cmark & \cmark \\ \midrule
+31 & \multirow{9}{*}{\textsf{sniffnet}} & \multirow{9}{*}{\textit{7304}} & $\leftrightarrows$ & & & \cmark & & & & \cmark & \cmark & \cmark \\
+32 & & & $\leftrightarrows$ & & & \cmark & & \cmark & & \xmark & \cmark & \xmark \\
+33 & & & $\circlearrowleft$ & & & \cmark & \cmark & & \cmark & \cmark & \cmark & \cmark \\
+34 & & & $\circlearrowleft$ & & & & \cmark & & \cmark & \xmark & \cmark & \cmark \\
+35 & & & $\circlearrowleft$ & & & & & & & \cmark & \cmark & \cmark \\
+36 & & & $\circlearrowleft$ & & & \cmark & & & & \cmark & \cmark & \cmark \\
+37 & & & $\circlearrowleft$ & & & & & & & \cmark & \cmark & \cmark \\
+38 & & & $\circlearrowleft$ & & & & \cmark & & & \xmark & \cmark & \cmark \\
+39 & & & $\circlearrowleft$ & & & & & & & \cmark & \cmark & \cmark \\ \midrule
+40 & \multirow{1}{*}{\textsf{beerus}} & \multirow{1}{*}{\textit{302}} & \small{\smiley{}} & & & & & & & \cmark & \small{\Stopsign} & \cmark \\ \bottomrule
 \end{tabular}%
-\caption{\tool . }
+}}
+\end{minipage}
+\caption{
+Statistics for the case studies on five projects.
+%
+The types of case studies include 
+%
+reproducing refactoring from a commit by a human developer (\smiley{}),
+inlining an existing function and extracting it again ($\leftrightarrows$), and
+arbitrary extraction of a code fragment ($\circlearrowleft$).
+%
+The types of refactoring outcomes for IntelliJ IDEA Rust plug-in (\textbf{IJR}), VSCode Rust Analyzer (\textbf{VSC}), and \tool include: 
+%
+producing well-typed code (\cmark), producing ill-typed code (\xmark), and refusing to perform the refactoring (\Stopsign).  
+%
+\todo{Explain the rest of the legend}.
+}
 \label{table:effoverall}
 \end{table}
