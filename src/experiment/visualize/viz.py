@@ -80,7 +80,7 @@ def cargo_cycle_plot(df):
     plt.savefig(fig_path)
     copy_to_paper(fig_path)
 
-def features_table(df, name, renames, longTable=False, landscape=False, show=False):
+def features_table(df, name, renames, longTable=False, landscape=False, show=False, resize_to_width=False):
     def get_unique_features(df):
         features = df.FEATURES.unique()
         feat_cols = {}
@@ -99,7 +99,7 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
                 # n = x.lstrip(r)
                 return f"{rename[r]}"
 
-    def make_latex_table(df, name, features):
+    def make_latex_table(df, name, features, resize_to_width):
         project_inner_merged = {}
         projects = df.Project.unique()
         df['ID'] = [(i + 1) for i in range(df.shape[0])]
@@ -114,9 +114,10 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
         fmt1 = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'), 1)
         features_starts_at = 4
         alignment = ('r' * ((features_starts_at - 1) + len(features) - 1)).replace('r','r|',2)
-        preamble = r'''\begin{table}[]
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{l|[[[REPLACE_ME]]]}
+        preamble = r'\begin{table}[]'+'\n'+r'\centering'
+        if resize_to_width:
+            preamble += '\n' + r'\resizebox{\columnwidth}{!}{%'
+        preamble += '\n' + r'''\begin{tabular}{l|[[[REPLACE_ME]]]}
 \hline'''
         if landscape:
             preamble = r'\begin{landscape}' + '\n' + preamble
@@ -143,9 +144,10 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
         header += features_header
         header += r'\\ \hline' + '\n'
         footer = r''' \hline
-\end{tabular}%
-}
-\caption{\tool . }
+\end{tabular}%'''
+        if resize_to_width:
+            footer += '\n' + r'}'
+        footer += '\n' + r'''\caption{\tool . }
 \label{table:eff[[[REPLACE_ME]]]}
 \end{table}'''
         if landscape:
@@ -198,42 +200,12 @@ def features_table(df, name, renames, longTable=False, landscape=False, show=Fal
     default_renames.update(renames)
     out = df.rename(columns=default_renames)
     out.to_csv(f'tables/{name}StatsTbl.csv', index=False, encoding='utf-8')
-    latex = make_latex_table(out, name, features)
+    latex = make_latex_table(out, name, features, resize_to_width)
     with open(f'tables/{name}StatsTbl.tex', 'w') as f:
         f.write(latex)
         f.flush()
     copy_to_paper(f'tables/{name}StatsTbl.tex')
     return out
-
-
-def features_table_by_project(df, show=False):
-    projects = df.PROJECT.unique()
-    projects_with_features = {}
-    sel = ['BRANCH', 'PROJECT_SIZE', 'CARGO_CYCLES']
-
-    for project in projects:
-        project_df = df[df.PROJECT == project]
-        project_df = project_df[project_df.FEATURES_JSON.apply(lambda l: len(l) > 0)]
-        if len(project_df) == 0:
-            continue
-        renames = {'BRANCH': f'{project} examples', 'PROJECT_SIZE' : 'Module Size(LOC)', 'CARGO_CYCLES': 'Repair count'}
-        projects_with_features[project] = features_table(project_df, project, sel, renames)
-    if show:
-        for p in projects_with_features:
-            print(p)
-            print(projects_with_features[p].head())
-            print('\n\n')
-            print(latex)
-            print('\n\n')
-
-    sel = ['PROJECT', 'BRANCH', 'FIX_NLCF_DURATION_MS', 'FIX_BORROW_DURATION_MS', 'FIX_LIFETIME_CARGO_MS', 'CARGO_CYCLES', 'TOTAL_DURATION_MS',	'COMMIT_URL', 'SUCCESS','FAILED_AT', 'FEATURES']
-    out = df[sel]
-    latex = make_latex_table(out)
-    tbl_path = 'tables/overallExperimentTbl.tex'
-    with open(tbl_path, 'w') as f:
-        f.write(latex)
-        f.flush()
-    copy_to_paper(tbl_path)
 
 def inner_handler(csv_path, show=False):
     csv_name = csv_path.split('/')[-1]
@@ -245,8 +217,6 @@ def inner_handler(csv_path, show=False):
     #features_table_by_project(df, show)
     renames = {'PROJECT': 'Project', 'BRANCH': 'ET', 'TOTAL_DURATION_S': 't(s)'}
     features_table(df, "overall", renames, landscape=False, show=show)
-
-    #appendix_table_all_experiment(df, show)
     if show:
         plt.show()
 
