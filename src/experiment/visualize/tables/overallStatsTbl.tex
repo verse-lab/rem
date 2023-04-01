@@ -3,52 +3,54 @@
 \centering
 \scriptsize{
 
-\begin{tabular}{c|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{c|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c@{\ \ }|c@{\ \ }|c}
 \toprule
 
-\multirow{2}{*}{\textbf{\#}}& \multirow{2}{*}{\textbf{Project}}& \multirow{2}{*}{\textbf{Type}}& \multicolumn{2}{c|}{\textbf{Size}}& \multicolumn{6}{c|}{\textbf{Code Features}}& \multicolumn{3}{c}{\textbf{Outcome}}\\[2pt]
- &  & & \textbf{SRC}& \textbf{SNP} & \textbf{NLL} & \textbf{NLR} & \textbf{IB} & \textbf{MB} & \textbf{NEL} & \textbf{SHL}& \textbf{IJR}& \textbf{VSC}& \textbf{\tool}\\ \midrule
-1 & \multirow{7}{*}{\makecell{\textsf{petgraph} \\ (20,157)}} & $\circlearrowleft$ & 89 & 27 & & & & & & & \cmark & \small{\Stopsign} & \cmark \\
-2 & & $\circlearrowleft$ & 921 & 20 & & & & & & & \cmark & \xmark & \cmark \\
-3 & & $\circlearrowleft$ & 921 & 8 & & & & & \cmark & & \xmark & \xmark & \cmark \\
-4 & & $\circlearrowleft$ & 264 & 54 & & & \cmark & & & \cmark & \cmark & \xmark & \cmark \\
-5 & & $\circlearrowleft$ & 55 & 122 & & & \cmark & \cmark & & & \cmark & \xmark & \cmark \\
-6 & & $\circlearrowleft$ & 815 & 22 & & & \cmark & & & & \cmark & \cmark & \cmark \\
-7 & & $\leftrightarrows$ & 308 & 54 & & & \cmark & & \cmark & & \xmark & \xmark & \small{\Stopsign} \\ \midrule
-8 & \multirow{18}{*}{\makecell{\textsf{gitoxide} \\ (20,211)}} & $\circlearrowleft$ & 56 & 9 & & & & & & & \xmark & \cmark & \cmark \\
-9 & & $\circlearrowleft$ & 109 & 53 & & \cmark & & & \cmark & \cmark & \xmark & \xmark & \cmark \\
-10 & & $\circlearrowleft$ & 178 & 19 & & & & & & & \cmark & \xmark & \cmark \\
-11 & & $\circlearrowleft$ & 134 & 18 & & & & & & & \xmark & \xmark & \cmark \\
-12 & & $\circlearrowleft$ & 134 & 60 & & & & & \cmark & \cmark & \xmark & \xmark & \cmark \\
-13 & & $\circlearrowleft$ & 134 & 15 & & & & & & & \xmark & \xmark & \cmark \\
-14 & & $\circlearrowleft$ & 73 & 31 & & & & \cmark & & \cmark & \xmark & \xmark & \cmark \\
-15 & & $\circlearrowleft$ & 121 & 41 & & & & & & & \xmark & \cmark & \cmark \\
-16 & & \small{\smiley{}} & 84 & 47 & & \cmark & & & & & \xmark & \cmark & \cmark \\
-17 & & \small{\smiley{}} & 192 & 73 & & & \cmark & \cmark & \cmark & \cmark & \xmark & \xmark & \cmark \\
-18 & & $\leftrightarrows$ & 86 & 32 & & \cmark & & & \cmark & & \cmark & \xmark & \cmark \\
-19 & & $\leftrightarrows$ & 122 & 60 & & & & & \cmark & \cmark & \xmark & \xmark & \cmark \\
-20 & & $\leftrightarrows$ & 216 & 121 & & & & \cmark & \cmark & & \xmark & \xmark & \small{\Stopsign} \\
-21 & & $\leftrightarrows$ & 154 & 52 & & & & & & & \cmark & \cmark & \cmark \\
-22 & & $\leftrightarrows$ & 149 & 49 & & & & & & & \cmark & \cmark & \cmark \\
-23 & & $\leftrightarrows$ & 143 & 144 & & & & & & & \cmark & \cmark & \cmark \\
-24 & & $\leftrightarrows$ & 72 & 43 & & & \cmark & & & & \cmark & \cmark & \cmark \\
-25 & & $\leftrightarrows$ & 368 & 65 & & & \cmark & & & \cmark & \xmark & \xmark & \cmark \\ \midrule
-26 & \multirow{5}{*}{\makecell{\textsf{kickoff} \\ (1,502)}} & $\leftrightarrows$ & 324 & 56 & & & \cmark & \cmark & & \cmark & \cmark & \cmark & \cmark \\
-27 & & $\circlearrowleft$ & 123 & 53 & \cmark & & & & & & \xmark & \cmark & \cmark \\
-28 & & $\circlearrowleft$ & 94 & 51 & & & & & & & \cmark & \cmark & \cmark \\
-29 & & $\circlearrowleft$ & 124 & 34 & & & & & & & \cmark & \cmark & \cmark \\
-30 & & $\circlearrowleft$ & 123 & 21 & & & \cmark & \cmark & & \cmark & \xmark & \cmark & \cmark \\ \midrule
-31 & \multirow{9}{*}{\makecell{\textsf{sniffnet} \\ (7,304)}} & $\leftrightarrows$ & 352 & 72 & & & \cmark & & & & \cmark & \cmark & \cmark \\
-32 & & $\leftrightarrows$ & 179 & 182 & & & \cmark & & \cmark & & \xmark & \cmark & \small{\Stopsign} \\
-33 & & $\circlearrowleft$ & 67 & 53 & & & \cmark & \cmark & & \cmark & \cmark & \cmark & \cmark \\
-34 & & $\circlearrowleft$ & 98 & 98 & & & & \cmark & & \cmark & \xmark & \cmark & \cmark \\
-35 & & $\circlearrowleft$ & 189 & 28 & & & & & & & \cmark & \cmark & \cmark \\
-36 & & $\circlearrowleft$ & 190 & 66 & & & \cmark & & & & \cmark & \cmark & \cmark \\
-37 & & $\circlearrowleft$ & 339 & 47 & & & & & & & \cmark & \cmark & \cmark \\
-38 & & $\circlearrowleft$ & 339 & 25 & & & & \cmark & & & \xmark & \cmark & \cmark \\
-39 & & $\circlearrowleft$ & 340 & 84 & & & & & & & \cmark & \cmark & \cmark \\ \midrule
-40 & \multirow{1}{*}{\makecell{\textsf{beerus}  (302)}} & \small{\smiley{}} & 63 & 27 & & & & & & & \cmark & \small{\Stopsign} & \cmark \\ \bottomrule
+\multirow{2}{*}{\textbf{\#}}& \multirow{2}{*}{\textbf{\makecell{Project \\ (LOC)}}}& \multirow{2}{*}{\textbf{Type}}& \multicolumn{2}{c|}{\textbf{Size (LOC)}}& \multicolumn{6}{c|}{\textbf{Code Features}}& \multicolumn{3}{c|}{\textbf{Outcome}}& \multirow{2}{*}{\textbf{\makecell{Cargo \\ Check}}}& \multirow{2}{*}{\textbf{\makecell{Time \\ (sec)}}}\\[2pt]
+ &  & & \textbf{SRC}& \textbf{SNP} & \textbf{NLL} & \textbf{NLR} & \textbf{IB} & \textbf{MB} & \textbf{NEL} & \textbf{SHL}& \textbf{IJR}& \textbf{VSC}& \textbf{\tool} & &\\ \midrule
+1 & \multirow{7}{*}{\makecell{\textsf{petgraph} \\ (20,157)}} & $\circlearrowleft$ & 89 & 21 & & & & & & & \cmark & \small{\Stopsign} & \cmark & 0 & 0.37 \\
+2 & & $\circlearrowleft$ & 925 & 20 & & & & & & & \cmark & \xmark & \cmark & 0 & 1.02 \\
+3 & & $\circlearrowleft$ & 926 & 8 & & & & & \cmark & & \xmark & \xmark & \cmark & 1 & 1.47 \\
+4 & & $\circlearrowleft$ & 268 & 54 & & & \cmark & & & \cmark & \cmark & \xmark & \cmark & 0 & 1.7 \\
+5 & & $\circlearrowleft$ & 58 & 51 & & & \cmark & \cmark & & & \cmark & \xmark & \cmark & 0 & 0.85 \\
+6 & & $\circlearrowleft$ & 815 & 21 & & & \cmark & & & & \cmark & \cmark & \cmark & 0 & 0.98 \\
+7 & & $\leftrightarrows$ & 318 & 54 & & & \cmark & & \cmark & & \xmark & \xmark & \small{\Stopsign} & 1 & 0.55 \\ \midrule
+8 & \multirow{18}{*}{\makecell{\textsf{gitoxide} \\ (20,211)}} & $\circlearrowleft$ & 58 & 8 & & & & & & & \xmark & \cmark & \cmark & 0 & 0.93 \\
+9 & & $\circlearrowleft$ & 130 & 53 & & \cmark & & & \cmark & \cmark & \xmark & \xmark & \cmark & 1 & 1.24 \\
+10 & & $\circlearrowleft$ & 180 & 16 & & & & & & & \cmark & \xmark & \cmark & 0 & 0.64 \\
+11 & & $\circlearrowleft$ & 141 & 17 & & & & & & & \xmark & \xmark & \cmark & 0 & 0.81 \\
+12 & & $\circlearrowleft$ & 143 & 50 & & & & & \cmark & \cmark & \xmark & \xmark & \cmark & 0 & 0.81 \\
+13 & & $\circlearrowleft$ & 140 & 13 & & & & & & & \xmark & \xmark & \cmark & 0 & 0.86 \\
+14 & & $\circlearrowleft$ & 73 & 30 & & & & \cmark & & \cmark & \xmark & \xmark & \cmark & 0 & 0.69 \\
+15 & & $\circlearrowleft$ & 123 & 34 & & & & & & & \xmark & \cmark & \cmark & 0 & 0.68 \\
+16 & & \small{\smiley{}} & 85 & 47 & & \cmark & & & & & \xmark & \cmark & \cmark & 0 & 0.54 \\
+17 & & \small{\smiley{}} & 214 & 73 & & & \cmark & \cmark & \cmark & \cmark & \xmark & \xmark & \cmark & 1 & 1.2 \\
+18 & & $\leftrightarrows$ & 94 & 30 & & \cmark & & & \cmark & & \cmark & \xmark & \cmark & 1 & 0.92 \\
+19 & & $\leftrightarrows$ & 134 & 60 & & & & & \cmark & \cmark & \xmark & \xmark & \cmark & 3 & 2.32 \\
+20 & & $\leftrightarrows$ & 240 & 116 & & & & \cmark & \cmark & & \xmark & \xmark & \small{\Stopsign} & 1 & 1.15 \\
+21 & & $\leftrightarrows$ & 157 & 52 & & & & & & & \cmark & \cmark & \cmark & 0 & 0.69 \\
+22 & & $\leftrightarrows$ & 154 & 49 & & & & & & & \cmark & \cmark & \cmark & 0 & 0.64 \\
+23 & & $\leftrightarrows$ & 153 & 133 & & & & & & & \cmark & \cmark & \cmark & 0 & 0.7 \\
+24 & & $\leftrightarrows$ & 72 & 38 & & & \cmark & & & & \cmark & \cmark & \cmark & 0 & 0.64 \\
+25 & & $\leftrightarrows$ & 419 & 65 & & & \cmark & & & \cmark & \xmark & \xmark & \cmark & 0 & 0.72 \\ \midrule
+26 & \multirow{5}{*}{\makecell{\textsf{kickoff} \\ (1,502)}} & $\leftrightarrows$ & 324 & 56 & & & \cmark & \cmark & & \cmark & \cmark & \cmark & \cmark & 0 & 1.03 \\
+27 & & $\circlearrowleft$ & 125 & 53 & \cmark & & & & & & \xmark & \cmark & \cmark & 0 & 1.01 \\
+28 & & $\circlearrowleft$ & 94 & 51 & & & & & & & \cmark & \cmark & \cmark & 0 & 0.91 \\
+29 & & $\circlearrowleft$ & 124 & 34 & & & & & & & \cmark & \cmark & \cmark & 0 & 0.98 \\
+30 & & $\circlearrowleft$ & 127 & 21 & & & \cmark & \cmark & & \cmark & \xmark & \cmark & \cmark & 0 & 0.79 \\ \midrule
+31 & \multirow{9}{*}{\makecell{\textsf{sniffnet} \\ (7,304)}} & $\leftrightarrows$ & 356 & 71 & & & \cmark & & & & \cmark & \cmark & \cmark & 0 & 1.04 \\
+32 & & $\leftrightarrows$ & 193 & 180 & & & \cmark & & \cmark & & \xmark & \cmark & \small{\Stopsign} & 1 & 0.76 \\
+33 & & $\circlearrowleft$ & 71 & 50 & & & \cmark & \cmark & & \cmark & \cmark & \cmark & \cmark & 0 & 1.01 \\
+34 & & $\circlearrowleft$ & 107 & 98 & & & & \cmark & & \cmark & \xmark & \cmark & \cmark & 0 & 0.98 \\
+35 & & $\circlearrowleft$ & 189 & 27 & & & & & & & \cmark & \cmark & \cmark & 0 & 1.06 \\
+36 & & $\circlearrowleft$ & 193 & 57 & & & \cmark & & & & \cmark & \cmark & \cmark & 0 & 1.0 \\
+37 & & $\circlearrowleft$ & 349 & 45 & & & & & & & \cmark & \cmark & \cmark & 0 & 1.06 \\
+38 & & $\circlearrowleft$ & 339 & 20 & & & & \cmark & & & \xmark & \cmark & \cmark & 0 & 1.08 \\
+39 & & $\circlearrowleft$ & 340 & 71 & & & & & & & \cmark & \cmark & \cmark & 0 & 1.06 \\ \midrule
+40 & \multirow{1}{*}{\makecell{\textsf{beerus}  (302)}} & \small{\smiley{}} & 63 & 26 & & & & & & & \cmark & \small{\Stopsign} & \cmark & 0 & 1.07 \\ \bottomrule
 \end{tabular}%
+}
 }
 \end{minipage}
 \caption{
@@ -62,13 +64,15 @@ arbitrary extraction of a code fragment ($\circlearrowleft$).
 %
 The sizes of these cases in lines of code for the source file (SRC), and extracted snippet (SNP).
 %
+Code Features of the extracted fragment include:
+%
+non local loop (NLL), non local return (NLR), immutable borrow (IB), mutable borrow (MB), non elidible lifetimes (NEL), struct has lifetime slot (SHL).
+%
 The types of refactoring outcomes for IntelliJ IDEA Rust plug-in (IJR), VSCode Rust Analyzer (VSC), and \tool include: 
 %
 producing well-typed code (\cmark), producing ill-typed code (\xmark), and refusing to perform the refactoring (\small{\Stopsign}).  
 %
-The code features of the refactoring contains:
-%
-non local loop (NLL), non local return (NLR), immutable borrow (IB), mutable borrow (MB), non elidible lifetimes (NEL), struct has lifetime slot (SHL).
+For \tool, we count the \cc repair cycles, and measure the total time taken to extract the case study in seconds.
 %
 }
 \label{table:effoverall}

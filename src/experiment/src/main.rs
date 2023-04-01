@@ -4,23 +4,21 @@ mod projects;
 mod utils;
 
 use crate::projects::{ExtractionResultOld, PATH_TO_EXPERIMENT_PROJECTS};
-use crate::utils::{
-    get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch,
-    run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets,
-};
-use log::{info, warn};
+use crate::utils::{get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout};
+use log::{debug, info, warn};
 use std::fs;
 use std::string::ToString;
 
 const RESULT_SPREADSHEET: &str = "121Lwpv03Vq5K4IBdbQGn7OS5aBGPVKg-jDn8xczkXJc";
 const RESULT_SHEET_ID: i32 = 549359316;
+const RUN_EXTRACTION: bool = false;
 
 fn main() {
     env_logger::init();
     let secrets_content = fs::read_to_string("secrets.json").unwrap();
     let secrets = serde_json::from_str::<Secrets>(secrets_content.as_str()).unwrap();
     let result_n = fs::read_dir("./results").unwrap().count();
-    let csv_file = format!("./results/result_{}.csv", result_n);
+    let csv_file = format!("./results/result_{}---NOT-RAN.csv", result_n);
     let mut wtr = csv::Writer::from_path(&csv_file).unwrap();
     info!("Currently running {} experiments!", projects::size());
     for expr_project in projects::all() {
@@ -33,7 +31,8 @@ fn main() {
                 // rename_callee(&repo_path, &expr_branch, "bar", CALLEE_NAME, experiment.extractions.get(i - 1).unwrap());
 
                 // reset all branch to their base branch
-                either!(
+                if RUN_EXTRACTION {
+                    either!(
                     reset_to_base_branch(&repo_path, &expr_branch, &expr_branch_active),
                     panic!(
                         "could not reset to initial state for {}:{}",
@@ -41,12 +40,15 @@ fn main() {
                     )
                 );
 
-                info!(
+                    info!(
                     "checked out: {} {}<--- HEAD: {}",
                     expr_project.project,
                     expr_branch_active,
                     get_latest_commit(&repo_path)
                 );
+                } else {
+                    checkout(&repo_path, &expr_branch);
+                }
 
                 let mut extraction_result = ExtractionResult {
                     success: false,
@@ -71,6 +73,19 @@ fn main() {
                     rust_analyzer: extraction.rust_analyzer,
                     notes: extraction.notes.clone(),
                 };
+
+                if !RUN_EXTRACTION {
+                    info!("project {}, {}, has src_size: {}, and caller_size: {}, weird: {}",
+                        expr_project.project, expr_branch_active, extraction_result.src_size, extraction_result.caller_size,
+                        extraction_result.src_size < extraction_result.caller_size,
+                    );
+                    if extraction_result.src_size < extraction_result.caller_size {
+                        panic!("weird!!");
+                    }
+                    wtr.serialize(extraction_result)
+                        .expect("failed to write experiment results!");
+                    continue
+                }
 
                 let (success, duration) = run_extraction(extraction, &mut extraction_result);
                 info!(
@@ -101,8 +116,8 @@ fn main() {
         }
     }
     wtr.flush().expect("failed to flush csv");
-
-    either!(
+    if RUN_EXTRACTION {
+        either!(
         upload_csv(
             &secrets,
             &csv_file,
@@ -116,4 +131,5 @@ fn main() {
             csv_file
         )
     );
+    }
 }

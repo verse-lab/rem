@@ -119,12 +119,12 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
                 m = ''.join(tmp[::-1][1:])
             project_sizes[project] = m
 
-        merged = {'Project': {'row':2}, 'Type': {'row':2}, 'Size': {'col':2, 'align':'c|'}, 'Code Features': {'col':len(features), 'align': 'c|'}, 'Outcome': {'col':3, 'align':'c'}}
+        merged = {'Project': {'row':2}, 'Type': {'row':2}, 'Size (LOC)': {'col':2, 'align':'c|'}, 'Code Features': {'col':len(features), 'align': 'c|'}, 'Outcome': {'col':3, 'align':'c|'}, r'\makecell{Cargo \\ Check}': {'row':2}, r'\makecell{Time \\ (sec)}': {'row':2}}
         replace_txt = r'[[[REPLACE_ME]]]'
         fmt = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'))
         fmt1 = lambda x, y: x.replace(replace_txt, str(y).replace('_', '\\_'), 1)
         features_starts_at = 6
-        alignment = r'c|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c'
+        alignment = r'c|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }|@{\ \ }c@{\ \ }c@{\ \ }|c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c@{\ \ }c|c@{\ \ }c@{\ \ }c@{\ \ }|c@{\ \ }|c'
         #('r' * ((features_starts_at - 1) + len(features) - 1)).replace('r','r|',2) + '|rrr'
         preamble = r'''\begin{table}[]
 \begin{minipage}{\textwidth}
@@ -148,7 +148,10 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
                 tmp = fmt1(tmp, r'\multicolumn{'+str(merged[h]['col'])+r'}{'+merged[h]['align']+'}')
             elif 'row' in merged[h]:
                 tmp = fmt1(tmp, r'\multirow{'+str(merged[h]['row'])+r'}{*}')
-            header += fmt1(tmp, h)
+            if h == 'Project':
+                header += fmt1(tmp, r'\makecell{Project \\ (LOC)}')
+            else:
+                header += fmt1(tmp, h)
         header += r'\\[2pt]' + '\n'
         # header += r'\\ \cline{'+str(features_starts_at)+'-' + str(features_starts_at+len(features) - 1) + '}\n'
         empty_header = ' & ' * 2
@@ -161,7 +164,8 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
         outcome_header = r'& \textbf{IJR}'
         outcome_header += r'& \textbf{VSC}'
         outcome_header += r'& \textbf{\tool}'
-        header += empty_header + sizes_header + features_header + outcome_header
+        extra_empty_header = ' &' * 2
+        header += empty_header + sizes_header + features_header + outcome_header + extra_empty_header
         header += r'\\ \midrule' + '\n'
         footer = r''' \bottomrule
 \end{tabular}%'''
@@ -181,13 +185,15 @@ arbitrary extraction of a code fragment ($\circlearrowleft$).
 %
 The sizes of these cases in lines of code for the source file (SRC), and extracted snippet (SNP).
 %
+Code Features of the extracted fragment include:
+%
+[[[REPLACE_ME]]].
+%
 The types of refactoring outcomes for IntelliJ IDEA Rust plug-in (IJR), VSCode Rust Analyzer (VSC), and \tool include: 
 %
 producing well-typed code (\cmark), producing ill-typed code (\xmark), and refusing to perform the refactoring (\small{\Stopsign}).  
 %
-The code features of the refactoring contains:
-%
-[[[REPLACE_ME]]].
+For \tool, we count the \cc repair cycles, and measure the total time taken to extract the case study in seconds.
 %
 }
 \label{table:eff[[[REPLACE_ME]]]}
@@ -234,6 +240,8 @@ The code features of the refactoring contains:
             body += fmt(row_template, row['IJ'])
             body += fmt(row_template, row['RA'])
             body += fmt(row_template, row['SUCCESS'])
+            body += fmt(row_template, row['CARGO_CYCLES'])
+            body += fmt(row_template, round(row['TOTAL_DURATION_S'], 2))
             body += r' \\' + '\n'
         body = body.rstrip('\n')
         latex = preamble + '\n' + header + body + footer
@@ -290,7 +298,7 @@ def inner_handler(csv_path, show=False):
     overall(df)
     # cargo_cycle_plot(df)
     #features_table_by_project(df, show)
-    features_table(df, "overall", landscape=False, resize_to_width=False, show=show)
+    features_table(df, "overall", landscape=False, resize_to_width=True, show=show)
     if show:
         plt.show()
 

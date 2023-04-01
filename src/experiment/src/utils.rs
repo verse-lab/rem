@@ -17,7 +17,7 @@ use borrower::borrow::inner_make_borrows;
 use controller::non_local_controller::inner_make_controls;
 use repairer::common::RepairSystem;
 use repairer::repair_lifetime_loosest_bound_first::Repairer;
-use utils::{check_project, find_caller};
+use utils::{check_project, find_caller, format_source};
 
 pub const CALLEE_NAME: &str = "bar____EXTRACT_THIS";
 
@@ -389,7 +389,10 @@ pub fn get_project_size(e: &Extraction) -> i32 {
 
 pub fn get_src_size(e: &Extraction) -> i32 {
     let mut cmd = Command::new("cargo");
-    cmd.arg("count").arg(&e.src_path);
+    let path = "/tmp/some_src_tmp.rs";
+    let content = fs::read_to_string(&e.src_path).unwrap();
+    fs::write(path, format_source(content.as_str())).unwrap();
+    cmd.arg("count").arg(path);
     let out = cmd.output().unwrap();
     if out.status.success() {
         let stats = String::from_utf8_lossy(&out.stdout);
@@ -401,10 +404,12 @@ pub fn get_src_size(e: &Extraction) -> i32 {
 }
 
 pub fn get_caller_size(e: &Extraction) -> i32 {
-    let (found, caller, callee) = find_caller(e.src_path.as_str(), e.caller.as_str(), CALLEE_NAME);
+    let (found, mut caller, mut callee) = find_caller(e.src_path.as_str(), e.caller.as_str(), CALLEE_NAME, false);
     either!(found, panic!("did not find caller/callee"));
     let path = "/tmp/some_caller_tmp.rs";
-    fs::write(path, format!("{}\n\n{}", caller, callee)).unwrap();
+    caller = caller.split("\n").filter(|x| !x.starts_with("#")).collect::<Vec<&str>>().join("\n");
+    callee = callee.split("\n").filter(|x| !x.starts_with("#")).collect::<Vec<&str>>().join("\n");
+    fs::write(path, format!("{}{}", caller, callee)).unwrap();
     let mut cmd = Command::new("cargo");
     cmd.arg("count").arg(path);
     let out = cmd.output().unwrap();

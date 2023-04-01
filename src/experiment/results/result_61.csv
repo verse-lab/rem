@@ -1,0 +1,118 @@
+SUCCESS,FIX_NLCF_DURATION_MS,FIX_BORROW_DURATION_MS,FIX_LIFETIME_CARGO_MS,CARGO_CYCLES,TOTAL_DURATION_MS,TOTAL_DURATION_S,COMMIT,COMMIT_URL,FAILED_AT,PROJECT,BRANCH,PROJECT_SIZE,SRC_SIZE,CALLER_SIZE,NUM_INPUTS,FEATURES,NOTES
+true,55,77,284,0,416,0.41600000000000004,"1354df19ab4b7078e86cfdf816c4a6ca54843d80
+","https://github.com/sewenthy/petgraph/commit/1354df19ab4b7078e86cfdf816c4a6ca54843d80
+",,petgraph,ext1-expr-active,20114,89,27,2,[],within impl
+true,67,112,865,0,1045,1.045,"dee47513c6e02148624db9cfa5578ce094d5ace9
+","https://github.com/sewenthy/petgraph/commit/dee47513c6e02148624db9cfa5578ce094d5ace9
+",,petgraph,ext2-expr-active,20115,921,20,3,[],"new impl with generics annotated + invoc using self.bar, RA failed re-declared same generics"
+true,101,113,1374,1,1589,1.589,"7b691fd3aeae8abeb22962f3e9238a7c4c071399
+","https://github.com/sewenthy/petgraph/commit/7b691fd3aeae8abeb22962f3e9238a7c4c071399
+",,petgraph,ext3-expr-active,20115,921,8,2,"[""non_elidible_lifetimes""]","new impl + invoc using self.bar + lt bound needed between genrics and output, RA failed no lt annotations, IJ no annotations"
+true,78,83,1512,0,1674,1.674,"68c32e4ccb0a94541685f8c827f1fa905d1b8c90
+","https://github.com/sewenthy/petgraph/commit/68c32e4ccb0a94541685f8c827f1fa905d1b8c90
+",,petgraph,ext4-expr-active,20113,264,54,4,"[""immutable_borrow""]","RA tried to re-declare same generics again--failed, IJ got by on elided lt"
+true,75,74,738,0,888,0.888,"b3f46655ce3362378677fd54eea67d7c30d296bd
+","https://github.com/sewenthy/petgraph/commit/b3f46655ce3362378677fd54eea67d7c30d296bd
+",,petgraph,ext5-expr-active,20113,55,122,2,"[""immutable_borrow"",""mutable_borrow""]",RA did not declare generics
+true,92,104,831,0,1028,1.028,"f27ecc74a032b34354460922066f1299413f6833
+","https://github.com/sewenthy/petgraph/commit/f27ecc74a032b34354460922066f1299413f6833
+",,petgraph,ext6-expr-active,20113,815,22,2,"[""immutable_borrow""]",has self so smart not elide
+false,50,53,412,1,517,0.517,"c68af668befcd210f8c17870521d536869d8bea7
+","https://github.com/sewenthy/petgraph/commit/c68af668befcd210f8c17870521d536869d8bea7
+",cargo,petgraph,inline-ext1-expr-active,20157,308,54,4,"[""immutable_borrow"",""non_elidible_lifetimes""]","failed due to type inference on generics, RA & IJ also failed generics inferences"
+true,74,49,767,0,891,0.891,"7f1f520197f5b8cfdeb8472af7d67c6e03301bf2
+","https://github.com/sewenthy/gitoxide/commit/7f1f520197f5b8cfdeb8472af7d67c6e03301bf2
+",,gitoxide,ext1-expr-active,9131,56,9,1,[],
+true,76,76,1108,1,1261,1.2610000000000001,"fc46163f049bad1fc9cb58c2eb7cf6ec2c4278ea
+","https://github.com/sewenthy/gitoxide/commit/fc46163f049bad1fc9cb58c2eb7cf6ec2c4278ea
+",,gitoxide,ext2-expr-active,771,109,53,6,"[""non_local_return"",""non_elidible_lifetimes""]",complex lifetime + bounds + nlcf--used in paper
+true,76,80,518,0,675,0.675,"5ff8bd238baf3c89f697feb580551af66f439072
+","https://github.com/sewenthy/gitoxide/commit/5ff8bd238baf3c89f697feb580551af66f439072
+",,gitoxide,ext3-expr-active,800,178,19,1,[],"extracted within impl + invoc Self::bar, has question ?, RA will also failed even after helping with import"
+true,75,79,682,0,837,0.837,"3fa3f6a18637c266504f5341d432b2414ba5b279
+","https://github.com/sewenthy/gitoxide/commit/3fa3f6a18637c266504f5341d432b2414ba5b279
+",,gitoxide,ext4-expr-active,8966,134,18,1,[],extracted within impl + invoc self.bar with non-elidible lifetime
+true,47,82,647,0,777,0.777,"2c2420d508a485eb4f4e2adb12275590a06bdd18
+","https://github.com/sewenthy/gitoxide/commit/2c2420d508a485eb4f4e2adb12275590a06bdd18
+",,gitoxide,ext5-expr-active,8966,134,60,1,"[""non_elidible_lifetimes""]",extracted within impl + invoc Self::bar nel
+true,76,48,710,0,835,0.835,"519d5f39567af0f375b7ebf7fc02235bda83fb9e
+","https://github.com/sewenthy/gitoxide/commit/519d5f39567af0f375b7ebf7fc02235bda83fb9e
+",,gitoxide,ext6-expr-active,8966,134,15,0,[],"within closure, elided lt but need to have '_"
+true,61,46,505,0,613,0.613,"fa55f9b664aed0e4a51055018ca0aaee51083b1b
+","https://github.com/sewenthy/gitoxide/commit/fa55f9b664aed0e4a51055018ca0aaee51083b1b
+",,gitoxide,ext7-expr-active,1027,73,31,4,"[""mutable_borrow""]","loop, RA did not de-ref, also '_ needed"
+true,75,78,476,0,630,0.63,"e66809f9fb357dded05e80500d72118e9a42e5dd
+","https://github.com/sewenthy/gitoxide/commit/e66809f9fb357dded05e80500d72118e9a42e5dd
+",,gitoxide,ext8-expr-active,1026,121,41,1,[],"some unrelated syntax feature |, IJ bad qualified name"
+true,44,74,400,0,519,0.519,"4311451ea2144c6ce2ad512de656792ec731bb01
+","https://github.com/sewenthy/gitoxide/commit/4311451ea2144c6ce2ad512de656792ec731bb01
+",,gitoxide,ext-com1-expr-active,574,84,47,1,"[""non_local_return""]",nclf
+true,77,81,1117,1,1277,1.2770000000000001,"20dd36fd7d90256cb52ee03987f4924cacbaac61
+","https://github.com/sewenthy/gitoxide/commit/20dd36fd7d90256cb52ee03987f4924cacbaac61
+",,gitoxide,ext-com2-expr-active,6761,192,73,3,"[""immutable_borrow"",""mutable_borrow"",""non_elidible_lifetimes""]",2 lifetimes usage + good elision
+true,45,76,828,1,949,0.9490000000000001,"2f567fb380cdc55ba55432def72190c38c5abf6c
+","https://github.com/sewenthy/gitoxide/commit/2f567fb380cdc55ba55432def72190c38c5abf6c
+",,gitoxide,inline-ext1-expr-active,375,86,32,1,"[""non_local_return"",""non_elidible_lifetimes""]","nclf + lifetime within traits + some non-elidibles, lt elision works in IJ favor 1 input ref + 1 output ref"
+true,58,83,2117,3,2260,2.2600000000000002,"d99d67d460883a82118d1c0319c5e3fd1e1c1463
+","https://github.com/sewenthy/gitoxide/commit/d99d67d460883a82118d1c0319c5e3fd1e1c1463
+",,gitoxide,inline-ext2-expr-active,3759,122,60,1,"[""non_elidible_lifetimes""]",generic has lifetimes + very complex boundings--good to show
+false,49,59,1007,1,1116,1.116,"43b993e273bb09d9f69622e01cb1488dcf8aac53
+","https://github.com/sewenthy/gitoxide/commit/43b993e273bb09d9f69622e01cb1488dcf8aac53
+",cargo,gitoxide,inline-ext3-expr-active,20211,216,121,1,"[""mutable_borrow"",""non_elidible_lifetimes""]","failed due to cargo check, RA type inference"
+true,73,49,557,0,680,0.68,"327c292a85415ee5e33beacad692dd26dfb637ef
+","https://github.com/sewenthy/gitoxide/commit/327c292a85415ee5e33beacad692dd26dfb637ef
+",,gitoxide,inline-ext4-expr-active,630,154,52,1,[],
+true,45,78,502,0,626,0.626,"ef4a2220e2a1b3873397ab5174c91eab93f578f2
+","https://github.com/sewenthy/gitoxide/commit/ef4a2220e2a1b3873397ab5174c91eab93f578f2
+",,gitoxide,inline-ext5-expr-active,625,149,49,1,[],
+true,63,59,591,0,714,0.714,"72e2e1414b7fc9f6036b47ca12e0c15f34ebb89f
+","https://github.com/sewenthy/gitoxide/commit/72e2e1414b7fc9f6036b47ca12e0c15f34ebb89f
+",,gitoxide,inline-ext6-expr-active,1428,143,144,1,[],
+true,43,75,492,0,611,0.611,"7dc1499a07d76f97366faa44b175a5d55dbb5fc7
+","https://github.com/sewenthy/gitoxide/commit/7dc1499a07d76f97366faa44b175a5d55dbb5fc7
+",,gitoxide,inline-ext7-expr-active,1026,72,43,1,"[""immutable_borrow""]",
+true,84,60,603,0,749,0.749,"58d73fa4cb0aa6474947bfebfb481b4985becaa7
+","https://github.com/sewenthy/gitoxide/commit/58d73fa4cb0aa6474947bfebfb481b4985becaa7
+",,gitoxide,inline-ext8-expr-active,1304,368,65,2,"[""immutable_borrow""]",
+true,69,83,714,0,867,0.867,"38ae856965c96d1f20c8d86b07f151fb00ceb41f
+","https://github.com/sewenthy/kickoff/commit/38ae856965c96d1f20c8d86b07f151fb00ceb41f
+",,kickoff,inline-ext1-expr-active,1502,324,56,2,"[""immutable_borrow"",""mutable_borrow""]",all elidible lifetimes
+true,46,78,871,0,996,0.996,"ceb6be895d513a0054bbd6424c7a1af1b831c1d3
+","https://github.com/sewenthy/kickoff/commit/ceb6be895d513a0054bbd6424c7a1af1b831c1d3
+",,kickoff,ext1-expr-active,1486,123,53,3,"[""non_local_loop""]",IJ did not do nclf + no deref
+true,45,78,818,0,942,0.9420000000000001,"56c04d1e01ffdd2c6d79aa819412f52424d5f764
+","https://github.com/sewenthy/kickoff/commit/56c04d1e01ffdd2c6d79aa819412f52424d5f764
+",,kickoff,ext2-expr-active,1487,94,51,2,[],
+true,74,73,785,0,933,0.933,"7e22805b5534f2d0a2c511abd7e82be36847e632
+","https://github.com/sewenthy/kickoff/commit/7e22805b5534f2d0a2c511abd7e82be36847e632
+",,kickoff,ext3-expr-active,1487,124,34,2,[],
+true,72,44,614,0,731,0.731,"77d1daf2769b2bb29934c898a4a48422a73a7cca
+","https://github.com/sewenthy/kickoff/commit/77d1daf2769b2bb29934c898a4a48422a73a7cca
+",,kickoff,ext4-expr-active,1486,123,21,3,"[""immutable_borrow"",""mutable_borrow""]",IJ failed because of deref
+true,79,85,911,0,1076,1.076,"e0f441db4125d031c6f60ae5b8e95b6b2d638bf6
+","https://github.com/sewenthy/sniffnet/commit/e0f441db4125d031c6f60ae5b8e95b6b2d638bf6
+",,sniffnet,inline-ext1-expr-active,7283,352,72,3,"[""immutable_borrow""]",all elidible lifetimes
+false,76,61,591,1,729,0.729,"69ff44b7b6423e019ef6256609e406996dde5a6e
+","https://github.com/sewenthy/sniffnet/commit/69ff44b7b6423e019ef6256609e406996dde5a6e
+",cargo,sniffnet,inline-ext2-expr-active,7304,179,182,6,"[""immutable_borrow"",""non_elidible_lifetimes""]","technial; need to introduce A{x=*x} if taken x as reference and init struct, IJ failed borrowing, RA figured out Copy"
+true,55,76,841,0,974,0.974,"10622fbfb3e5ef096732ef0b7cce476b1a9f7363
+","https://github.com/sewenthy/sniffnet/commit/10622fbfb3e5ef096732ef0b7cce476b1a9f7363
+",,sniffnet,ext1-expr-active,7269,67,53,3,"[""immutable_borrow"",""mutable_borrow""]",
+true,44,79,831,0,955,0.9550000000000001,"95f1aa339f5b594dd7bb0a4a79ee3f3f6911cbbf
+","https://github.com/sewenthy/sniffnet/commit/95f1aa339f5b594dd7bb0a4a79ee3f3f6911cbbf
+",,sniffnet,ext2-expr-active,7269,98,98,4,"[""mutable_borrow""]",path-ed receiver
+true,72,48,807,0,929,0.929,"542a950035ac550535920831bb445c64fbce1c29
+","https://github.com/sewenthy/sniffnet/commit/542a950035ac550535920831bb445c64fbce1c29
+",,sniffnet,ext3-expr-active,7269,189,28,2,[],
+true,46,48,860,0,956,0.9560000000000001,"fce0ad037ebe4ece0e9f610d664fcccbb9527998
+","https://github.com/sewenthy/sniffnet/commit/fce0ad037ebe4ece0e9f610d664fcccbb9527998
+",,sniffnet,ext4-expr-active,7270,190,66,2,"[""immutable_borrow""]",
+true,81,56,910,0,1048,1.048,"c930f5e3ed33e995dfc7e84da4aa626dfe5757f2
+","https://github.com/sewenthy/sniffnet/commit/c930f5e3ed33e995dfc7e84da4aa626dfe5757f2
+",,sniffnet,ext5-expr-active,7269,339,47,5,[],lots of references but all elidible
+true,81,78,856,0,1016,1.016,"0340137ff7b9dcf1f28afa7a53b40a166a57b298
+","https://github.com/sewenthy/sniffnet/commit/0340137ff7b9dcf1f28afa7a53b40a166a57b298
+",,sniffnet,ext6-expr-active,7269,339,25,2,"[""mutable_borrow""]",IJ failed no de-ref
+true,78,86,882,0,1047,1.047,"e7b257fcd6b4997b954d526e34abbd243a5f2601
+","https://github.com/sewenthy/sniffnet/commit/e7b257fcd6b4997b954d526e34abbd243a5f2601
+",,sniffnet,ext7-expr-active,7270,340,84,1,[],

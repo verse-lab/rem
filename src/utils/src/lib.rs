@@ -164,6 +164,7 @@ pub struct FindFn<'a> {
     fn_name: &'a str,
     found: bool,
     fn_txt: String,
+    body_only: bool,
 }
 
 impl VisitMut for FindFn<'_> {
@@ -176,7 +177,12 @@ impl VisitMut for FindFn<'_> {
         match id == self.fn_name {
             true => {
                 self.found = true;
-                self.fn_txt = i.into_token_stream().to_string();
+                i.attrs = vec![];
+                if self.body_only {
+                    self.fn_txt = i.block.clone().into_token_stream().to_string();
+                } else {
+                    self.fn_txt = i.into_token_stream().to_string();
+                }
             }
             false => {}
         }
@@ -192,7 +198,12 @@ impl VisitMut for FindFn<'_> {
         match id == self.fn_name {
             true => {
                 self.found = true;
-                self.fn_txt = i.into_token_stream().to_string();
+                i.attrs = vec![];
+                if self.body_only {
+                    self.fn_txt = "{}".to_string();
+                } else {
+                    self.fn_txt = i.into_token_stream().to_string();
+                }
             }
             false => {}
         }
@@ -208,7 +219,12 @@ impl VisitMut for FindFn<'_> {
         match id == self.fn_name {
             true => {
                 self.found = true;
-                self.fn_txt = i.into_token_stream().to_string();
+                i.attrs = vec![];
+                if self.body_only {
+                    self.fn_txt = i.block.clone().into_token_stream().to_string();
+                } else {
+                    self.fn_txt = i.into_token_stream().to_string();
+                }
             }
             false => (),
         }
@@ -219,6 +235,7 @@ pub fn find_caller(
     file_name: &str,
     caller_name: &str,
     callee_name: &str,
+    callee_body_only: bool,
 ) -> (bool, String, String) {
     let file_content: String = fs::read_to_string(&file_name).unwrap().parse().unwrap();
     let mut file = syn::parse_str::<File>(file_content.as_str())
@@ -240,6 +257,7 @@ pub fn find_caller(
         fn_name: callee_name,
         found: false,
         fn_txt: String::new(),
+        body_only: callee_body_only,
     };
 
     callee.visit_file_mut(&mut file);
