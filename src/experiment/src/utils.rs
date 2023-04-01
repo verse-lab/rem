@@ -425,7 +425,7 @@ pub fn get_caller_callee_size(e: &Extraction) -> (i32, i32) {
         let stats_callee = String::from_utf8_lossy(&out_callee.stdout);
         debug!("found stats: {}, {}", stats_caller.as_ref(), stats_callee.as_ref());
         let caller_size_after_ext = read_cargo_count(stats_caller.as_ref());
-        let callee_size_after_ext = read_cargo_count(stats_caller.as_ref());
+        let callee_size_after_ext = read_cargo_count(stats_callee.as_ref());
         (caller_size_after_ext + callee_size_after_ext, callee_size_after_ext)
     } else {
         panic!("no commit hash found for HEAD")

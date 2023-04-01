@@ -155,8 +155,8 @@ def features_table(df, name, longTable=False, landscape=False, show=False, resiz
         header += r'\\[2pt]' + '\n'
         # header += r'\\ \cline{'+str(features_starts_at)+'-' + str(features_starts_at+len(features) - 1) + '}\n'
         empty_header = ' & ' * 2
-        sizes_header = r'& \textbf{SRC}'
-        sizes_header += r'& \textbf{SNP}'
+        sizes_header = r'& \textbf{CLR}'
+        sizes_header += r'& \textbf{CLE}'
         features_abbr = lambda i: ''.join([j[0] for j in i.split(' ')]).upper()[:3]
         features_header = ""
         for ff in features:
@@ -183,7 +183,7 @@ reproducing refactoring from a commit by a human developer (\smiley{}),
 inlining an existing function and extracting it again ($\leftrightarrows$), and
 arbitrary extraction of a code fragment ($\circlearrowleft$).
 %
-The sizes of these cases in lines of code for the source file (SRC), and extracted snippet (SNP).
+The sizes of these cases in lines of code for the caller function (pre-extraction) (CLR), and extracted function i.e. the callee (CLE).
 %
 Notable language features occurring in the refactored code fragments include:
 %
@@ -227,8 +227,8 @@ For \tool, we count the \cc repair cycles, and measure the total time taken to e
                     project_line = project_line.replace(r'\\','')
                 body += project_line
             body += fmt(row_template, row['Type'])
-            body += fmt(row_template, row['SRC_SIZE'])
             body += fmt(row_template, row['CALLER_SIZE'])
+            body += fmt(row_template, row['CALLEE_SIZE'])
             for r in features:
                 h = row[r]
                 if h == '':
