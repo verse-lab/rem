@@ -348,6 +348,7 @@ pub struct ExtractionResult {
     pub project_size: i32,
     pub src_size: i32,
     pub caller_size: i32,
+    pub callee_size: i32,
     pub num_inputs: usize,
     pub features: String,
     #[serde(skip_serializing)]
@@ -390,7 +391,8 @@ pub fn get_project_size(e: &Extraction) -> i32 {
 pub fn get_src_size(e: &Extraction) -> i32 {
     let mut cmd = Command::new("cargo");
     let path = "/tmp/some_src_tmp.rs";
-    let content = fs::read_to_string(&e.src_path).unwrap();
+    let mut content = fs::read_to_string(&e.src_path).unwrap();
+    content = content.split("\n").filter(|x| !x.starts_with("#")).collect::<Vec<&str>>().join("\n");
     fs::write(path, format_source(content.as_str())).unwrap();
     cmd.arg("count").arg(path);
     let out = cmd.output().unwrap();
@@ -403,20 +405,28 @@ pub fn get_src_size(e: &Extraction) -> i32 {
     }
 }
 
-pub fn get_caller_size(e: &Extraction) -> i32 {
+pub fn get_caller_callee_size(e: &Extraction) -> (i32, i32) {
     let (found, mut caller, mut callee) = find_caller(e.src_path.as_str(), e.caller.as_str(), CALLEE_NAME, false);
     either!(found, panic!("did not find caller/callee"));
-    let path = "/tmp/some_caller_tmp.rs";
-    caller = caller.split("\n").filter(|x| !x.starts_with("#")).collect::<Vec<&str>>().join("\n");
-    callee = callee.split("\n").filter(|x| !x.starts_with("#")).collect::<Vec<&str>>().join("\n");
-    fs::write(path, format!("{}{}", caller, callee)).unwrap();
-    let mut cmd = Command::new("cargo");
-    cmd.arg("count").arg(path);
-    let out = cmd.output().unwrap();
-    if out.status.success() {
-        let stats = String::from_utf8_lossy(&out.stdout);
-        debug!("found stats: {}", stats.as_ref());
-        read_cargo_count(stats.as_ref())
+    let path_caller = "/tmp/some_caller_tmp.rs";
+    let path_callee = "/tmp/some_callee_tmp.rs";
+    caller = caller.split("\n").filter(|x| !x.trim().starts_with("#")).collect::<Vec<&str>>().join("\n");
+    callee = callee.split("\n").filter(|x| !x.trim().starts_with("#")).collect::<Vec<&str>>().join("\n");
+    fs::write(path_caller, caller).unwrap();
+    fs::write(path_callee, callee).unwrap();
+    let mut cmd_caller = Command::new("cargo");
+    cmd_caller.arg("count").arg(path_caller);
+    let out_caller = cmd_caller.output().unwrap();
+    let mut cmd_callee = Command::new("cargo");
+    cmd_callee.arg("count").arg(path_callee);
+    let out_callee = cmd_callee.output().unwrap();
+    if out_caller.status.success() && out_callee.status.success() {
+        let stats_caller = String::from_utf8_lossy(&out_caller.stdout);
+        let stats_callee = String::from_utf8_lossy(&out_callee.stdout);
+        debug!("found stats: {}, {}", stats_caller.as_ref(), stats_callee.as_ref());
+        let caller_size_after_ext = read_cargo_count(stats_caller.as_ref());
+        let callee_size_after_ext = read_cargo_count(stats_caller.as_ref());
+        (caller_size_after_ext + callee_size_after_ext, callee_size_after_ext)
     } else {
         panic!("no commit hash found for HEAD")
     }

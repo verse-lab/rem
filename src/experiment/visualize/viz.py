@@ -185,7 +185,7 @@ arbitrary extraction of a code fragment ($\circlearrowleft$).
 %
 The sizes of these cases in lines of code for the source file (SRC), and extracted snippet (SNP).
 %
-Code Features of the extracted fragment include:
+Notable language features occurring in the refactored code fragments include:
 %
 [[[REPLACE_ME]]].
 %

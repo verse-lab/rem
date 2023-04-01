@@ -4,7 +4,7 @@ mod projects;
 mod utils;
 
 use crate::projects::{ExtractionResultOld, PATH_TO_EXPERIMENT_PROJECTS};
-use crate::utils::{get_caller_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout};
+use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout};
 use log::{debug, info, warn};
 use std::fs;
 use std::string::ToString;
@@ -50,6 +50,8 @@ fn main() {
                     checkout(&repo_path, &expr_branch);
                 }
 
+                let (caller_size, callee_size) = get_caller_callee_size(extraction);
+
                 let mut extraction_result = ExtractionResult {
                     success: false,
                     fix_nlcf_duration_ms: Default::default(),
@@ -65,7 +67,8 @@ fn main() {
                     branch: expr_branch_active.clone(),
                     project_size: get_project_size(extraction),
                     src_size: get_src_size(extraction),
-                    caller_size: get_caller_size(extraction),
+                    caller_size,
+                    callee_size,
                     num_inputs: 0,
                     features: String::new(),
                     features_inner: vec![],
@@ -75,11 +78,10 @@ fn main() {
                 };
 
                 if !RUN_EXTRACTION {
-                    info!("project {}, {}, has src_size: {}, and caller_size: {}, weird: {}",
+                    info!("project {}, {}, has src_size: {}, and caller_size: {}",
                         expr_project.project, expr_branch_active, extraction_result.src_size, extraction_result.caller_size,
-                        extraction_result.src_size < extraction_result.caller_size,
                     );
-                    if extraction_result.src_size < extraction_result.caller_size {
+                    if extraction_result.callee_size > extraction_result.caller_size {
                         panic!("weird!!");
                     }
                     wtr.serialize(extraction_result)
