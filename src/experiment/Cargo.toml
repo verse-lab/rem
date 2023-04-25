@@ -9,9 +9,9 @@ edition = "2021"
 log = "0.4.17"
 env_logger = "0.10.0"
 regex = "1.6.0"
-controller = { path = "../controller" }
-borrower = { path = "../borrower" }
-repairer = { path = "../repairer" }
+rem-controller = { path = "../rem-controller" }
+rem-borrower = { path = "../rem-borrower" }
+rem-repairer = { path = "../rem-repairer" }
 utils = { path = "../utils" }
 csv = "1.1"
 serde = { version = "1", features = ["derive"] }

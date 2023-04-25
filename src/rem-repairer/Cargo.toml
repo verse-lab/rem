@@ -1,23 +1,22 @@
 [package]
-name = "borrower"
+name = "rem-repairer"
 version = "0.1.0"
 edition = "2021"
 authors = ["Sewen Thy <me@sewenthy.dev>"]
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 colored = "2.0.0"
 clap = { version = "4.0.20", features = [ "derive" ] }
+regex = "1.6.0"
+rustfix = "0.6.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 syn = {version="1.0.86", features=["printing", "parsing", "full", "visit-mut", "visit"]}
 proc-macro2 = { version = "1.0", features = ["span-locations"]}
 quote = "1.0"
 utils = { path = "../utils" }
-constraint = { path = "../constraint" }
-itertools = "0.10.5"
-regex = "1.6.0"
-env_logger = "0.10.0"
 log = "0.4.17"
-
-[package.metadata.rust-analyzer]
-rustc_private=true
+env_logger = "0.10.0"
