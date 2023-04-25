@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use proc_macro2::Ident;
 use std::fs;
 
-use constraint::common::AliasConstraints;
-use constraint::ConstraintManager;
+use rem_constraint::common::AliasConstraints;
+use rem_constraint::ConstraintManager;
 use itertools::Itertools;
 use regex::Regex;
 use syn::punctuated::Punctuated;
@@ -16,7 +16,7 @@ use syn::{
 };
 
 use log::debug;
-use utils::{format_source, FindCallee};
+use rem_utils::{format_source, FindCallee};
 
 struct RefBorrowAssignerHelper<'a> {
     make_ref: &'a Vec<String>,
@@ -928,7 +928,7 @@ fn run_alias_analysis(
 ) {
     let mut cs = ConstraintManager::default();
 
-    let annot_ast = utils::annotation::annotate_ast(i);
+    let annot_ast = rem_utils::annotation::annotate_ast(i);
 
     cs.add_constraint::<AliasConstraints>();
 
@@ -937,7 +937,7 @@ fn run_alias_analysis(
     let constraints: Vec<AliasConstraints> = constraints.into_iter().unique().collect();
 
     let mut lookup = HashMap::new();
-    let lookup_str: String = fs::read_to_string(utils::annotation::LOOKUP_FILE)
+    let lookup_str: String = fs::read_to_string(rem_utils::annotation::LOOKUP_FILE)
         .unwrap()
         .parse()
         .unwrap();

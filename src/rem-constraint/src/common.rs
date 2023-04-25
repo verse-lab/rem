@@ -10,8 +10,8 @@ use nom::{
 use proc_macro2::{Ident, Span};
 
 use syn::{visit_mut::VisitMut, Expr, ExprAssign, FnArg, Stmt, Type};
-use utils::annotation::Annotations;
-use utils::labelling::Label;
+use rem_utils::annotation::Annotations;
+use rem_utils::labelling::Label;
 
 /// Aliasing Constraints
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -33,7 +33,7 @@ impl std::fmt::Display for AliasConstraints {
 impl crate::LocalConstraint for AliasConstraints {
     const CHR_RULES: &'static str = include_str!("constraint_rules/alias_constraint_rules.pl");
     fn parse(s: &str) -> nom::IResult<&str, Self> {
-        use utils::parser::{label, ws};
+        use rem_utils::parser::{label, ws};
         fn ref_(s: &str) -> IResult<&str, AliasConstraints> {
             let (s, _) = tag("ref")(s)?;
             let (s, l1) = delimited(char('('), label, char(')'))(s)?;
@@ -63,8 +63,8 @@ impl crate::LocalConstraint for AliasConstraints {
         alt((ref_, alias, assign))(s)
     }
 
-    fn collect<'a>((map, fun): &utils::annotation::Annotated<'a, &'a syn::ItemFn>) -> Vec<Self> {
-        use utils::labelling::ASTKey;
+    fn collect<'a>((map, fun): &rem_utils::annotation::Annotated<'a, &'a syn::ItemFn>) -> Vec<Self> {
+        use rem_utils::labelling::ASTKey;
 
         struct Traverse<'a> {
             ast: &'a Annotations<'a>,

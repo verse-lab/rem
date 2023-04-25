@@ -13,7 +13,7 @@ use syn::{
     ImplItemMethod, ItemFn, Lifetime, PredicateLifetime, ReturnType, Signature, TraitItemMethod,
     TypeReference, WhereClause, WherePredicate,
 };
-use utils::format_source;
+use rem_utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////

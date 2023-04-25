@@ -11,7 +11,7 @@ use crate::common::{
     repair_iteration_project, RepairResult, RepairSystem, RustcError,
 };
 use crate::repair_lifetime_simple;
-use utils::{check_project, compile_file, format_source};
+use rem_utils::{check_project, compile_file, format_source};
 
 pub struct Repairer {}
 

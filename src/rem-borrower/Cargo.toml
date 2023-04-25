@@ -15,8 +15,8 @@ clap = { version = "4.0.20", features = [ "derive" ] }
 syn = {version="1.0.86", features=["printing", "parsing", "full", "visit-mut", "visit"]}
 proc-macro2 = { version = "1.0", features = ["span-locations"]}
 quote = "1.0"
-utils = { path = "../utils" }
-constraint = { path = "../constraint" }
+rem-utils = { version = "0.1.0", path = "../rem-utils" }
+rem-constraint = { version = "0.1.0", path = "../rem-constraint" }
 itertools = "0.10.5"
 regex = "1.6.0"
 env_logger = "0.10.0"

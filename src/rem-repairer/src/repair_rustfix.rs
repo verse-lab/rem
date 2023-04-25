@@ -2,7 +2,7 @@ use crate::common::{repair_iteration, RepairResult, RepairSystem};
 
 use std::collections::HashSet;
 use std::fs;
-use utils::compile_file;
+use rem_utils::compile_file;
 
 pub struct Repairer {}
 

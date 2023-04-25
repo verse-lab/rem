@@ -1,5 +1,6 @@
 [package]
-name = "constraint"
+name = "rem-constraint"
+authors = ["VERSE Lab <https://verse-lab.github.io>"]
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +12,7 @@ proc-macro2 = "1.0"
 quote = "1.0"
 nom = {version="7.1.0"}
 mktemp = {version="0.4.1"}
-utils = { path = "../utils" }
+rem-utils = { version="0.1.0", path = "../rem-utils" }
 itertools = "0.10.5"
 env_logger = "0.10.0"
 log = "0.4.17"

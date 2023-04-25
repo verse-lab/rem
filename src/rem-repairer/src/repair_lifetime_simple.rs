@@ -3,7 +3,7 @@ use std::fs;
 use crate::common::{
     repair_bounds_help, repair_iteration, repair_standard_help, RepairResult, RepairSystem,
 };
-use utils::compile_file;
+use rem_utils::compile_file;
 
 pub struct Repairer {}
 

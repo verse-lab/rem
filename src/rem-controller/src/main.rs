@@ -4,7 +4,7 @@ use colored::Colorize;
 use std::process::exit;
 use std::time::SystemTime;
 use std::{env, fs};
-use utils::compile_file;
+use rem_utils::compile_file;
 
 #[derive(Parser)]
 struct Cli {

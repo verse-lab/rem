@@ -2,7 +2,7 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use utils::annotation::Annotated;
+use rem_utils::annotation::Annotated;
 
 /// Abstract encoding of a Local Constraint
 pub trait LocalConstraint: Any + Display + Clone {

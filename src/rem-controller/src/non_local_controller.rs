@@ -6,7 +6,7 @@ use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
 use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, Item, ItemEnum, ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type};
-use utils::{format_source, FindCallee};
+use rem_utils::{format_source, FindCallee};
 
 const ENUM_NAME: &str = "Ret";
 

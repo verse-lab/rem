@@ -4,7 +4,7 @@ use std::io::Write;
 
 use log::debug;
 use std::process::{Command, Stdio};
-use utils::parser::ws;
+use rem_utils::parser::ws;
 
 use crate::constraint;
 
