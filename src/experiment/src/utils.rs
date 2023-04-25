@@ -13,10 +13,10 @@ use crate::utils::ExtractionFeature::{
     ImmutableBorrow, MutableBorrow, NonElidibleLifetimes, NonLocalLoop, NonLocalReturn,
     StructHasLifetimeSlot,
 };
-use borrower::borrow::inner_make_borrows;
-use controller::non_local_controller::inner_make_controls;
-use repairer::common::RepairSystem;
-use repairer::repair_lifetime_loosest_bound_first::Repairer;
+use rem_borrower::borrow::inner_make_borrows;
+use rem_controller::non_local_controller::inner_make_controls;
+use rem_repairer::common::RepairSystem;
+use rem_repairer::repair_lifetime_loosest_bound_first::Repairer;
 use utils::{check_project, find_caller, format_source};
 
 pub const CALLEE_NAME: &str = "bar____EXTRACT_THIS";
