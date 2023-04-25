@@ -1,6 +1,6 @@
 [package]
 name = "rem-repairer"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Sewen Thy <me@sewenthy.dev>"]
 license = "MIT"
@@ -19,6 +19,6 @@ serde_json = "1.0"
 syn = {version="1.0.86", features=["printing", "parsing", "full", "visit-mut", "visit"]}
 proc-macro2 = { version = "1.0", features = ["span-locations"]}
 quote = "1.0"
-rem-utils = { version = "0.1.0", path = "../rem-utils" }
+rem-utils = { version = "0.1", path = "../rem-utils" }
 log = "0.4.17"
 env_logger = "0.10.0"

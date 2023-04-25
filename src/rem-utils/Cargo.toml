@@ -1,6 +1,6 @@
 [package]
 name = "rem-utils"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["VERSE Lab <https://verse-lab.github.io>"]
 license = "MIT"
@@ -17,3 +17,4 @@ log = "0.4"
 proc-macro2 = { version = "1.0", features = ["span-locations"]}
 string_cache = "0.8"
 quote = "1.0"
+home = "0.5.4"

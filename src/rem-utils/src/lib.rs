@@ -31,6 +31,8 @@ use std::process::{Command, Stdio};
 use syn::visit_mut::VisitMut;
 use syn::{ExprCall, ExprMethodCall, File, ImplItemMethod, ItemFn, TraitItemMethod};
 
+use home::cargo_home;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////        COMPILE        /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -275,7 +277,9 @@ pub fn find_caller(
 
 pub fn format_source(src: &str) -> String {
     let rustfmt = {
-        let mut proc = Command::new(&"$HOME/.cargo/bin/rustfmt")
+        let rustfmt_path = format!("{}/bin/rustfmt", cargo_home().unwrap().to_string_lossy());
+        println!("{}", &rustfmt_path);
+        let mut proc = Command::new(&rustfmt_path)
             .arg("--edition=2021")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
