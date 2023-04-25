@@ -1,0 +1,15 @@
+[submodule "artefacts/sample_projects/gitoxide"]
+	path = artefacts/sample_projects/gitoxide
+	url = https://github.com/sewenthy/gitoxide.git
+[submodule "artefacts/sample_projects/petgraph"]
+	path = artefacts/sample_projects/petgraph
+	url = https://github.com/sewenthy/petgraph.git
+[submodule "artefacts/sample_projects/beerus"]
+	path = artefacts/sample_projects/beerus
+	url = https://github.com/sewenthy/beerus.git
+[submodule "artefacts/sample_projects/sniffnet"]
+	path = artefacts/sample_projects/sniffnet
+	url = https://github.com/sewenthy/sniffnet.git
+[submodule "artefacts/sample_projects/kickoff"]
+	path = artefacts/sample_projects/kickoff
+	url = https://github.com/sewenthy/kickoff.git
