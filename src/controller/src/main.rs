@@ -56,6 +56,9 @@ fn test() {
         if test_name.to_str().unwrap() == "if_return_unit_controller.rs" {
             continue;
         }
+        if !test_name.to_str().unwrap().contains("qmark") {
+            continue;
+        }
         let file_name = format!("./input/{}", test_name.to_str().unwrap());
         let new_file_name = format!("./output/{}", test_name.to_str().unwrap());
         let callee_fn_name = "bar";

@@ -4,16 +4,15 @@ struct A {
 
 fn new_foo() -> Option<()> {
     let x = Some(());
-    bar(x);
-    Ok(())
+    bar(x)
 }
 
-fn bar(x: Option<()>) {
+fn bar(x: Option<()>) -> Option<()> {
     let _y = x?;
-    let a = A {x: None};
+    let a = A { x: None };
     match a.x? {
-        () => (),
-    };
+        () => Some(()),
+    }
 }
 
 

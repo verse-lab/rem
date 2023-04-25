@@ -5,19 +5,17 @@ use log::debug;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
-use syn::{
-    Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ImplItemMethod, Item, ItemEnum,
-    ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type,
-};
+use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, Item, ItemEnum, ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type};
 use utils::{format_source, FindCallee};
 
 const ENUM_NAME: &str = "Ret";
 
 fn make_pascal_case(s: &str) -> String {
-    s.to_case(Case::Pascal)
-        .strip_suffix("ExtractThis")
-        .unwrap()
-        .to_string()
+    let result = s.to_case(Case::Pascal);
+    match result.strip_suffix("ExtractThis") {
+        Some(r) => r.to_string(),
+        None => result.to_string(),
+    }
 }
 
 struct CheckCalleeWithinLoopHelper<'a> {
@@ -169,6 +167,37 @@ impl CallerVisitor<'_> {
     }
 }
 
+enum RetTyQMark {
+    QMarkOption,
+    QMarkResult
+}
+
+struct CalleeDeSugarQMark {
+    has_desugared: bool,
+    rety_qmark: RetTyQMark,
+}
+
+impl VisitMut for CalleeDeSugarQMark {
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
+        match i {
+            Expr::Try(ExprTry { expr, ..}) => {
+                let inner = expr.as_mut().clone();
+                match self.rety_qmark {
+                    RetTyQMark::QMarkOption => {
+                        *i = syn::parse_str(format!("match {} {{ Some(x) => x, None => return None }}", inner.into_token_stream().to_string()).as_str()).unwrap();
+                    }
+                    RetTyQMark::QMarkResult => {
+                        *i = syn::parse_str(format!("match {} {{ Ok(x) => x, Err(e) => return Err(e) }}", inner.into_token_stream().to_string()).as_str()).unwrap();
+                    }
+                }
+                self.has_desugared = true;
+            }
+            _ => (),
+        }
+        syn::visit_mut::visit_expr_mut(self, i);
+    }
+}
+
 struct CalleeCheckReturn {
     has_return: bool,
 }
@@ -203,6 +232,7 @@ impl VisitMut for CalleeCheckLoops {
 struct CalleeCheckNCF<'a> {
     found: bool,
     callee_fn_name: &'a str,
+    caller_rety: ReturnType,
     within_caller_loop: bool,
     has_break: bool,
     has_continue: bool,
@@ -246,6 +276,30 @@ impl VisitMut for CalleeCheckNCF<'_> {
 impl CalleeCheckNCF<'_> {
     fn callee_check_ncf(&mut self, sig: Signature, block: &mut Block) {
         self.found = true;
+
+        match &self.caller_rety {
+            ReturnType::Default => {}
+            ReturnType::Type(_, ty) => {
+                let mut rety = None;
+                if ty.as_ref().clone().into_token_stream().to_string().starts_with("Result") {
+                    rety = Some(RetTyQMark::QMarkResult)
+                } else if ty.as_ref().clone().into_token_stream().to_string().starts_with("Option"){
+                    rety = Some(RetTyQMark::QMarkOption)
+                }
+
+                match rety {
+                    None => (),
+                    Some(rety_qmark) => {
+                        let mut desugar_qmark = CalleeDeSugarQMark {
+                            has_desugared: false,
+                            rety_qmark,
+                        };
+                        desugar_qmark.visit_block_mut(block);
+                    }
+                }
+            }
+        }
+
         self.num_inputs = sig.inputs.len();
         let mut check_return = CalleeCheckReturn {
             has_return: self.has_return,
@@ -698,6 +752,7 @@ pub fn inner_make_controls(
     let mut callee_visitor = CalleeCheckNCF {
         found: false,
         callee_fn_name,
+        caller_rety: caller_visitor.caller_rety.clone(),
         within_caller_loop: caller_visitor.callee_in_loop,
         has_break: false,
         has_continue: false,

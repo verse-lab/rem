@@ -3,9 +3,9 @@
 mod projects;
 mod utils;
 
-use crate::projects::{ExtractionResultOld, PATH_TO_EXPERIMENT_PROJECTS};
+use crate::projects::{PATH_TO_EXPERIMENT_PROJECTS};
 use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout};
-use log::{debug, info, warn};
+use log::{info, warn};
 use std::fs;
 use std::string::ToString;
 
@@ -18,7 +18,7 @@ fn main() {
     let secrets_content = fs::read_to_string("secrets.json").unwrap();
     let secrets = serde_json::from_str::<Secrets>(secrets_content.as_str()).unwrap();
     let result_n = fs::read_dir("./results").unwrap().count();
-    let csv_file = format!("./results/result_{}---NOT-RAN.csv", result_n);
+    let csv_file = format!("./results/result_{}.csv", result_n);
     let mut wtr = csv::Writer::from_path(&csv_file).unwrap();
     info!("Currently running {} experiments!", projects::size());
     for expr_project in projects::all() {
