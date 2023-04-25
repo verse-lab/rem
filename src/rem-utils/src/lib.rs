@@ -275,7 +275,7 @@ pub fn find_caller(
 
 pub fn format_source(src: &str) -> String {
     let rustfmt = {
-        let mut proc = Command::new(&"rustfmt")
+        let mut proc = Command::new(&"$HOME/.cargo/bin/rustfmt")
             .arg("--edition=2021")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
