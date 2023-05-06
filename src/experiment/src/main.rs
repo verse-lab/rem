@@ -5,13 +5,16 @@ mod utils;
 
 use crate::projects::{PATH_TO_EXPERIMENT_PROJECTS};
 use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout};
-use log::{info, warn};
+use log::{info, warn, debug};
 use std::fs;
 use std::string::ToString;
+
+use std::process::Command;
 
 const RESULT_SPREADSHEET: &str = "121Lwpv03Vq5K4IBdbQGn7OS5aBGPVKg-jDn8xczkXJc";
 const RESULT_SHEET_ID: i32 = 549359316;
 const RUN_EXTRACTION: bool = false;
+const CREATE_ARTEFACTS: bool = true;
 
 fn main() {
     env_logger::init();
@@ -22,12 +25,39 @@ fn main() {
     let mut wtr = csv::Writer::from_path(&csv_file).unwrap();
     info!("Currently running {} experiments!", projects::size());
     for expr_project in projects::all() {
-        let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, expr_project.project);
+        let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, &expr_project.project);
         for experiment in expr_project.experiments {
             for i in 1..(experiment.extractions.len() + 1) {
                 let extraction = experiment.extractions.get(i - 1).unwrap();
                 let expr_branch = format!("{}{}-expr", experiment.expr_type, i);
                 let expr_branch_active = format!("{}{}-expr-active", experiment.expr_type, i);
+
+                if CREATE_ARTEFACTS {
+                    let expr_arte = format!("{}{}-expr-ij", experiment.expr_type, i);
+                    let mut cmd = Command::new("git");
+                    let arte_clone = String::from("/tmp/arte");
+                    cmd.arg("clone").arg(&expr_project.project_url).arg(&arte_clone);
+                    let out = cmd.output().unwrap();
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    debug!("cloned: {}, {}", out.status.success(), stderr);
+                    assert!((utils::stash(&arte_clone) || true) // don't care about stashing
+                        && utils::checkout(&arte_clone, &expr_arte));
+
+
+                    let mut cmd = Command::new("git");
+                    cmd.arg("reset").arg("--hard").arg("HEAD~1");
+                    let out = cmd.output().unwrap();
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    debug!("reset: {}, {}", out.status.success(), stderr);
+
+                    let mut cmd = Command::new("mv");
+                    cmd.arg(arte_clone).arg(format!("~/capstone/rustic-cat/artefacts/sample_projects/{}-{}{}", &expr_project.project, experiment.expr_type, i));
+                    let out = cmd.output().unwrap();
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    debug!("moved: {}, {}", out.status.success(), stderr);
+                    continue;
+                }
+
                 // rename_callee(&repo_path, &expr_branch, "bar", CALLEE_NAME, experiment.extractions.get(i - 1).unwrap());
 
                 // reset all branch to their base branch
