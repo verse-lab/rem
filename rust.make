@@ -1,5 +1,7 @@
 default:
 	cargo build --release
+	cp target/release/rem-*er ~/.cargo/bin/
+	sudo cp ~/.cargo/bin/rem-* /usr/bin
 
 all:
 	cargo build --release

@@ -22,6 +22,7 @@ pub struct Extraction {
     pub notes: Option<String>,
     pub intellij_old_rust: ExtractionResultOld,
     pub rust_analyzer: ExtractionResultOld,
+    pub project_path: String,
 }
 
 impl Extraction {
@@ -59,6 +60,7 @@ impl Extraction {
             notes: notes.map(|s| s.to_string()),
             intellij_old_rust,
             rust_analyzer,
+            project_path: project_path.clone(),
         }
     }
 

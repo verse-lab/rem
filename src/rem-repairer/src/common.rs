@@ -734,10 +734,10 @@ pub fn repair_iteration_project(
                     None => {}
                     Some(message) => {
                         let spans = &message.spans;
-                        //println!("message: {:?}", &message);
+                        debug!("message: {:?}", &message);
                         for span in spans {
                             if src_path.contains(&span.file_name) {
-                                // println!("processing error: {}", &message.rendered);
+                                debug!("processing error: {}", &message.rendered);
                                 last_failure = message.rendered.clone();
                                 if process_errors(&message) {
                                     help = true;
@@ -747,8 +747,8 @@ pub fn repair_iteration_project(
                         }
                     }
                 },
-                Err(_e) => {
-                    // println!("error parsing cargo error:\n{}", e);
+                Err(e) => {
+                    debug!("error parsing cargo error:\n{}", e);
                 }
             }
         }

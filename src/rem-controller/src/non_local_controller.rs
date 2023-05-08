@@ -203,7 +203,8 @@ struct CalleeCheckReturn {
 }
 
 impl VisitMut for CalleeCheckReturn {
-    fn visit_expr_return_mut(&mut self, _: &mut ExprReturn) {
+    fn visit_expr_return_mut(&mut self, _e: &mut ExprReturn) {
+        debug!("has return?{:?}", _e);
         self.has_return = true
     }
 }
@@ -611,6 +612,7 @@ impl VisitMut for MatchCallSiteHelper<'_> {
                     false => syn::visit_mut::visit_expr_mut(self, i),
                 }
             }
+            // NEED TO FIX TO INCLUDE CHECK FOR OTHER CALL SITE SUCH AS self. and Self::
             _ => syn::visit_mut::visit_expr_mut(self, i),
         }
     }

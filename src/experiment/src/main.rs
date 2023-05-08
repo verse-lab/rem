@@ -4,9 +4,10 @@ mod projects;
 mod utils;
 
 use crate::projects::{PATH_TO_EXPERIMENT_PROJECTS};
-use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout};
+use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout, push_branch, checkout_b};
 use log::{info, warn, debug};
 use std::fs;
+use std::path::Path;
 use std::string::ToString;
 
 use std::process::Command;
@@ -15,6 +16,7 @@ const RESULT_SPREADSHEET: &str = "121Lwpv03Vq5K4IBdbQGn7OS5aBGPVKg-jDn8xczkXJc";
 const RESULT_SHEET_ID: i32 = 549359316;
 const RUN_EXTRACTION: bool = false;
 const CREATE_ARTEFACTS: bool = true;
+const CARGO_CLEAN: bool = true;
 
 fn main() {
     env_logger::init();
@@ -28,33 +30,58 @@ fn main() {
         let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, &expr_project.project);
         for experiment in expr_project.experiments {
             for i in 1..(experiment.extractions.len() + 1) {
+                let arte_fixed = format!("../../../artefact_sample_projects/{}-{}{}", &expr_project.project, experiment.expr_type, i);
+                debug!("running for {}", arte_fixed);
                 let extraction = experiment.extractions.get(i - 1).unwrap();
                 let expr_branch = format!("{}{}-expr", experiment.expr_type, i);
                 let expr_branch_active = format!("{}{}-expr-active", experiment.expr_type, i);
 
                 if CREATE_ARTEFACTS {
-                    let expr_arte = format!("{}{}-expr-ij", experiment.expr_type, i);
+                    let expr_arte = format!("{}{}-expr-ra", experiment.expr_type, i);
+                    let arte_clone = format!("../../../artefact_sample_projects/{}", &expr_project.project);
+                    if !(Path::new(&arte_clone).is_dir()) {
+                        let mut cmd = Command::new("gix");
+                        cmd.arg("clone").arg(&expr_project.project_url).arg(&arte_clone);
+                        let out = cmd.output().unwrap();
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        debug!("cloned: {}, {}", out.status.success(), stderr);
+                    }
+
+                    if !((utils::stash(&arte_clone) || true) // don't care about stashing
+                        && utils::checkout(&arte_clone, &expr_arte)) {
+                        let expr_arte_tmp = format!("{}{}-expr-ij", experiment.expr_type, i);
+                        assert!(reset_to_base_branch(&arte_clone, &expr_arte_tmp, &expr_arte));
+                    };
+
+                    if !(Path::new(&arte_fixed).is_dir()) {
+                        let mut cmd = Command::new("cp");
+                        cmd.arg("-r").arg(&arte_clone).arg(&arte_fixed);
+                        let out = cmd.output().unwrap();
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        debug!("cp: {}, {}", out.status.success(), stderr);
+                    }
+
+                    // change remote url to ssh so can push
                     let mut cmd = Command::new("git");
-                    let arte_clone = String::from("/tmp/arte");
-                    cmd.arg("clone").arg(&expr_project.project_url).arg(&arte_clone);
+                    cmd.arg("-C").arg(&arte_fixed).arg("remote").arg("set-url").arg("origin").arg(format!("git@github.com:sewenthy/{}.git", &expr_project.project).as_str());
                     let out = cmd.output().unwrap();
                     let stderr = String::from_utf8_lossy(&out.stderr);
-                    debug!("cloned: {}, {}", out.status.success(), stderr);
-                    assert!((utils::stash(&arte_clone) || true) // don't care about stashing
-                        && utils::checkout(&arte_clone, &expr_arte));
+                    debug!("remote re-url: {}, {}", out.status.success(), stderr,);
 
-
-                    let mut cmd = Command::new("git");
-                    cmd.arg("reset").arg("--hard").arg("HEAD~1");
-                    let out = cmd.output().unwrap();
-                    let stderr = String::from_utf8_lossy(&out.stderr);
-                    debug!("reset: {}, {}", out.status.success(), stderr);
-
-                    let mut cmd = Command::new("mv");
-                    cmd.arg(arte_clone).arg(format!("~/capstone/rustic-cat/artefacts/sample_projects/{}-{}{}", &expr_project.project, experiment.expr_type, i));
-                    let out = cmd.output().unwrap();
-                    let stderr = String::from_utf8_lossy(&out.stderr);
-                    debug!("moved: {}, {}", out.status.success(), stderr);
+                    // checkout to new branch for artefact
+                    let arte_branch = format!("{}{}-expr-artefact", &experiment.expr_type, i);
+                    // checkout_b(&arte_fixed, &arte_branch);
+                    // push new branch
+                    push_branch(&arte_fixed, &arte_branch, true);
+                    // run cargo clean
+                    if CARGO_CLEAN {
+                        let mut cmd = Command::new("cargo");
+                        let toml = format!("--manifest-path={}/{}", &arte_fixed, extraction.cargo_path.replace(&extraction.project_path, ""));
+                        cmd.arg("clean").arg(toml);
+                        let out = cmd.output().unwrap();
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        debug!("cargo cealn: {}, {}", out.status.success(), stderr);
+                    }
                     continue;
                 }
 

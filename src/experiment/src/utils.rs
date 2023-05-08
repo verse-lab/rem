@@ -244,7 +244,7 @@ pub fn push_branch(dir: &String, branch: &String, force: bool) -> bool {
         .arg(dir)
         .arg("push")
         .arg("-u")
-        .arg("fork") // always push to fork
+        .arg("origin") // always push to fork
         .arg(branch);
     if force {
         cmd.arg("--force");
