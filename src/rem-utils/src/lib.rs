@@ -191,6 +191,26 @@ impl VisitMut for FindFn<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.found {
+            return;
+        }
+        debug!("{:?}", i);
+        let id = i.sig.ident.to_string();
+        match id == self.fn_name {
+            true => {
+                self.found = true;
+                i.attrs = vec![];
+                if self.body_only {
+                    self.fn_txt = i.block.clone().into_token_stream().to_string();
+                } else {
+                    self.fn_txt = i.into_token_stream().to_string();
+                }
+            }
+            false => (),
+        }
+    }
+
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         if self.found {
             return;
@@ -210,26 +230,6 @@ impl VisitMut for FindFn<'_> {
             false => {}
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        if self.found {
-            return;
-        }
-        debug!("{:?}", i);
-        let id = i.sig.ident.to_string();
-        match id == self.fn_name {
-            true => {
-                self.found = true;
-                i.attrs = vec![];
-                if self.body_only {
-                    self.fn_txt = i.block.clone().into_token_stream().to_string();
-                } else {
-                    self.fn_txt = i.into_token_stream().to_string();
-                }
-            }
-            false => (),
-        }
     }
 }
 

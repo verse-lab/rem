@@ -56,7 +56,7 @@ fn test() {
         if test_name.to_str().unwrap() == "if_return_unit_controller.rs" {
             continue;
         }
-        if !test_name.to_str().unwrap().contains("qmark") {
+        if !test_name.to_str().unwrap().contains("qmark_test") {
             continue;
         }
         let file_name = format!("./input/{}", test_name.to_str().unwrap());

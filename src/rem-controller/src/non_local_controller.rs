@@ -6,10 +6,8 @@ use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use rem_utils::{format_source, FindCallee};
 use syn::visit_mut::VisitMut;
-use syn::{
-    Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, ItemFn,
-    ItemImpl, ItemTrait, ReturnType, Signature, Stmt, TraitItemMethod, Type,
-};
+use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, Item, ItemFn, ItemImpl, ItemMod, ItemTrait, ReturnType, Signature, Stmt, TraitItemMethod, Type};
+use syn::token::Brace;
 
 const ENUM_NAME: &str = "Ret";
 
@@ -247,6 +245,7 @@ impl VisitMut for CalleeCheckLoops {
     }
 }
 
+#[derive(Debug)]
 struct CalleeCheckNCF<'a> {
     found: bool,
     callee_fn_name: &'a str,
@@ -320,12 +319,14 @@ impl CalleeCheckNCF<'_> {
                 match rety {
                     None => (),
                     Some(rety_qmark) => {
+                        debug!("desugaring...");
                         let mut desugar_qmark = CalleeDeSugarQMark {
                             has_desugared: false,
                             rety_qmark,
                         };
                         desugar_qmark.visit_block_mut(block);
-                        self.has_return = desugar_qmark.has_desugared;
+                        debug!("desugaring...{}", desugar_qmark.has_desugared);
+                        self.has_return = desugar_qmark.has_desugared || self.has_return;
                     }
                 }
             }
@@ -348,7 +349,7 @@ impl CalleeCheckNCF<'_> {
                 check_loops.visit_stmt_mut(stmt);
             }
         });
-        self.has_return = check_return.has_return || self.has_return;
+        self.has_return = check_return.has_return;
         self.has_break = check_loops.has_break;
         self.has_continue = check_loops.has_continue;
     }
@@ -593,6 +594,20 @@ struct MakeCallerReturn<'a> {
 }
 
 impl VisitMut for MakeCallerReturn<'_> {
+    fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id.contains(self.callee_fn_name) {
+            true => {
+                debug!("found callee: {:?}", i);
+                let mut helper = MakeCallerReturnHelper {
+                    callee_fn_name: self.callee_fn_name,
+                };
+                helper.visit_impl_item_method_mut(i)
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
         match id.contains(self.callee_fn_name) {
@@ -605,6 +620,20 @@ impl VisitMut for MakeCallerReturn<'_> {
                 helper.visit_item_fn_mut(i)
             }
         }
+    }
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        let id = i.sig.ident.to_string();
+        match id.contains(self.callee_fn_name) {
+            true => {
+                debug!("found callee: {:?}", i);
+                let mut helper = MakeCallerReturnHelper {
+                    callee_fn_name: self.callee_fn_name,
+                };
+                helper.visit_trait_item_method_mut(i);
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_trait_item_method_mut(self, i);
     }
 }
 
@@ -707,30 +736,22 @@ impl VisitMut for MatchCallSite<'_> {
         syn::visit_mut::visit_item_fn_mut(self, i);
     }
 
-    fn visit_item_impl_mut(&mut self, i: &mut ItemImpl) {
-        if i.clone()
-            .into_token_stream()
-            .to_string()
-            .contains(self.caller_fn_name)
-        {
-            i.items
-                .push(syn::parse_str(self.enum_str.as_str()).unwrap());
-            self.added_enum = true;
-        }
-        syn::visit_mut::visit_item_impl_mut(self, i);
-    }
 
-    fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
+    fn visit_item_mod_mut(&mut self, i: &mut ItemMod) {
         if i.clone()
             .into_token_stream()
             .to_string()
             .contains(self.caller_fn_name)
         {
-            i.items
-                .push(syn::parse_str(self.enum_str.as_str()).unwrap());
-            self.added_enum = true;
+            match i.content.as_mut() {
+                None => {}
+                Some((_, items)) => {
+                    items.push(syn::parse_str(self.enum_str.as_str()).unwrap());
+                    self.added_enum = true;
+                }
+            }
         }
-        syn::visit_mut::visit_item_trait_mut(self, i);
+        syn::visit_mut::visit_item_mod_mut(self, i);
     }
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
@@ -770,6 +791,7 @@ impl MatchCallSite<'_> {
     }
 }
 
+#[derive(Debug)]
 pub struct NonLocalControlFlowResult {
     pub success: bool,
     pub has_return: bool,
@@ -843,6 +865,7 @@ pub fn inner_make_controls(
         };
     }
 
+    debug!("callee_visitor: {:?}", callee_visitor);
     if callee_visitor.has_return || callee_visitor.has_continue || callee_visitor.has_break {
         let caller_rety = match caller_visitor.caller_rety {
             ReturnType::Default => Type::Verbatim(quote! {()}),
@@ -851,6 +874,7 @@ pub fn inner_make_controls(
         let mut already_did_return = false;
 
         if callee_visitor.has_return {
+            debug!("has return!");
             let mut make_ret = MakeReturn {
                 callee_fn_name,
                 caller_rety: &caller_rety,
@@ -863,10 +887,7 @@ pub fn inner_make_controls(
         }
 
         if callee_visitor.has_break || callee_visitor.has_continue {
-            // println!(
-            //     "has break {} or cont {}",
-            //     callee_visitor.has_break, callee_visitor.has_continue
-            // );
+            debug!("has break {} or cont {}",callee_visitor.has_break, callee_visitor.has_continue);
             let mut make_brk_and_cont = MakeBrkAndCont {
                 callee_fn_name,
                 success,
@@ -934,5 +955,7 @@ pub fn make_controls(
     callee_fn_name: &str,
     caller_fn_name: &str,
 ) -> bool {
-    inner_make_controls(file_name, new_file_name, callee_fn_name, caller_fn_name).success
+    let res = inner_make_controls(file_name, new_file_name, callee_fn_name, caller_fn_name);
+    debug!("result: {:?}", res);
+    res.success
 }
