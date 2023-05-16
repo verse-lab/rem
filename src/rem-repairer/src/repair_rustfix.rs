@@ -1,8 +1,8 @@
 use crate::common::{repair_iteration, RepairResult, RepairSystem};
 
+use rem_utils::compile_file;
 use std::collections::HashSet;
 use std::fs;
-use rem_utils::compile_file;
 
 pub struct Repairer {}
 

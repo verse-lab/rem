@@ -4,10 +4,10 @@ use std::collections::HashMap;
 use proc_macro2::Ident;
 use std::fs;
 
-use rem_constraint::common::AliasConstraints;
-use rem_constraint::ConstraintManager;
 use itertools::Itertools;
 use regex::Regex;
+use rem_constraint::common::AliasConstraints;
+use rem_constraint::ConstraintManager;
 use syn::punctuated::Punctuated;
 use syn::{
     visit_mut::VisitMut, Block, Expr, ExprAssign, ExprAssignOp, ExprCall, ExprMethodCall,

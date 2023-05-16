@@ -3,8 +3,8 @@ use std::io::prelude::*;
 use std::io::Write;
 
 use log::debug;
-use std::process::{Command, Stdio};
 use rem_utils::parser::ws;
+use std::process::{Command, Stdio};
 
 use crate::constraint;
 

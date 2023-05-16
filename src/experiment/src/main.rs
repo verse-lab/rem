@@ -3,9 +3,13 @@
 mod projects;
 mod utils;
 
-use crate::projects::{PATH_TO_EXPERIMENT_PROJECTS};
-use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout, push_branch};
-use log::{info, warn, debug};
+use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
+use crate::utils::{
+    checkout, get_caller_callee_size, get_latest_commit, get_project_size, get_src_size,
+    push_branch, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv,
+    ExtractionResult, Secrets,
+};
+use log::{debug, info, warn};
 use std::fs;
 use std::path::Path;
 use std::string::ToString;
@@ -30,7 +34,10 @@ fn main() {
         let repo_path = format!("{}/{}", PATH_TO_EXPERIMENT_PROJECTS, &expr_project.project);
         for experiment in expr_project.experiments {
             for i in 1..(experiment.extractions.len() + 1) {
-                let arte_fixed = format!("../../../artefact_sample_projects/{}-{}{}", &expr_project.project, experiment.expr_type, i);
+                let arte_fixed = format!(
+                    "../../../artefact_sample_projects/{}-{}{}",
+                    &expr_project.project, experiment.expr_type, i
+                );
                 debug!("running for {}", arte_fixed);
                 let extraction = experiment.extractions.get(i - 1).unwrap();
                 let expr_branch = format!("{}{}-expr", experiment.expr_type, i);
@@ -38,19 +45,29 @@ fn main() {
 
                 if CREATE_ARTEFACTS {
                     let expr_arte = format!("{}{}-expr-ra", experiment.expr_type, i);
-                    let arte_clone = format!("../../../artefact_sample_projects/{}", &expr_project.project);
+                    let arte_clone = format!(
+                        "../../../artefact_sample_projects/{}",
+                        &expr_project.project
+                    );
                     if !(Path::new(&arte_clone).is_dir()) {
                         let mut cmd = Command::new("gix");
-                        cmd.arg("clone").arg(&expr_project.project_url).arg(&arte_clone);
+                        cmd.arg("clone")
+                            .arg(&expr_project.project_url)
+                            .arg(&arte_clone);
                         let out = cmd.output().unwrap();
                         let stderr = String::from_utf8_lossy(&out.stderr);
                         debug!("cloned: {}, {}", out.status.success(), stderr);
                     }
 
                     if !((utils::stash(&arte_clone) || true) // don't care about stashing
-                        && utils::checkout(&arte_clone, &expr_arte)) {
+                        && utils::checkout(&arte_clone, &expr_arte))
+                    {
                         let expr_arte_tmp = format!("{}{}-expr-ij", experiment.expr_type, i);
-                        assert!(reset_to_base_branch(&arte_clone, &expr_arte_tmp, &expr_arte));
+                        assert!(reset_to_base_branch(
+                            &arte_clone,
+                            &expr_arte_tmp,
+                            &expr_arte
+                        ));
                     };
 
                     if !(Path::new(&arte_fixed).is_dir()) {
@@ -63,7 +80,15 @@ fn main() {
 
                     // change remote url to ssh so can push
                     let mut cmd = Command::new("git");
-                    cmd.arg("-C").arg(&arte_fixed).arg("remote").arg("set-url").arg("origin").arg(format!("git@github.com:sewenthy/{}.git", &expr_project.project).as_str());
+                    cmd.arg("-C")
+                        .arg(&arte_fixed)
+                        .arg("remote")
+                        .arg("set-url")
+                        .arg("origin")
+                        .arg(
+                            format!("git@github.com:sewenthy/{}.git", &expr_project.project)
+                                .as_str(),
+                        );
                     let out = cmd.output().unwrap();
                     let stderr = String::from_utf8_lossy(&out.stderr);
                     debug!("remote re-url: {}, {}", out.status.success(), stderr,);
@@ -76,7 +101,11 @@ fn main() {
                     // run cargo clean
                     if CARGO_CLEAN {
                         let mut cmd = Command::new("cargo");
-                        let toml = format!("--manifest-path={}/{}", &arte_fixed, extraction.cargo_path.replace(&extraction.project_path, ""));
+                        let toml = format!(
+                            "--manifest-path={}/{}",
+                            &arte_fixed,
+                            extraction.cargo_path.replace(&extraction.project_path, "")
+                        );
                         cmd.arg("clean").arg(toml);
                         let out = cmd.output().unwrap();
                         let stderr = String::from_utf8_lossy(&out.stderr);
@@ -90,19 +119,19 @@ fn main() {
                 // reset all branch to their base branch
                 if RUN_EXTRACTION {
                     either!(
-                    reset_to_base_branch(&repo_path, &expr_branch, &expr_branch_active),
-                    panic!(
-                        "could not reset to initial state for {}:{}",
-                        &expr_project.project, &expr_branch
-                    )
-                );
+                        reset_to_base_branch(&repo_path, &expr_branch, &expr_branch_active),
+                        panic!(
+                            "could not reset to initial state for {}:{}",
+                            &expr_project.project, &expr_branch
+                        )
+                    );
 
                     info!(
-                    "checked out: {} {}<--- HEAD: {}",
-                    expr_project.project,
-                    expr_branch_active,
-                    get_latest_commit(&repo_path)
-                );
+                        "checked out: {} {}<--- HEAD: {}",
+                        expr_project.project,
+                        expr_branch_active,
+                        get_latest_commit(&repo_path)
+                    );
                 } else {
                     checkout(&repo_path, &expr_branch);
                 }
@@ -135,15 +164,19 @@ fn main() {
                 };
 
                 if !RUN_EXTRACTION {
-                    info!("project {}, {}, has src_size: {}, and caller_size: {}",
-                        expr_project.project, expr_branch_active, extraction_result.src_size, extraction_result.caller_size,
+                    info!(
+                        "project {}, {}, has src_size: {}, and caller_size: {}",
+                        expr_project.project,
+                        expr_branch_active,
+                        extraction_result.src_size,
+                        extraction_result.caller_size,
                     );
                     if extraction_result.callee_size > extraction_result.caller_size {
                         panic!("weird!!");
                     }
                     wtr.serialize(extraction_result)
                         .expect("failed to write experiment results!");
-                    continue
+                    continue;
                 }
 
                 let (success, duration) = run_extraction(extraction, &mut extraction_result);
@@ -177,18 +210,18 @@ fn main() {
     wtr.flush().expect("failed to flush csv");
     if RUN_EXTRACTION {
         either!(
-        upload_csv(
-            &secrets,
-            &csv_file,
-            &RESULT_SPREADSHEET.to_string(),
-            RESULT_SHEET_ID,
-            0,
-            0
-        ),
-        warn!(
-            "failed to upload result csv! please upload {} manually.",
-            csv_file
-        )
-    );
+            upload_csv(
+                &secrets,
+                &csv_file,
+                &RESULT_SPREADSHEET.to_string(),
+                RESULT_SHEET_ID,
+                0,
+                0
+            ),
+            warn!(
+                "failed to upload result csv! please upload {} manually.",
+                csv_file
+            )
+        );
     }
 }

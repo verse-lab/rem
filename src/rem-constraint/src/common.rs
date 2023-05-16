@@ -9,9 +9,9 @@ use nom::{
 };
 use proc_macro2::{Ident, Span};
 
-use syn::{visit_mut::VisitMut, Expr, ExprAssign, FnArg, Stmt, Type};
 use rem_utils::annotation::Annotations;
 use rem_utils::labelling::Label;
+use syn::{visit_mut::VisitMut, Expr, ExprAssign, FnArg, Stmt, Type};
 
 /// Aliasing Constraints
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -63,7 +63,9 @@ impl crate::LocalConstraint for AliasConstraints {
         alt((ref_, alias, assign))(s)
     }
 
-    fn collect<'a>((map, fun): &rem_utils::annotation::Annotated<'a, &'a syn::ItemFn>) -> Vec<Self> {
+    fn collect<'a>(
+        (map, fun): &rem_utils::annotation::Annotated<'a, &'a syn::ItemFn>,
+    ) -> Vec<Self> {
         use rem_utils::labelling::ASTKey;
 
         struct Traverse<'a> {

@@ -1,7 +1,7 @@
 #![feature(box_patterns)]
 
-use rem_constraint::{common::AliasConstraints, ConstraintManager};
 use itertools::Itertools;
+use rem_constraint::{common::AliasConstraints, ConstraintManager};
 
 fn main() {
     let ast: syn::ItemFn = syn::parse_str(
@@ -26,7 +26,7 @@ fn main() {
     .unwrap();
     let mut cs = ConstraintManager::default();
 
-    let annot_ast =rem_utils::annotation::annotate_ast(&ast);
+    let annot_ast = rem_utils::annotation::annotate_ast(&ast);
 
     //cs.add_constraint::<ArrayConstraint>();
     cs.add_constraint::<AliasConstraints>();

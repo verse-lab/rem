@@ -2,9 +2,9 @@ mod borrow;
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
+use rem_utils::compile_file;
 use std::time::SystemTime;
 use std::{env, fs};
-use rem_utils::compile_file;
 
 #[derive(Parser)]
 struct Cli {

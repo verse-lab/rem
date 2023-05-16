@@ -2,6 +2,7 @@ use log::{debug, info};
 use proc_macro2::Span;
 use quote::ToTokens;
 use regex::Regex;
+use rem_utils::format_source;
 use serde::{Deserialize, Serialize};
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
@@ -13,7 +14,6 @@ use syn::{
     ImplItemMethod, ItemFn, Lifetime, PredicateLifetime, ReturnType, Signature, TraitItemMethod,
     TypeReference, WhereClause, WherePredicate,
 };
-use rem_utils::format_source;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////     REPAIR HELPERS     ////////////////////////////////////////////
@@ -345,9 +345,7 @@ impl VisitMut for ChangeLtHelperElider<'_> {
                 debug!("generic lt: {:?}", &id);
                 self.has_struct_lt = true;
                 match self.map.get(&id) {
-                    Some(new_lt) => {
-                        *l = Lifetime::new(new_lt.as_str(), Span::call_site())
-                    },
+                    Some(new_lt) => *l = Lifetime::new(new_lt.as_str(), Span::call_site()),
                     None => *l = Lifetime::new("'_", Span::call_site()),
                 }
             }
@@ -519,7 +517,10 @@ impl FnLifetimeElider<'_> {
                 gen.params.iter_mut().for_each(|gp| match gp {
                     GenericParam::Lifetime(_) => (),
                     gp => {
-                        let mut change_lt = ChangeLtHelperElider { map: &new_lts, has_struct_lt: false };
+                        let mut change_lt = ChangeLtHelperElider {
+                            map: &new_lts,
+                            has_struct_lt: false,
+                        };
                         if change_lt.has_struct_lt {
                             self.has_struct_lt = true;
                         }
@@ -553,7 +554,10 @@ impl FnLifetimeElider<'_> {
                 inputs.iter_mut().for_each(|fn_arg| match fn_arg {
                     FnArg::Receiver(_) => (),
                     FnArg::Typed(t) => {
-                        let mut change_lt = ChangeLtHelperElider { map: &new_lts, has_struct_lt: false };
+                        let mut change_lt = ChangeLtHelperElider {
+                            map: &new_lts,
+                            has_struct_lt: false,
+                        };
                         if change_lt.has_struct_lt {
                             self.has_struct_lt = true;
                         }
@@ -564,7 +568,10 @@ impl FnLifetimeElider<'_> {
                 match sig.output.borrow_mut() {
                     ReturnType::Default => (),
                     ReturnType::Type(_, ty) => {
-                        let mut change_lt = ChangeLtHelperElider { map: &new_lts, has_struct_lt: false };
+                        let mut change_lt = ChangeLtHelperElider {
+                            map: &new_lts,
+                            has_struct_lt: false,
+                        };
                         if change_lt.has_struct_lt {
                             self.has_struct_lt = true;
                         }

@@ -4,9 +4,12 @@ use convert_case::{Case, Casing};
 use log::debug;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
-use syn::visit_mut::VisitMut;
-use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, ItemFn, ItemImpl, ItemTrait, ReturnType, Signature, Stmt, TraitItemMethod, Type};
 use rem_utils::{format_source, FindCallee};
+use syn::visit_mut::VisitMut;
+use syn::{
+    Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, ItemFn,
+    ItemImpl, ItemTrait, ReturnType, Signature, Stmt, TraitItemMethod, Type,
+};
 
 const ENUM_NAME: &str = "Ret";
 
@@ -169,7 +172,7 @@ impl CallerVisitor<'_> {
 
 enum RetTyQMark {
     QMarkOption,
-    QMarkResult
+    QMarkResult,
 }
 
 struct CalleeDeSugarQMark {
@@ -180,14 +183,28 @@ struct CalleeDeSugarQMark {
 impl VisitMut for CalleeDeSugarQMark {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         match i {
-            Expr::Try(ExprTry { expr, ..}) => {
+            Expr::Try(ExprTry { expr, .. }) => {
                 let inner = expr.as_mut().clone();
                 match self.rety_qmark {
                     RetTyQMark::QMarkOption => {
-                        *i = syn::parse_str(format!("match {} {{ Some(x) => x, None => return None }}", inner.into_token_stream().to_string()).as_str()).unwrap();
+                        *i = syn::parse_str(
+                            format!(
+                                "match {} {{ Some(x) => x, None => return None }}",
+                                inner.into_token_stream().to_string()
+                            )
+                            .as_str(),
+                        )
+                        .unwrap();
                     }
                     RetTyQMark::QMarkResult => {
-                        *i = syn::parse_str(format!("match {} {{ Ok(x) => x, Err(e) => return Err(e) }}", inner.into_token_stream().to_string()).as_str()).unwrap();
+                        *i = syn::parse_str(
+                            format!(
+                                "match {} {{ Ok(x) => x, Err(e) => return Err(e) }}",
+                                inner.into_token_stream().to_string()
+                            )
+                            .as_str(),
+                        )
+                        .unwrap();
                     }
                 }
                 self.has_desugared = true;
@@ -282,9 +299,21 @@ impl CalleeCheckNCF<'_> {
             ReturnType::Default => {}
             ReturnType::Type(_, ty) => {
                 let mut rety = None;
-                if ty.as_ref().clone().into_token_stream().to_string().starts_with("Result") {
+                if ty
+                    .as_ref()
+                    .clone()
+                    .into_token_stream()
+                    .to_string()
+                    .starts_with("Result")
+                {
                     rety = Some(RetTyQMark::QMarkResult)
-                } else if ty.as_ref().clone().into_token_stream().to_string().starts_with("Option"){
+                } else if ty
+                    .as_ref()
+                    .clone()
+                    .into_token_stream()
+                    .to_string()
+                    .starts_with("Option")
+                {
                     rety = Some(RetTyQMark::QMarkOption)
                 }
 
@@ -306,7 +335,6 @@ impl CalleeCheckNCF<'_> {
         let mut check_return = CalleeCheckReturn {
             has_return: self.has_return,
         };
-
 
         let mut check_loops = CalleeCheckLoops {
             has_break: self.has_break,
@@ -660,7 +688,6 @@ impl VisitMut for MatchCallSite<'_> {
         syn::visit_mut::visit_impl_item_method_mut(self, i);
     }
 
-
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         if self.callee_finder.found {
             return;
@@ -674,7 +701,6 @@ impl VisitMut for MatchCallSite<'_> {
                     return;
                 }
                 self.match_callsite(&mut i.block);
-
             }
             false => {}
         }
@@ -682,16 +708,26 @@ impl VisitMut for MatchCallSite<'_> {
     }
 
     fn visit_item_impl_mut(&mut self, i: &mut ItemImpl) {
-        if i.clone().into_token_stream().to_string().contains(self.caller_fn_name) {
-            i.items.push(syn::parse_str(self.enum_str.as_str()).unwrap());
+        if i.clone()
+            .into_token_stream()
+            .to_string()
+            .contains(self.caller_fn_name)
+        {
+            i.items
+                .push(syn::parse_str(self.enum_str.as_str()).unwrap());
             self.added_enum = true;
         }
         syn::visit_mut::visit_item_impl_mut(self, i);
     }
 
     fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
-        if  i.clone().into_token_stream().to_string().contains(self.caller_fn_name) {
-            i.items.push(syn::parse_str(self.enum_str.as_str()).unwrap());
+        if i.clone()
+            .into_token_stream()
+            .to_string()
+            .contains(self.caller_fn_name)
+        {
+            i.items
+                .push(syn::parse_str(self.enum_str.as_str()).unwrap());
             self.added_enum = true;
         }
         syn::visit_mut::visit_item_trait_mut(self, i);
@@ -715,9 +751,7 @@ impl VisitMut for MatchCallSite<'_> {
                     .clone()
                     .default
                     .as_mut()
-                    .and_then(|block|  {
-                        Some(self.match_callsite(block))
-                    });
+                    .and_then(|block| Some(self.match_callsite(block)));
             }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
