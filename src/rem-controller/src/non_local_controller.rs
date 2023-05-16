@@ -741,7 +741,7 @@ impl VisitMut for MatchCallSite<'_> {
         if i.clone()
             .into_token_stream()
             .to_string()
-            .contains(self.caller_fn_name)
+            .contains(self.callee_fn_name)
         {
             match i.content.as_mut() {
                 None => {}
