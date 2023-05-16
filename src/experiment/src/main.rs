@@ -4,7 +4,7 @@ mod projects;
 mod utils;
 
 use crate::projects::{PATH_TO_EXPERIMENT_PROJECTS};
-use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout, push_branch, checkout_b};
+use crate::utils::{get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, checkout, push_branch};
 use log::{info, warn, debug};
 use std::fs;
 use std::path::Path;
