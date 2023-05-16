@@ -5,7 +5,7 @@ use log::debug;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::visit_mut::VisitMut;
-use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, Item, ItemEnum, ItemFn, ReturnType, Signature, Stmt, TraitItemMethod, Type};
+use syn::{Block, Expr, ExprCall, ExprMatch, ExprMethodCall, ExprReturn, ExprTry, ImplItemMethod, Item, ItemEnum, ItemFn, ItemImpl, ItemTrait, ReturnType, Signature, Stmt, TraitItem, TraitItemMethod, Type};
 use rem_utils::{format_source, FindCallee};
 
 const ENUM_NAME: &str = "Ret";
@@ -95,7 +95,7 @@ impl VisitMut for CallerVisitor<'_> {
         }
         debug!("finding caller in impl...");
         let id = i.sig.ident.clone().to_string();
-        match id == self.caller_fn_name {
+        match id.contains(self.caller_fn_name) {
             false => (),
             true => {
                 debug!("found same id: {}...", id);
@@ -119,7 +119,7 @@ impl VisitMut for CallerVisitor<'_> {
         }
 
         let id = i.sig.ident.clone().to_string();
-        match id == self.caller_fn_name {
+        match id.contains(self.caller_fn_name) {
             false => (),
             true => {
                 self.callee_finder.visit_item_fn_mut(i);
@@ -137,7 +137,7 @@ impl VisitMut for CallerVisitor<'_> {
         }
 
         let id = i.sig.ident.clone().to_string();
-        match id == self.caller_fn_name {
+        match id.contains(self.caller_fn_name) {
             false => (),
             true => {
                 self.callee_finder.visit_trait_item_method_mut(i);
@@ -244,7 +244,7 @@ struct CalleeCheckNCF<'a> {
 impl VisitMut for CalleeCheckNCF<'_> {
     fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => self.callee_check_ncf(i.sig.clone(), &mut i.block),
         }
@@ -253,7 +253,7 @@ impl VisitMut for CalleeCheckNCF<'_> {
 
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => self.callee_check_ncf(i.sig.clone(), &mut i.block),
         }
@@ -261,7 +261,7 @@ impl VisitMut for CalleeCheckNCF<'_> {
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => {
                 let _ = i
@@ -296,6 +296,7 @@ impl CalleeCheckNCF<'_> {
                             rety_qmark,
                         };
                         desugar_qmark.visit_block_mut(block);
+                        self.has_return = desugar_qmark.has_desugared;
                     }
                 }
             }
@@ -305,17 +306,21 @@ impl CalleeCheckNCF<'_> {
         let mut check_return = CalleeCheckReturn {
             has_return: self.has_return,
         };
+
+
         let mut check_loops = CalleeCheckLoops {
             has_break: self.has_break,
             has_continue: self.has_continue,
         };
         block.stmts.iter_mut().for_each(|stmt| {
-            check_return.visit_stmt_mut(stmt);
+            if !self.has_return {
+                check_return.visit_stmt_mut(stmt);
+            }
             if self.within_caller_loop {
                 check_loops.visit_stmt_mut(stmt);
             }
         });
-        self.has_return = check_return.has_return;
+        self.has_return = check_return.has_return || self.has_return;
         self.has_break = check_loops.has_break;
         self.has_continue = check_loops.has_continue;
     }
@@ -384,7 +389,7 @@ struct MakeBrkAndCont<'a> {
 impl VisitMut for MakeBrkAndCont<'_> {
     fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => self.make_brk_and_cont(&mut i.sig, &mut i.block),
         }
@@ -393,7 +398,7 @@ impl VisitMut for MakeBrkAndCont<'_> {
 
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => self.make_brk_and_cont(&mut i.sig, &mut i.block),
         }
@@ -402,7 +407,7 @@ impl VisitMut for MakeBrkAndCont<'_> {
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => {
                 let _ = i
@@ -462,7 +467,7 @@ struct MakeReturn<'a> {
 impl VisitMut for MakeReturn<'_> {
     fn visit_impl_item_method_mut(&mut self, i: &mut ImplItemMethod) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => self.make_return(&mut i.sig, &mut i.block),
         }
@@ -472,7 +477,7 @@ impl VisitMut for MakeReturn<'_> {
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => {
                 let _ = i
@@ -486,7 +491,7 @@ impl VisitMut for MakeReturn<'_> {
 
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => self.make_return(&mut i.sig, &mut i.block),
         }
@@ -532,6 +537,11 @@ struct MakeCallerReturnHelper<'a> {
     callee_fn_name: &'a str,
 }
 impl VisitMut for MakeCallerReturnHelper<'_> {
+    fn visit_expr_mut(&mut self, i: &mut Expr) {
+        debug!("expr: {:?}", i);
+        syn::visit_mut::visit_expr_mut(self, i);
+    }
+
     fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
         let ident_str = format!("{}{}", ENUM_NAME, make_pascal_case(self.callee_fn_name));
         let ident = Ident::new(ident_str.as_str(), Span::call_site());
@@ -557,9 +567,10 @@ struct MakeCallerReturn<'a> {
 impl VisitMut for MakeCallerReturn<'_> {
     fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
         let id = i.sig.ident.to_string();
-        match id == self.callee_fn_name {
+        match id.contains(self.callee_fn_name) {
             false => (),
             true => {
+                debug!("found callee: {:?}", i);
                 let mut helper = MakeCallerReturnHelper {
                     callee_fn_name: self.callee_fn_name,
                 };
@@ -582,7 +593,7 @@ impl VisitMut for MatchCallSiteHelper<'_> {
         match i {
             Expr::Call(c) => {
                 let id = c.func.clone().as_ref().into_token_stream().to_string();
-                match id == self.callee_fn_name {
+                match id.contains(self.callee_fn_name) {
                     true => {
                         let e = i.clone().into_token_stream().to_string();
                         let enum_name_fn = make_pascal_case(self.callee_fn_name);
@@ -625,6 +636,8 @@ struct MatchCallSite<'a> {
     has_return: bool,
     has_continue: bool,
     has_break: bool,
+    enum_str: String,
+    added_enum: bool,
 }
 
 impl VisitMut for MatchCallSite<'_> {
@@ -634,17 +647,54 @@ impl VisitMut for MatchCallSite<'_> {
         }
 
         let id = i.sig.ident.to_string();
-        match id == self.caller_fn_name {
+        match id.contains(self.caller_fn_name) {
             false => (),
             true => {
                 self.callee_finder.visit_impl_item_method_mut(i);
                 if !self.callee_finder.found {
                     return;
                 }
-                self.match_callsite(&mut i.block)
+                self.match_callsite(&mut i.block);
             }
         }
         syn::visit_mut::visit_impl_item_method_mut(self, i);
+    }
+
+
+    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
+        if self.callee_finder.found {
+            return;
+        }
+
+        let id = i.sig.ident.to_string();
+        match id.contains(self.caller_fn_name) {
+            true => {
+                self.callee_finder.visit_item_fn_mut(i);
+                if !self.callee_finder.found {
+                    return;
+                }
+                self.match_callsite(&mut i.block);
+
+            }
+            false => {}
+        }
+        syn::visit_mut::visit_item_fn_mut(self, i);
+    }
+
+    fn visit_item_impl_mut(&mut self, i: &mut ItemImpl) {
+        if i.clone().into_token_stream().to_string().contains(self.caller_fn_name) {
+            i.items.push(syn::parse_str(self.enum_str.as_str()).unwrap());
+            self.added_enum = true;
+        }
+        syn::visit_mut::visit_item_impl_mut(self, i);
+    }
+
+    fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
+        if  i.clone().into_token_stream().to_string().contains(self.caller_fn_name) {
+            i.items.push(syn::parse_str(self.enum_str.as_str()).unwrap());
+            self.added_enum = true;
+        }
+        syn::visit_mut::visit_item_trait_mut(self, i);
     }
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
@@ -654,7 +704,7 @@ impl VisitMut for MatchCallSite<'_> {
 
         let id = i.sig.ident.to_string();
         //println!("caller name: {}, at: {}", self.caller_fn_name, &id);
-        match id == self.caller_fn_name {
+        match id.contains(self.caller_fn_name) {
             false => (),
             true => {
                 self.callee_finder.visit_trait_item_method_mut(i);
@@ -662,30 +712,15 @@ impl VisitMut for MatchCallSite<'_> {
                     return;
                 }
                 let _ = i
+                    .clone()
                     .default
                     .as_mut()
-                    .and_then(|block| Some(self.match_callsite(block)));
+                    .and_then(|block|  {
+                        Some(self.match_callsite(block))
+                    });
             }
         }
         syn::visit_mut::visit_trait_item_method_mut(self, i);
-    }
-
-    fn visit_item_fn_mut(&mut self, i: &mut ItemFn) {
-        if self.callee_finder.found {
-            return;
-        }
-
-        let id = i.sig.ident.to_string();
-        match id == self.caller_fn_name {
-            true => {
-                self.callee_finder.visit_item_fn_mut(i);
-                if !self.callee_finder.found {
-                    return;
-                }
-                self.match_callsite(&mut i.block)
-            }
-            false => {}
-        }
     }
 }
 
@@ -828,8 +863,6 @@ pub fn inner_make_controls(
                 ""
             },
         );
-        let enum_ret: ItemEnum = syn::parse_str(enum_str.as_str()).unwrap();
-        file.items.push(Item::Enum(enum_ret));
 
         let mut caller_matcher = MatchCallSite {
             caller_fn_name,
@@ -841,8 +874,14 @@ pub fn inner_make_controls(
             has_return: callee_visitor.has_return,
             has_continue: callee_visitor.has_continue,
             has_break: callee_visitor.has_break,
+            enum_str: enum_str.clone(),
+            added_enum: false,
         };
         caller_matcher.visit_file_mut(&mut file);
+
+        if !caller_matcher.added_enum {
+            file.items.push(syn::parse_str(enum_str.as_str()).unwrap());
+        }
     }
     let file = file.into_token_stream().to_string();
     fs::write(new_file_name.to_string(), format_source(&file)).unwrap();
