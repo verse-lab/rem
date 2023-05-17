@@ -4,11 +4,7 @@ mod projects;
 mod utils;
 
 use crate::projects::PATH_TO_EXPERIMENT_PROJECTS;
-use crate::utils::{
-    checkout, get_caller_callee_size, get_latest_commit, get_project_size, get_src_size,
-    push_branch, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv,
-    ExtractionResult, Secrets,
-};
+use crate::utils::{checkout, get_caller_callee_size, get_latest_commit, get_project_size, get_src_size, push_branch, reset_to_base_branch, run_extraction, update_expr_branch, upload_csv, ExtractionResult, Secrets, stash};
 use log::{debug, info, warn};
 use std::fs;
 use std::path::Path;
@@ -59,6 +55,7 @@ fn main() {
                         debug!("cloned: {}, {}", out.status.success(), stderr);
                     }
 
+                    /*
                     if !((utils::stash(&arte_clone) || true) // don't care about stashing
                         && utils::checkout(&arte_clone, &expr_arte))
                     {
@@ -69,6 +66,7 @@ fn main() {
                             &expr_arte
                         ));
                     };
+                    */
 
                     if !(Path::new(&arte_fixed).is_dir()) {
                         let mut cmd = Command::new("cp");
@@ -78,6 +76,7 @@ fn main() {
                         debug!("cp: {}, {}", out.status.success(), stderr);
                     }
 
+                    /*
                     // change remote url to ssh so can push
                     let mut cmd = Command::new("git");
                     cmd.arg("-C")
@@ -90,16 +89,20 @@ fn main() {
                                 .as_str(),
                         );
                     let out = cmd.output().unwrap();
-                    let stderr = String::from_utf8_lossy(&out.stderr);
-                    debug!("remote re-url: {}, {}", out.status.success(), stderr,);
+                    debug!("remote re-url: {}, {}", out.status.success(), String::from_utf8_lossy(&out.stderr));
+                     */
 
                     // checkout to new branch for artefact
                     let arte_branch = format!("{}{}-expr-artefact", &experiment.expr_type, i);
-                    // checkout_b(&arte_fixed, &arte_branch);
+                    stash(&arte_clone);
+                    checkout(&arte_fixed, &arte_branch);
                     // push new branch
+                    debug!("pushing {}...", &arte_branch);
                     push_branch(&arte_fixed, &arte_branch, true);
+                    debug!("pushing {}...done", &arte_branch);
                     // run cargo clean
                     if CARGO_CLEAN {
+                        debug!("cleaning {}...", &arte_branch);
                         let mut cmd = Command::new("cargo");
                         let toml = format!(
                             "--manifest-path={}/{}",
@@ -108,8 +111,7 @@ fn main() {
                         );
                         cmd.arg("clean").arg(toml);
                         let out = cmd.output().unwrap();
-                        let stderr = String::from_utf8_lossy(&out.stderr);
-                        debug!("cargo cealn: {}, {}", out.status.success(), stderr);
+                        debug!("cargo clean: {}, {}", out.status.success(), String::from_utf8_lossy(&out.stderr));
                     }
                     continue;
                 }
