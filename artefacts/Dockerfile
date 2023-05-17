@@ -7,12 +7,12 @@ RUN apt-get install -y curl software-properties-common wget
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
 RUN apt-add-repository ppa:swi-prolog/stable
 RUN apt-get update
-RUN apt-get install -y swi-prolog build-essential
+RUN apt-get install -y swi-prolog build-essential git-all
 
 RUN chown -hR tester /home/tester/
 
 COPY capstone.conf /etc/ld.so.conf.d/
-RUN ldconfig
+RUN ldconfig -v
 
 COPY ideaIC-2022.3.3.tar.gz /home/tester/
 
@@ -47,5 +47,11 @@ RUN ln -s /usr/bin/lxterminal /home/tester/Desktop/
 
 COPY capstone_demo /home/tester/Desktop/capstone_demo/
 
+COPY artefacts.tar /home/tester/Desktop/artefacts.tar
+RUN tar -xzf /home/tester/Desktop/artefacts.tar --directory /home/tester/Desktop/
+
+COPY README.md /home/tester/Desktop/README.md
+
 USER root
 RUN echo "root:root" | chpasswd
+RUN ldconfig -v
