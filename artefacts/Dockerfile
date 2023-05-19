@@ -39,18 +39,22 @@ RUN rustup component add rust-src rustc-dev llvm-tools-preview
 # install the extracting backends
 RUN cargo install rem-controller rem-borrower rem-repairer
 
-RUN mkdir -p /home/tester/Desktop/capstone_demo
-
 RUN ln -s /opt/idea-IC-223.8836.41/bin/idea.sh /home/tester/Desktop/
 
-RUN ln -s /usr/bin/lxterminal /home/tester/Desktop/
-
-COPY capstone_demo /home/tester/Desktop/capstone_demo/
-
-COPY artefacts.tar /home/tester/Desktop/artefacts.tar
-RUN tar -xzf /home/tester/Desktop/artefacts.tar --directory /home/tester/Desktop/
+COPY sample_projects.tar /home/tester/Desktop/sample_projects.tar
+RUN tar -xzf /home/tester/Desktop/sample_projects.tar --directory /home/tester/Desktop/
+RUN mv /home/tester/Desktop/artefact_sample_projects /home/tester/Desktop/sample_projects
 
 COPY README.md /home/tester/Desktop/README.md
+
+COPY JetBrains.zip /home/tester/
+
+USER root
+RUN apt-get install -y zip
+
+USER tester
+RUN mkdir -p /home/tester/.local/share/
+RUN unzip /home/tester/JetBrains.zip -d /home/tester/.local/share/
 
 USER root
 RUN echo "root:root" | chpasswd
