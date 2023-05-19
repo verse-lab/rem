@@ -35,3 +35,13 @@ To test each case:
 4. Sometimes, running the terminal inside IntelliJ in the container hangs, so we suggest running it from the actual `lxterminal`.  
 
 5. Running the program using IntelliJ run configuration seems to hang for no particular reason either.  We suggest to run `cargo run|check|build` using the `lxterminal`.
+
+## Manifest:
+1. capstone.conf: loader configuration to find rust nightly libraries.  
+2. Dockerfile: recipe for rem_test Docker image.  
+3. ideaIC-2022.3.3.tar.gz: frozen version of the IntelliJ IDE.  
+4. intellij-rust-0.4.188.SNAPSHOT-223-dev.zip: our version of the IntelliJ Rust plugin that interacts with REM.  
+5. JetBrains.zip: installed plugin expansion for the IDE.  
+6. README.md: this README.  
+7. sample_projects.tar: our case studies separated into 40 folders.  
+8. source_code.tar: the source code for REM.  
